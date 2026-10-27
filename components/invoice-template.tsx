@@ -263,62 +263,64 @@ export function InvoiceTemplate({
         </div>
 
         {/* 4. SERVICES TABLE */}
-        <div className="px-6 sm:px-8 pt-5">
-          {/* Table Header Bar */}
-          <div
-            data-ui="invoice-table-header"
-            className="bg-[#0B132B] text-white rounded-xl px-4 py-3 flex items-center text-xs font-black uppercase"
-            style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
-          >
-            <div className="flex-1">SERVICE</div>
-            <div className="w-28 sm:w-36 text-left">STAFF</div>
-            <div className="w-12 sm:w-16 text-center">QTY</div>
-            <div className="w-20 sm:w-24 text-right">PRICE</div>
+        <div className="px-4 sm:px-8 pt-5 overflow-x-auto [scrollbar-width:none]">
+          <div className="min-w-[460px]">
+            {/* Table Header Bar */}
             <div
-              className="w-20 sm:w-24 text-right text-[#C5A059]"
-              style={{ color: '#C5A059' }}
+              data-ui="invoice-table-header"
+              className="bg-[#0B132B] text-white rounded-xl px-4 py-3 flex items-center text-xs font-black uppercase"
+              style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
             >
-              AMOUNT
-            </div>
-          </div>
-
-          {/* Table Body Rows: Strictly real selected services */}
-          <div className="divide-y divide-slate-100">
-            {bill.items && bill.items.length > 0 ? (
-              bill.items.map((item, idx) => {
-                const itemQty = item.qty || 1;
-                const itemPrice = item.price || 0;
-                const itemTotal = itemPrice * itemQty;
-                const itemStaff = item.staff || bill.staff || 'Stylist';
-
-                return (
-                  <div
-                    key={idx}
-                    className="px-4 py-3.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
-                  >
-                    <div className="flex-1 font-bold text-slate-900 pr-2">
-                      {item.name}
-                    </div>
-                    <div className="w-28 sm:w-36 text-left text-slate-600 font-medium">
-                      {itemStaff}
-                    </div>
-                    <div className="w-12 sm:w-16 text-center font-bold text-slate-800">
-                      {itemQty}
-                    </div>
-                    <div className="w-20 sm:w-24 text-right text-slate-700 font-mono">
-                      ₹{itemPrice}
-                    </div>
-                    <div className="w-20 sm:w-24 text-right font-black text-slate-900 font-mono">
-                      ₹{itemTotal}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="px-4 py-6 text-center text-xs text-slate-400">
-                No items recorded on this invoice.
+              <div className="flex-1">SERVICE</div>
+              <div className="w-28 sm:w-36 text-left">STAFF</div>
+              <div className="w-12 sm:w-16 text-center">QTY</div>
+              <div className="w-20 sm:w-24 text-right">PRICE</div>
+              <div
+                className="w-20 sm:w-24 text-right text-[#C5A059]"
+                style={{ color: '#C5A059' }}
+              >
+                AMOUNT
               </div>
-            )}
+            </div>
+
+            {/* Table Body Rows: Strictly real selected services */}
+            <div className="divide-y divide-slate-100">
+              {bill.items && bill.items.length > 0 ? (
+                bill.items.map((item, idx) => {
+                  const itemQty = item.qty || 1;
+                  const itemPrice = item.price || 0;
+                  const itemTotal = itemPrice * itemQty;
+                  const itemStaff = item.staff || bill.staff || 'Stylist';
+
+                  return (
+                    <div
+                      key={idx}
+                      className="px-4 py-3.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
+                    >
+                      <div className="flex-1 font-bold text-slate-900 pr-2">
+                        {item.name}
+                      </div>
+                      <div className="w-28 sm:w-36 text-left text-slate-600 font-medium">
+                        {itemStaff}
+                      </div>
+                      <div className="w-12 sm:w-16 text-center font-bold text-slate-800">
+                        {itemQty}
+                      </div>
+                      <div className="w-20 sm:w-24 text-right text-slate-700 font-mono">
+                        ₹{itemPrice}
+                      </div>
+                      <div className="w-20 sm:w-24 text-right font-black text-slate-900 font-mono">
+                        ₹{itemTotal}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-6 text-center text-xs text-slate-400">
+                  No items recorded on this invoice.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

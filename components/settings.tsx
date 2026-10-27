@@ -1136,7 +1136,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 mb-1">City</label>
                   <input

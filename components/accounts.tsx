@@ -731,7 +731,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
               </div>
 
               {/* Amount and Date */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'} mb-1 uppercase tracking-wider`}>
                     Amount (₹) *

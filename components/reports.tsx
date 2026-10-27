@@ -886,7 +886,7 @@ export function ReportsView() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {/* Zero Transactions */}
               <div className={`p-4 rounded-2xl border text-center ${isDarkMode ? 'bg-[#0F1C36] border-[#2A3858]' : 'bg-slate-50 border-slate-200'}`}>
                 <span className="text-[10px] font-bold text-slate-400 block">Zero Transactions</span>
@@ -965,8 +965,8 @@ export function ReportsView() {
                 No transactions recorded for {reportDateRange.label}.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+              <div className="overflow-x-auto [scrollbar-width:none]">
+                <table className="w-full min-w-[520px] text-xs text-left">
                   <thead>
                     <tr className={`border-b ${isDarkMode ? 'border-white/10 text-[#A7B0C3]' : 'border-slate-200 text-slate-600'}`}>
                       <th className="py-2.5 px-3 font-bold">Date</th>
@@ -1025,8 +1025,8 @@ export function ReportsView() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+              <div className="overflow-x-auto [scrollbar-width:none]">
+                <table className="w-full min-w-[520px] text-xs text-left">
                   <thead>
                     <tr className={`border-b ${isDarkMode ? 'border-white/10 text-[#A7B0C3]' : 'border-slate-200 text-slate-600'}`}>
                       <th className="py-2.5 px-2 font-bold">Stylist</th>

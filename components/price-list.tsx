@@ -1040,7 +1040,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className={`text-xs font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
                     Value {newOfferType === 'percentage' ? '(%)' : '(₹)'}

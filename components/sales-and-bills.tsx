@@ -639,7 +639,7 @@ export function SalesAndBillsView({
     <section className="space-y-6 animate-fadeIn pb-16">
       {/* ================= 1. HEADER & LARGEST BEAUTIFUL NEW BILL BUTTON ================= */}
       <div
-        className={`p-6 rounded-3xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm ${
+        className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm ${
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
         }`}
       >

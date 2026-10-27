@@ -484,11 +484,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
       </div>
     )}
 
-    {/* 3. Mobile Bottom Navigation Bar (Phones & Small Tablets) */}
-    <nav className={`md:hidden fixed bottom-0 inset-x-0 z-40 border-t px-2 py-1.5 flex items-center justify-around select-none ${
+    {/* 3. Mobile Bottom Navigation Bar (Phones & Small Tablets with Safe Area Inset) */}
+    <nav className={`md:hidden fixed bottom-0 inset-x-0 z-40 border-t px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around select-none backdrop-blur-lg ${
       isDarkMode
-        ? 'bg-[#0B1F44] border-[#2A3858] text-[#F8FAFC]'
-        : 'bg-[#FAF8F3] border-slate-300 text-[#0F172A]'
+        ? 'bg-[#0B1F44]/95 border-[#2A3858] text-[#F8FAFC]'
+        : 'bg-[#FAF8F3]/95 border-slate-300 text-[#0F172A]'
     }`}>
       {/* Home */}
       <button

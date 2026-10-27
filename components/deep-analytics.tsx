@@ -563,9 +563,9 @@ export function DeepAnalyticsView() {
         </div>
 
         {/* Period Selector Pills & Actions */}
-        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
+        <div className="flex items-center gap-2 flex-wrap self-start md:self-auto max-w-full">
           <div
-            className={`p-1 rounded-2xl border flex items-center gap-1 ${
+            className={`p-1 rounded-2xl border flex items-center gap-1 overflow-x-auto max-w-full [scrollbar-width:none] [-webkit-overflow-scrolling:touch] ${
               isDarkMode ? 'bg-[#0B1528] border-[#2A3858]' : 'bg-slate-100 border-slate-200'
             }`}
           >
@@ -980,8 +980,8 @@ export function DeepAnalyticsView() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-center border-collapse text-xs">
+          <div className="overflow-x-auto [scrollbar-width:none]">
+            <table className="w-full min-w-[480px] text-center border-collapse text-xs">
               <thead>
                 <tr>
                   <th className={`p-2 text-left text-[11px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>

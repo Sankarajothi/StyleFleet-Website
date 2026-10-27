@@ -519,7 +519,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Floating Curved Luxury Dashboard Widget (Organic curved contour with running numbers) */}
-                <div className="absolute left-[-24px] bottom-[60px] min-w-[240px] bg-[#0D2244]/95 border border-[#D4AF37]/45 rounded-[32px] rounded-tl-[12px] p-4 shadow-2xl z-20 animate-floating-dashboard backdrop-blur-md">
+                <div className="hidden sm:block absolute left-[-20px] bottom-[60px] min-w-[240px] bg-[#0D2244]/95 border border-[#D4AF37]/45 rounded-[32px] rounded-tl-[12px] p-4 shadow-2xl z-20 animate-floating-dashboard backdrop-blur-md">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
@@ -548,7 +548,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Floating Curved Capsule 2: Live Next Chair Appointment */}
-                <div className="absolute right-[-15px] top-[35px] flex items-center gap-3 bg-[#0D2244]/95 border border-white/20 rounded-[28px] rounded-tr-[10px] p-3.5 shadow-2xl z-20 animate-float-reverse backdrop-blur-md">
+                <div className="hidden sm:flex absolute right-[-15px] top-[35px] items-center gap-3 bg-[#0D2244]/95 border border-white/20 rounded-[28px] rounded-tr-[10px] p-3.5 shadow-2xl z-20 animate-float-reverse backdrop-blur-md">
                   <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#E0C068] font-bold text-xs shrink-0">
                     02
                   </div>
@@ -1096,7 +1096,7 @@ export default function HomePage() {
                       <label className="block text-xs font-semibold text-[#A7B0C3] mb-2">
                         Enter 6-Digit OTP
                       </label>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                         {otp.map((digit, idx) => (
                           <input
                             key={idx}
@@ -1110,7 +1110,7 @@ export default function HomePage() {
                             onChange={(e) => handleOtpChange(idx, e.target.value)}
                             onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                             onPaste={handleOtpPaste}
-                            className="w-full h-12 text-center text-xl font-bold bg-[#07152B] border border-white/10 rounded-2xl text-white outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all"
+                            className="w-full h-11 sm:h-12 text-center text-lg sm:text-xl font-bold bg-[#07152B] border border-white/10 rounded-xl sm:rounded-2xl text-white outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all"
                           />
                         ))}
                       </div>

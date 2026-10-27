@@ -211,7 +211,7 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
           </div>
 
           {/* Quick Action CTAs */}
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 lg:pt-0">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-2 lg:pt-0">
             {/* Small background-free "View Analytics" text button for Owner */}
             {!isStylist && (
               <button
@@ -267,7 +267,7 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
       {/* 2. UNIFIED 4-CELL KPI CONTAINER (Curved contours + Running counter animations) */}
       {/* ========================================================= */}
       <div
-        className={`rounded-[28px] rounded-tl-[12px] border grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x overflow-hidden transition-colors duration-300 hover:border-[#D4AF37]/40 ${
+        className={`rounded-[28px] rounded-tl-[12px] border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x overflow-hidden transition-colors duration-300 hover:border-[#D4AF37]/40 ${
           isDarkMode
             ? 'bg-[#121B33] border-[#2A3858] divide-[#2A3858]'
             : 'bg-white border-slate-200 divide-slate-200'

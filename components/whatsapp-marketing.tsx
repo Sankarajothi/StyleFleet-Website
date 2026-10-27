@@ -384,7 +384,7 @@ export const WhatsAppMarketingView: React.FC = () => {
               </div>
 
               {/* Step 2: Discount & Validity Inputs */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`block text-[11px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                     Discount / Flat Offer
