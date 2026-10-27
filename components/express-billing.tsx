@@ -42,6 +42,7 @@ export function ExpressBillingView({
     isDarkMode,
     role,
     loggedInStaffName,
+    shopProfile,
   } = useSalon();
 
   const [billTip, setBillTip] = useState(0);
@@ -62,9 +63,13 @@ export function ExpressBillingView({
   // Bill Date state (Strictly limited: past dates or today, cannot select future dates)
   const [billDate, setBillDate] = useState<string>(getTodayInputStr());
 
-  // Cart Calculations
+  // Cart Calculations (Strict Section 3 Mathematical Invariant)
   const cartSubtotal = billCartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const cartTotal = Math.max(0, cartSubtotal - billDiscount + billTip);
+  const safeDiscount = Math.min(cartSubtotal, Math.max(0, billDiscount || 0));
+  const safeTip = Math.max(0, billTip || 0);
+  const gstRate = shopProfile?.gstRate || 0;
+  const taxAmount = shopProfile?.applyGst ? Math.round((cartSubtotal - safeDiscount) * (gstRate / 100)) : 0;
+  const cartTotal = Math.max(0, cartSubtotal - safeDiscount + taxAmount + safeTip);
 
   let finalPaid = cartTotal;
   let finalDue = 0;
@@ -112,6 +117,9 @@ export function ExpressBillingView({
       dueAmount: finalDue,
       mode: billPaymentMode,
       status: billStatus,
+      discount: safeDiscount,
+      tax: taxAmount,
+      tip: safeTip,
     }, customDateStr, isToday);
 
     setActiveInvoice(newBill);

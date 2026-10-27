@@ -95,3 +95,123 @@ export function generateTimeSlotsFromBookingHours(bookingHoursStr?: string): str
     return fallback;
   }
 }
+
+/**
+ * Official StyleFleet WhatsApp Bill Templates (100% Mobile Parity)
+ * Generates Template 1 (Paid), Template 2 (Partially Paid with UPI ID), or Template 3 (Pending Dues).
+ */
+export function buildOfficialWhatsAppBillMessage(params: {
+  shopName: string;
+  shopPhone: string;
+  upiId?: string;
+  customerName: string;
+  invoiceNumber: string;
+  billId?: string;
+  totalAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+  paymentMethod: string;
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    youtube?: string;
+    website?: string;
+  };
+}): string {
+  const {
+    shopName,
+    shopPhone,
+    upiId,
+    customerName,
+    invoiceNumber,
+    billId,
+    totalAmount,
+    paidAmount,
+    dueAmount,
+    paymentMethod,
+    socialLinks,
+  } = params;
+
+  const shortId = (billId || invoiceNumber).replace(/\D/g, '').slice(-4) || '1001';
+  const billPdfUrl = `https://stylefleet.tecstellar.com/b/${invoiceNumber}_${shortId}.pdf`;
+  const cleanShopPhone = (shopPhone || '').replace(/\D/g, '').slice(-10);
+
+  // Social media block
+  const socialLines: string[] = [];
+  if (socialLinks?.instagram) {
+    const handle = socialLinks.instagram.replace(/^@/, '').replace(/https?:\/\/(www\.)?instagram\.com\//, '');
+    socialLines.push(`Instagram: https://instagram.com/${handle}`);
+  }
+  if (socialLinks?.facebook) {
+    const page = socialLinks.facebook.replace(/https?:\/\/(www\.)?facebook\.com\//, '');
+    socialLines.push(`Facebook: https://facebook.com/${page}`);
+  }
+  if (socialLinks?.youtube) {
+    const channel = socialLinks.youtube.replace(/https?:\/\/(www\.)?youtube\.com\/@?/, '');
+    socialLines.push(`YouTube: https://youtube.com/@${channel}`);
+  }
+  if (socialLinks?.website) {
+    const site = socialLinks.website.replace(/https?:\/\//, '');
+    socialLines.push(`Website: https://${site}`);
+  }
+  const socialSection = socialLines.length > 0 ? `\n${socialLines.join('\n')}` : '';
+
+  // Template 1: FULLY PAID BILL
+  if (dueAmount <= 0) {
+    return (
+      `Hi ${customerName} 👋,\n` +
+      `Thank you for choosing ${shopName}! ✨\n\n` +
+      `💰 Total Amount: ₹${totalAmount}\n` +
+      `✅ Payment Status: PAID (${paymentMethod})\n\n` +
+      `📄 View / Download your Bill:\n` +
+      `${billPdfUrl}\n\n` +
+      `📞 For bookings: +91 ${cleanShopPhone}\n` +
+      `We look forward to seeing you again! ❤️` +
+      socialSection
+    );
+  }
+
+  // Template 2: PARTIALLY PAID BILL (Includes UPI ID for Balance Collection)
+  if (paidAmount > 0) {
+    return (
+      `Hi ${customerName} 👋,\n` +
+      `Thank you for choosing ${shopName}! ✨\n\n` +
+      `💰 Total Amount: ₹${totalAmount}\n` +
+      `💵 Total Paid: ₹${paidAmount}\n` +
+      `🔴 Balance Due: ₹${dueAmount}\n` +
+      `⚠️ Payment Status: PARTIALLY PAID (${paymentMethod})\n\n` +
+      `📄 View / Download your Bill:\n` +
+      `${billPdfUrl}\n` +
+      (upiId ? `💳 UPI ID: ${upiId}\n\n` : `\n`) +
+      `📞 For bookings: +91 ${cleanShopPhone}\n` +
+      `We look forward to seeing you again! ❤️` +
+      socialSection
+    );
+  }
+
+  // Template 3: FULLY PENDING BILL (Unpaid / Dues)
+  return (
+    `Hi ${customerName} 👋,\n` +
+    `Thank you for choosing ${shopName}! ✨\n\n` +
+    `💰 Total Amount: ₹${totalAmount}\n` +
+    `💵 Total Paid: ₹0\n` +
+    `🔴 Balance Due: ₹${totalAmount}\n` +
+    `⚠️ Payment Status: PENDING (UNPAID)\n\n` +
+    `📄 View / Download your Bill:\n` +
+    `${billPdfUrl}\n` +
+    (upiId ? `💳 UPI ID: ${upiId}\n\n` : `\n`) +
+    `📞 For bookings: +91 ${cleanShopPhone}\n` +
+    `We look forward to seeing you again! ❤️` +
+    socialSection
+  );
+}
+
+/**
+ * Direct WhatsApp Dispatch on Web
+ */
+export function openWhatsAppBill(customerPhone: string, message: string): void {
+  const cleanPhone = (customerPhone || '').replace(/\D/g, '').slice(-10);
+  const encodedMsg = encodeURIComponent(message);
+  const waUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone}&text=${encodedMsg}`;
+  window.open(waUrl, '_blank');
+}

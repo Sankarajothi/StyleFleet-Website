@@ -644,6 +644,9 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         total: Math.round((b.total_minor || 0) / 100),
         paidAmount: Math.round((b.paid_amount_minor ?? b.total_minor ?? 0) / 100),
         dueAmount: Math.round((b.due_amount_minor || 0) / 100),
+        discount: Math.round((b.discount_minor || 0) / 100),
+        tax: Math.round((b.tax_minor || 0) / 100),
+        tip: Math.round((b.tip_minor || 0) / 100),
         mode: paymentMode,
         status: (b.status as Bill['status']) || 'paid',
         isDeleted: b.status === 'deleted' || !!b.deleted_at,
@@ -668,7 +671,10 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         statsByCustomer.set(key, { visits: 0, spend: 0, dues: 0, lastVisit: 'Today' });
       }
       const st = statsByCustomer.get(key)!;
-      st.visits += 1;
+      // Requirement 7: visits = Total count of non-deleted bills where status = 'paid' or due_amount_minor = 0
+      if (b.status === 'paid' || (b.dueAmount || 0) <= 0) {
+        st.visits += 1;
+      }
       st.spend += b.paidAmount || 0;
       st.dues += b.dueAmount || 0;
       st.lastVisit = b.dateStr ? b.dateStr.split(',')[0] : 'Today';
@@ -678,7 +684,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       const cleanPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
       const key = cleanPhone.length === 10 ? cleanPhone : c.name.toLowerCase();
       const liveStats = statsByCustomer.get(key);
-      const liveVisits = liveStats ? liveStats.visits : 1;
+      const liveVisits = liveStats ? liveStats.visits : 0;
       const liveSpend = liveStats ? liveStats.spend : 0;
       const liveDue = liveStats ? liveStats.dues : Math.round((c.outstanding_due_minor || 0) / 100);
       const lastVisit = liveStats ? liveStats.lastVisit : 'Recent';
@@ -965,8 +971,17 @@ export async function saveBillToDb(
 ): Promise<string | null> {
   try {
     const billId = generateUuid();
-    const totalMinor = Math.round(bill.total * 100);
-    const paidMinor = Math.round(bill.paidAmount * 100);
+    // Mathematical Invariant (paise integer calculations)
+    const itemsSubtotalMinor = (bill.items || []).reduce(
+      (sum, it) => sum + Math.round((it.price || 0) * 100) * (it.qty || 1),
+      0
+    );
+    const subtotalMinor = itemsSubtotalMinor > 0 ? itemsSubtotalMinor : Math.round(bill.total * 100);
+    const discountMinor = Math.min(subtotalMinor, Math.max(0, Math.round((bill.discount || 0) * 100)));
+    const taxMinor = Math.max(0, Math.round(((bill as any).tax || 0) * 100));
+    const tipMinor = Math.max(0, Math.round(((bill as any).tip || 0) * 100));
+    const totalMinor = Math.max(0, subtotalMinor - discountMinor + taxMinor + tipMinor);
+    const paidMinor = Math.min(totalMinor, Math.max(0, Math.round(bill.paidAmount * 100)));
     const dueMinor = Math.max(0, totalMinor - paidMinor);
 
     // Resolve customer foreign key (look up or auto-add walk-in client)
@@ -1013,7 +1028,7 @@ export async function saveBillToDb(
       } catch {}
     }
 
-    const billStatus = dueMinor === 0 ? 'Paid' : (paidMinor > 0 ? 'Partial' : 'Pending');
+    const billStatus = dueMinor === 0 ? 'paid' : (paidMinor > 0 ? 'partially_paid' : 'pending');
     const paymentMethod = bill.mode || 'UPI';
     const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}`;
     const nowIso = new Date().toISOString();
@@ -1025,10 +1040,10 @@ export async function saveBillToDb(
       staff_id: staffId,
       invoice_number: bill.invoiceNumber,
       status: billStatus,
-      subtotal_minor: totalMinor,
-      discount_minor: Math.round((bill.discount || 0) * 100),
-      tax_minor: 0,
-      tip_minor: 0,
+      subtotal_minor: subtotalMinor,
+      discount_minor: discountMinor,
+      tax_minor: taxMinor,
+      tip_minor: tipMinor,
       total_minor: totalMinor,
       paid_amount_minor: paidMinor,
       due_amount_minor: dueMinor,

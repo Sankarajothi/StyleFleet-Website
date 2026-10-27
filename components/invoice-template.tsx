@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Bill, ShopProfile } from '@/components/SalonContext';
+import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
 
 interface InvoiceTemplateProps {
   bill: Bill;
@@ -26,7 +27,6 @@ export function InvoiceTemplate({
           year: 'numeric',
         });
       }
-      // If dateVal is already "27 Oct 2026, 10:30 AM" or similar
       const cleaned = dateVal.split(',')[0].trim();
       const parsed = new Date(cleaned);
       if (!isNaN(parsed.getTime())) {
@@ -54,7 +54,8 @@ export function InvoiceTemplate({
     0
   );
   const discountAmount = bill.discount || 0;
-  const taxAmount = 0; // Tax amount in minor units or zero if GST is inclusive / 0
+  const taxAmount = (bill as any).tax || 0;
+  const tipAmount = (bill as any).tip || 0;
 
   // Salon initial badge
   const salonInitial = shopProfile.shopName
@@ -75,6 +76,30 @@ export function InvoiceTemplate({
     window.print();
   };
 
+  const handleDefaultWhatsAppShare = () => {
+    if (onShareWhatsApp) {
+      onShareWhatsApp();
+      return;
+    }
+    const msg = buildOfficialWhatsAppBillMessage({
+      shopName: shopProfile.shopName || 'StyleFleet Salon',
+      shopPhone: shopProfile.phone || '',
+      upiId: shopProfile.upiId || '',
+      customerName: bill.cust || 'Client',
+      invoiceNumber: bill.id,
+      billId: bill.id,
+      totalAmount: bill.total,
+      paidAmount: bill.paidAmount,
+      dueAmount: bill.dueAmount,
+      paymentMethod: bill.mode || 'UPI',
+      socialLinks: {
+        instagram: shopProfile.instagram,
+        facebook: shopProfile.facebook,
+      },
+    });
+    openWhatsAppBill(bill.phone, msg);
+  };
+
   return (
     <div className="w-full flex flex-col items-center">
       {/* ================= SCREEN-ONLY ACTION TOOLBAR ================= */}
@@ -90,18 +115,16 @@ export function InvoiceTemplate({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {onShareWhatsApp && (
-            <button
-              type="button"
-              onClick={onShareWhatsApp}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
-                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-              </svg>
-              <span>WhatsApp</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleDefaultWhatsAppShare}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+            </svg>
+            <span>WhatsApp</span>
+          </button>
           <button
             type="button"
             onClick={handlePrint}
@@ -139,15 +162,15 @@ export function InvoiceTemplate({
       >
         {/* 1. HEADER SECTION (NAVY BACKGROUND) */}
         <div
-          className="bg-[#0C1427] text-white p-6 sm:p-8"
-          style={{ backgroundColor: '#0C1427' }}
+          className="bg-[#0B132B] text-white p-6 sm:p-8"
+          style={{ backgroundColor: '#0B132B' }}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Salon Info Left */}
             <div className="flex items-center gap-4">
               <div
-                className="w-14 h-14 rounded-full border-2 border-[#E5B224] bg-[#0C1427] flex items-center justify-center text-[#E5B224] font-black text-lg shrink-0 shadow-sm"
-                style={{ borderColor: '#E5B224', backgroundColor: '#0C1427' }}
+                className="w-14 h-14 rounded-full border-2 border-[#C5A059] bg-[#0B132B] flex items-center justify-center text-[#C5A059] font-black text-lg shrink-0 shadow-sm"
+                style={{ borderColor: '#C5A059', backgroundColor: '#0B132B' }}
               >
                 {shopProfile.logoImg ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -179,8 +202,8 @@ export function InvoiceTemplate({
             {/* Invoice Tag Right */}
             <div className="sm:text-right space-y-1">
               <h2
-                className="text-2xl sm:text-3xl font-black text-[#E5B224] tracking-widest uppercase"
-                style={{ color: '#E5B224' }}
+                className="text-2xl sm:text-3xl font-black text-white tracking-widest uppercase"
+                style={{ color: '#FFFFFF', letterSpacing: '3px' }}
               >
                 INVOICE
               </h2>
@@ -188,7 +211,7 @@ export function InvoiceTemplate({
                 <div className="flex items-center sm:justify-end gap-2 text-slate-300">
                   <span className="text-slate-400">Invoice No.</span>
                   <strong className="text-white font-mono font-bold tracking-wide">
-                    {bill.id}
+                    #{bill.id}
                   </strong>
                 </div>
                 <div className="flex items-center sm:justify-end gap-2 text-slate-300">
@@ -202,50 +225,37 @@ export function InvoiceTemplate({
           </div>
         </div>
 
-        {/* 2. GOLDEN ACCENT STRIPE */}
+        {/* 2. CHAMPAGNE GOLD ACCENT STRIPE */}
         <div
-          className="h-1.5 w-full bg-[#E5B224]"
-          style={{ backgroundColor: '#E5B224' }}
+          className="h-[3.5px] w-full bg-[#C5A059]"
+          style={{ backgroundColor: '#C5A059' }}
         />
 
-        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (3 COLUMNS) */}
-        <div className="px-6 sm:px-8 py-5 border-b border-slate-100 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION) */}
+        <div className="px-6 sm:px-8 py-5 border-b border-slate-200 bg-white">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Column 1: Billed To */}
             <div>
-              <span
-                className="text-[10px] font-black uppercase tracking-wider block text-[#D4AF37]"
-                style={{ color: '#D4AF37' }}
-              >
+              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
                 BILLED TO
               </span>
-              <p className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+              <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
                 {bill.cust || 'Walk-in Client'}
               </p>
-            </div>
-
-            {/* Column 2: Mobile */}
-            <div>
-              <span
-                className="text-[10px] font-black uppercase tracking-wider block text-[#D4AF37]"
-                style={{ color: '#D4AF37' }}
-              >
-                MOBILE
-              </span>
-              <p className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5 font-mono">
+              <p className="text-xs text-slate-500 font-mono mt-0.5">
                 {bill.phone ? (bill.phone.startsWith('+91') ? bill.phone : `+91 ${bill.phone}`) : '–'}
               </p>
             </div>
 
-            {/* Column 3: Appointment Date */}
-            <div>
-              <span
-                className="text-[10px] font-black uppercase tracking-wider block text-[#D4AF37]"
-                style={{ color: '#D4AF37' }}
-              >
-                APPOINTMENT DATE
+            {/* Column 2: Appointment Details */}
+            <div className="sm:text-right">
+              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
+                APPOINTMENT DETAILS
               </span>
-              <p className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+              <p className="text-sm sm:text-base font-semibold text-slate-900 mt-0.5">
+                Stylist: <span className="font-bold">{bill.staff || 'Stylist'}</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
                 {invoiceDateStr}
               </p>
             </div>
@@ -257,16 +267,16 @@ export function InvoiceTemplate({
           {/* Table Header Bar */}
           <div
             data-ui="invoice-table-header"
-            className="bg-[#0C1427] text-white rounded-xl px-4 py-3 flex items-center text-xs font-black uppercase"
-            style={{ backgroundColor: '#0C1427', color: '#ffffff' }}
+            className="bg-[#0B132B] text-white rounded-xl px-4 py-3 flex items-center text-xs font-black uppercase"
+            style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
           >
             <div className="flex-1">SERVICE</div>
             <div className="w-28 sm:w-36 text-left">STAFF</div>
             <div className="w-12 sm:w-16 text-center">QTY</div>
             <div className="w-20 sm:w-24 text-right">PRICE</div>
             <div
-              className="w-20 sm:w-24 text-right text-[#E5B224]"
-              style={{ color: '#E5B224' }}
+              className="w-20 sm:w-24 text-right text-[#C5A059]"
+              style={{ color: '#C5A059' }}
             >
               AMOUNT
             </div>
@@ -317,24 +327,31 @@ export function InvoiceTemplate({
           <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
             {/* Left: Payment Status */}
             <div className="space-y-2">
-              <span
-                className="text-[10px] font-black uppercase tracking-wider block text-[#D4AF37]"
-                style={{ color: '#D4AF37' }}
-              >
-                PAYMENT
+              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
+                PAYMENT STATUS
               </span>
               <div className="flex items-center gap-2">
                 <span
                   data-ui="payment-badge"
-                  className="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-white bg-[#0C1427]"
-                  style={{ backgroundColor: '#0C1427', color: '#ffffff' }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase ${
+                    isPaid
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : isPartial
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
                 >
                   [{paymentBadgeText}]
                 </span>
-                <span className="text-xs font-bold text-slate-700">
+                <span className="text-xs font-semibold text-slate-600">
                   via {bill.mode || 'UPI'}
                 </span>
               </div>
+              {shopProfile.upiId && !isPaid && (
+                <p className="text-[11px] text-slate-500 font-mono mt-1">
+                  UPI ID: <span className="font-bold text-slate-800">{shopProfile.upiId}</span>
+                </p>
+              )}
             </div>
 
             {/* Right: Subtotal, Discount, Tax & Grand Total */}
@@ -347,41 +364,43 @@ export function InvoiceTemplate({
               </div>
 
               {discountAmount > 0 && (
-                <div className="flex justify-between items-center text-slate-600">
+                <div className="flex justify-between items-center text-amber-700">
                   <span>Discount</span>
-                  <strong className="text-emerald-700 font-mono font-bold">
+                  <strong className="font-mono font-bold">
                     – ₹{discountAmount}
                   </strong>
                 </div>
               )}
 
-              {taxAmount > 0 ? (
+              {taxAmount > 0 && (
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Tax (GST)</span>
                   <strong className="text-slate-900 font-mono font-bold">
-                    ₹{taxAmount}
+                    + ₹{taxAmount}
                   </strong>
                 </div>
-              ) : (
+              )}
+
+              {tipAmount > 0 && (
                 <div className="flex justify-between items-center text-slate-600">
-                  <span>Tax (GST)</span>
+                  <span>Tip</span>
                   <strong className="text-slate-900 font-mono font-bold">
-                    ₹0
+                    + ₹{tipAmount}
                   </strong>
                 </div>
               )}
 
               {/* Grand Total Banner */}
               <div
-                className="bg-[#0C1427] text-white rounded-xl px-4 py-3.5 flex items-center justify-between my-2 shadow-sm"
-                style={{ backgroundColor: '#0C1427', color: '#ffffff' }}
+                className="bg-[#0B132B] text-white rounded-xl px-4 py-3.5 flex items-center justify-between my-2 shadow-sm"
+                style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
               >
                 <span className="text-[11px] font-black tracking-widest uppercase">
                   TOTAL AMOUNT
                 </span>
                 <span
-                  className="text-xl sm:text-2xl font-black font-mono text-[#E5B224]"
-                  style={{ color: '#E5B224' }}
+                  className="text-xl sm:text-2xl font-black font-mono text-[#C5A059]"
+                  style={{ color: '#C5A059' }}
                 >
                   ₹{bill.total}
                 </span>
@@ -399,16 +418,10 @@ export function InvoiceTemplate({
                   <span>Balance Due</span>
                   <strong
                     className={`font-mono font-bold ${
-                      (bill.dueAmount || 0) > 0 ? 'text-rose-600' : 'text-slate-900'
+                      (bill.dueAmount || 0) > 0 ? 'text-red-600' : 'text-slate-900'
                     }`}
                   >
                     ₹{bill.dueAmount || 0}
-                  </strong>
-                </div>
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Payment Method</span>
-                  <strong className="text-slate-900 font-bold uppercase">
-                    [{bill.mode || 'UPI'}]
                   </strong>
                 </div>
               </div>
@@ -419,41 +432,18 @@ export function InvoiceTemplate({
         {/* 6. THANK YOU BOX */}
         <div className="px-6 sm:px-8 pb-4">
           <div
-            className="p-4 rounded-2xl border border-[#E5B224]/30 bg-[#FDFBF7] flex items-center gap-3.5"
-            style={{ backgroundColor: '#FDFBF7', borderColor: 'rgba(229, 178, 36, 0.35)' }}
+            className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 text-center"
           >
-            <div
-              className="w-10 h-10 rounded-full bg-[#0C1427] text-[#E5B224] flex items-center justify-center shrink-0 shadow-sm"
-              style={{ backgroundColor: '#0C1427', color: '#E5B224' }}
-            >
-              {/* Scissors Icon */}
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="6" cy="6" r="3" />
-                <circle cx="6" cy="18" r="3" />
-                <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                <line x1="8.12" y1="8.12" x2="12" y2="12" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-extrabold text-slate-900">
-                Thank you for visiting{' '}
-                <span className="text-[#D4AF37]" style={{ color: '#D4AF37' }}>
-                  {shopProfile.shopName || 'StyleFleet Salon'}
-                </span>
-                .
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                We look forward to serving you again!
-              </p>
-            </div>
+            <p className="text-xs sm:text-sm text-slate-700">
+              Thank you for visiting <strong className="text-slate-900">{shopProfile.shopName || 'StyleFleet Salon'}</strong>. We look forward to serving you again!
+            </p>
           </div>
         </div>
 
         {/* 7. BOTTOM ATTRIBUTION */}
-        <div className="py-4 text-center border-t border-slate-100 bg-slate-50/50">
+        <div className="py-4 text-center border-t border-slate-100 bg-white">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            POWERED BY STYLEFLEET · {shopProfile.shopName || 'SALON'}
+            POWERED BY STYLEFLEET
           </p>
         </div>
       </div>

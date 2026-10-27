@@ -113,6 +113,8 @@ export interface Bill {
   editedAt?: string;
   notes?: string;
   discount?: number;
+  tax?: number;
+  tip?: number;
 }
 
 export interface Expense {

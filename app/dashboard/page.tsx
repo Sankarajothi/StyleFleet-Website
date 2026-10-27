@@ -17,6 +17,7 @@ import { RemindersView } from '@/components/reminders';
 import { AccountsView } from '@/components/accounts';
 import { SettingsView } from '@/components/settings';
 import { InvoiceTemplate } from '@/components/invoice-template';
+import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
 
 function DashboardContent() {
   const router = useRouter();
@@ -872,34 +873,26 @@ function DashboardContent() {
               }}
               onShareWhatsApp={() => {
                 setIsWhatsAppShared(true);
-                const itemsText = (activeInvoice.items || [])
-                  .map((it) => `• ${it.name} (x${it.qty || 1}) - ₹${(it.price || 0) * (it.qty || 1)}`)
-                  .join('\n');
-                const msgText =
-                  `*${shopProfile.shopName.toUpperCase()}*\n` +
-                  `*Invoice #${activeInvoice.id}*\n` +
-                  `Date: ${activeInvoice.dateStr}\n` +
-                  `Client: ${activeInvoice.cust}\n` +
-                  `Stylist: ${activeInvoice.staff}\n` +
-                  `--------------------\n` +
-                  `*Services Availed:*\n${itemsText}\n` +
-                  `--------------------\n` +
-                  `Total: ₹${activeInvoice.total}\n` +
-                  `Paid (${activeInvoice.mode}): ₹${activeInvoice.paidAmount}\n` +
-                  (activeInvoice.dueAmount > 0
-                    ? `Pending Due: ₹${activeInvoice.dueAmount}\n`
-                    : `Status: Fully Paid\n`) +
-                  `--------------------\n` +
-                  `Thank you for visiting ${shopProfile.shopName}!`;
-
-                const phoneTarget = activeInvoice.phone ? `91${activeInvoice.phone}` : '';
-                window.open(
-                  `https://wa.me/${phoneTarget}?text=${encodeURIComponent(msgText)}`,
-                  '_blank'
-                );
+                const msgText = buildOfficialWhatsAppBillMessage({
+                  shopName: shopProfile.shopName || 'StyleFleet Salon',
+                  shopPhone: shopProfile.phone || '',
+                  upiId: shopProfile.upiId || '',
+                  customerName: activeInvoice.cust || 'Client',
+                  invoiceNumber: activeInvoice.id,
+                  billId: activeInvoice.id,
+                  totalAmount: activeInvoice.total,
+                  paidAmount: activeInvoice.paidAmount,
+                  dueAmount: activeInvoice.dueAmount,
+                  paymentMethod: activeInvoice.mode || 'UPI',
+                  socialLinks: {
+                    instagram: shopProfile.instagram,
+                    facebook: shopProfile.facebook,
+                  },
+                });
+                openWhatsAppBill(activeInvoice.phone, msgText);
                 showToast(
                   activeInvoice.phone
-                    ? `Invoice shared via WhatsApp to +91 ${activeInvoice.phone}!`
+                    ? `Official invoice shared via WhatsApp to +91 ${activeInvoice.phone}!`
                     : 'Invoice prefilled in WhatsApp!'
                 );
               }}
