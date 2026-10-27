@@ -212,6 +212,25 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
 
           {/* Quick Action CTAs */}
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 lg:pt-0">
+            {/* Small background-free "View Analytics" text button for Owner */}
+            {!isStylist && (
+              <button
+                type="button"
+                onClick={() => setCurrentScreen('analytics')}
+                className={`text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 px-2.5 py-2 ${
+                  isDarkMode
+                    ? 'text-[#D4AF37] hover:text-white'
+                    : 'text-amber-800 hover:text-amber-950'
+                }`}
+                title="Open Deep Analytics 360"
+              >
+                <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <span>View Analytics</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onOpenNewBooking}
@@ -242,40 +261,6 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
             </button>
           </div>
         </div>
-
-        {/* Executive Deep Analytics 360 Banner (Owner Only) */}
-        {!isStylist && (
-          <div
-            onClick={() => setCurrentScreen('analytics')}
-            className={`p-4 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-              isDarkMode
-                ? 'bg-[#0B1528] hover:bg-[#101F3B] border-[#D4AF37]/30 text-white'
-                : 'bg-amber-50/60 hover:bg-amber-100/60 border-amber-300 text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center font-black shrink-0">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <div>
-                <strong className="text-xs font-bold block text-[#D4AF37]">
-                  Salon Deep Analytics & Intelligence Suite 360°
-                </strong>
-                <span className={`text-[11px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Explore break-even economics, chair turnaround, staff ROI, customer cohorts, and peak rush matrix.
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#D4AF37] shrink-0">
-              <span>View Analytics</span>
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ========================================================= */}

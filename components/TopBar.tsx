@@ -46,6 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
       case 'accounts': return 'Expenses';
       case 'expenses': return 'Expenses';
       case 'reports': return 'Reports';
+      case 'analytics': return 'Deep Analytics 360°';
       case 'settings': return t.settings;
       default: return t.dashboard;
     }
@@ -95,6 +96,27 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
 
       {/* 2. Right Side: Search Capsule, Reminder, Theme Switcher, User Profile */}
       <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* Small background-free "View Analytics" text button for Owner */}
+        {role === 'owner' && (
+          <button
+            type="button"
+            onClick={() => setCurrentScreen('analytics')}
+            className={`text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 px-2 py-1 ${
+              currentScreen === 'analytics'
+                ? 'text-[#D4AF37] underline underline-offset-4'
+                : isDarkMode
+                ? 'text-slate-300 hover:text-[#D4AF37]'
+                : 'text-slate-700 hover:text-amber-800'
+            }`}
+            title="Open Deep Analytics 360"
+          >
+            <svg className="w-3.5 h-3.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span className="hidden sm:inline">View Analytics</span>
+          </button>
+        )}
+
         {/* Search Input Bar */}
         <div
           className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs w-52 md:w-64 focus-within:border-[#D4AF37] transition-colors ${
