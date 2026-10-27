@@ -368,7 +368,10 @@ export default function HomePage() {
               <img
                 src="/assets/stylefleet-logo.png"
                 alt="StyleFleet Logo"
-                className="w-full h-full object-cover"
+                width={40}
+                height={40}
+                className="w-10 h-10 object-cover"
+                style={{ maxWidth: '40px', maxHeight: '40px' }}
               />
             </div>
             <div className="flex flex-col">
@@ -885,8 +888,8 @@ export default function HomePage() {
               {/* Visual Panel Info Overlay */}
               <div className="absolute bottom-8 left-7 right-7 z-20 space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#07152B]/95 border border-[#F5A623]/50 shadow-lg">
-                  <div className="w-5 h-5 rounded-md overflow-hidden flex items-center justify-center p-0.5 bg-[#F5A623]/20">
-                    <img src="/assets/stylefleet-logo.png" alt="StyleFleet" className="w-full h-full object-contain" />
+                  <div className="w-5 h-5 rounded-md overflow-hidden flex items-center justify-center p-0.5 bg-[#F5A623]/20 shrink-0">
+                    <img src="/assets/stylefleet-logo.png" alt="StyleFleet" width={20} height={20} className="w-5 h-5 object-contain" style={{ maxWidth: '20px', maxHeight: '20px' }} />
                   </div>
                   <span className="text-[11px] font-bold text-[#F5A623] uppercase tracking-wider flex items-center gap-1.5">
                     {role === 'owner' ? (
@@ -1179,7 +1182,7 @@ export default function HomePage() {
           {/* Brand & Platform */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#D4AF37]/40 bg-[#0B1E3B] flex items-center justify-center p-0 shrink-0">
-              <img src="/assets/stylefleet-logo.png" alt="StyleFleet" className="w-full h-full object-cover" />
+              <img src="/assets/stylefleet-logo.png" alt="StyleFleet" width={32} height={32} className="w-8 h-8 object-cover" style={{ maxWidth: '32px', maxHeight: '32px' }} />
             </div>
             <span className="text-white font-semibold text-xs tracking-wide">Salon Management Platform</span>
           </div>
