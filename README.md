@@ -32,10 +32,10 @@ cp .env.example .env.local
 
 Configure your credentials:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://nqwgxkdpwpgqkezaqsrx.supabase.co
+NEXT_PUBLIC_SUPABASE_URL= your_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 TWO_FACTOR_API_KEY=your_2factor_api_key
-TWO_FACTOR_TEMPLATE_NAME=Login_Verification_OTP
+TWO_FACTOR_TEMPLATE_NAME=your_template
 ```
 
 ### 3. Installation & Run
