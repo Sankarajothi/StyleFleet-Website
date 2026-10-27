@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STYLEFLEET — Salon, beautifully managed</title>
+  
+  <!-- Browser Favicon & Apple Touch Icons -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="shortcut icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="assets/stylefleet-logo.png">
+
+  <!-- Typography: Plus Jakarta Sans & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,600;1,700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS Grid & Utility Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- StyleFleet Custom Luxury Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="selection:bg-[#D4AF37] selection:text-slate-900">
+
+  <!-- Ambient Luxury Gradient Light Orbs -->
+  <div class="ambient-glow-wrapper" aria-hidden="true">
+    <div class="glow-orb glow-gold"></div>
+    <div class="glow-orb glow-blue"></div>
+  </div>
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-40 glass-nav px-4 sm:px-8 py-4 transition-all duration-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      
+      <!-- Brand Logo & Name -->
+      <a href="javascript:void(0)" onclick="returnHome()" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-xl overflow-hidden border border-[#D4AF37]/50 shadow-md shadow-[#D4AF37]/20 bg-[#091730] flex items-center justify-center p-1 group-hover:border-[#D4AF37] transition-all">
+          <img src="assets/stylefleet-logo.png" alt="StyleFleet Logo" class="w-full h-full object-contain">
+        </div>
+        <div class="flex flex-col">
+          <span class="text-base font-extrabold tracking-[0.22em] text-white">STYLEFLEET</span>
+          <span class="text-[10px] uppercase tracking-widest text-[#D4AF37] font-semibold -mt-1">Salon OS</span>
+        </div>
+      </a>
+
+      <!-- Center Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-[#A7B0C3]">
+        <a href="#features" class="hover:text-[#E0C068] transition-colors">Features</a>
+        <a href="#billing" class="hover:text-[#E0C068] transition-colors">Express Billing</a>
+        <a href="#appointments" class="hover:text-[#E0C068] transition-colors">Appointments</a>
+        <a href="#stylists" class="hover:text-[#E0C068] transition-colors">Stylist Team</a>
+      </nav>
+
+      <!-- Right Action Controls -->
+      <div class="flex items-center gap-3">
+        <button onclick="openLogin('owner')" class="btn-outline-glass text-xs sm:text-sm py-2 sm:py-2.5 px-3.5 sm:px-5">
+          <span>Sign In</span>
+        </button>
+        <button onclick="openLogin('owner')" class="btn-primary-gold shimmer-btn text-xs sm:text-sm py-2 sm:py-2.5 px-4 sm:px-5 shadow-lg">
+          <span>Get Started</span>
+          <span aria-hidden="true">↗</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+
+  <!-- ================= VIEW 1: HOME / LANDING PAGE ================= -->
+  <main id="view-home">
+
+    <!-- HERO SECTION -->
+    <section class="relative pt-12 pb-20 sm:pt-20 sm:pb-28 px-4 sm:px-8 max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center hero-grid">
+        
+        <!-- Left Hero Copy -->
+        <div class="lg:col-span-7 space-y-7 text-left">
+          
+          <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068] uppercase tracking-widest">
+            <span class="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse"></span>
+            <span>The Modern Salon Management Suite</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.08]">
+            Your salon,<br>
+            <em class="font-display italic text-gold-gradient font-normal">beautifully</em> managed.
+          </h1>
+
+          <p class="text-base sm:text-lg text-[#A7B0C3] max-w-xl leading-relaxed font-normal">
+            Less time managing. More time creating. Bring express billing, real-time appointments, staff performance, and client WhatsApp engagement together in one seamless luxury workspace.
+          </p>
+
+          <!-- Dual Hero CTAs -->
+          <div class="flex flex-wrap items-center gap-4 pt-2">
+            <button onclick="openLogin('owner')" class="btn-primary-gold shimmer-btn text-base py-3.5 px-7">
+              <span>Get Started Now</span>
+              <span>↗</span>
+            </button>
+            <button onclick="openLogin('stylist')" class="btn-outline-glass text-base py-3.5 px-6">
+              <span>Stylist Workspace ✦</span>
+            </button>
+          </div>
+
+          <!-- Social Proof & Trust Mark -->
+          <div class="pt-4 flex items-center gap-4 text-xs font-semibold text-[#8B98AF]">
+            <div class="flex -space-x-2">
+              <div class="w-8 h-8 rounded-full border-2 border-[#07152B] bg-[#1E3A66] flex items-center justify-center text-xs text-[#E0C068]">✦</div>
+              <div class="w-8 h-8 rounded-full border-2 border-[#07152B] bg-[#294B82] flex items-center justify-center text-xs text-[#E0C068]">♛</div>
+              <div class="w-8 h-8 rounded-full border-2 border-[#07152B] bg-[#335C9E] flex items-center justify-center text-xs text-[#E0C068]">✂️</div>
+            </div>
+            <span>Trusted by premium salons, stylists & independent beauty artists</span>
+          </div>
+
+        </div>
+
+        <!-- Right Hero Visual Showcase with Floating Cards -->
+        <div class="lg:col-span-5 hero-visual-container">
+          
+          <!-- Main Salon Image -->
+          <div class="hero-main-photo-frame">
+            <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&q=85" 
+                 alt="Luxury modern salon styling chairs and golden mirror stations">
+          </div>
+
+          <!-- Floating KPI 1: Real-time Revenue -->
+          <div class="floating-kpi-card kpi-bottom-left">
+            <p class="text-[10px] uppercase font-bold tracking-wider text-[#A7B0C3] mb-1">Today's Revenue</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-2xl font-extrabold text-white">₹ 24,850</span>
+              <span class="text-xs font-bold text-emerald-400">↗ +18.4%</span>
+            </div>
+            <p class="text-[10px] text-[#737D92] mt-1">14 completed bills · 0 dues</p>
+          </div>
+
+          <!-- Floating KPI 2: Live Appointment Status -->
+          <div class="floating-kpi-card kpi-top-right flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#E0C068] text-lg font-bold">
+              ✦
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold tracking-wider text-[#A7B0C3]">Next Chair</p>
+              <p class="text-sm font-bold text-white">Deepa K. · Hair Spa</p>
+              <p class="text-[10px] text-[#D4AF37]">In Chair · 11:30 AM</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- KEY SALON METRICS RIBBON -->
+    <section class="border-y border-white/10 bg-[#0B1E3B]/60 py-10 px-4 sm:px-8">
+      <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+          <span class="text-3xl sm:text-4xl font-extrabold text-gold-gradient block">15 Sec</span>
+          <span class="text-xs sm:text-sm text-[#A7B0C3] mt-1 block">Express Multi-Service Billing</span>
+        </div>
+        <div>
+          <span class="text-3xl sm:text-4xl font-extrabold text-gold-gradient block">99.2%</span>
+          <span class="text-xs sm:text-sm text-[#A7B0C3] mt-1 block">Appointment Turn-up Rate</span>
+        </div>
+        <div>
+          <span class="text-3xl sm:text-4xl font-extrabold text-gold-gradient block">360°</span>
+          <span class="text-xs sm:text-sm text-[#A7B0C3] mt-1 block">Real-time Financial Audit</span>
+        </div>
+        <div>
+          <span class="text-3xl sm:text-4xl font-extrabold text-gold-gradient block">2 Roles</span>
+          <span class="text-xs sm:text-sm text-[#A7B0C3] mt-1 block">Owner & Stylist Workspaces</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES & SALON CAPABILITIES SHOWCASE -->
+    <section id="features" class="py-20 px-4 sm:px-8 max-w-7xl mx-auto">
+      
+      <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+        <span class="text-xs font-bold text-[#E0C068] uppercase tracking-[0.2em]">Designed For The Craft Of Hair & Beauty</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Everything your salon needs to thrive.</h2>
+        <p class="text-sm sm:text-base text-[#A7B0C3]">Engineered for high-volume salon days. Clear, lightning-fast, and designed with high aesthetics.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Feature 1: Express Billing -->
+        <article class="glass-card overflow-hidden flex flex-col" id="billing">
+          <div class="feature-image-box">
+            <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80" 
+                 alt="Stylist consulting with customer">
+          </div>
+          <div class="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-[#D4AF37] uppercase tracking-widest">01 / BILLING</span>
+              <h3 class="text-xl font-bold text-white mt-1 mb-2">Express Bill & Settle</h3>
+              <p class="text-xs sm:text-sm text-[#A7B0C3] leading-relaxed">
+                Add multiple services in taps, assign stylists, record Cash, UPI QR or partial payments, and instantly share WhatsApp PDF receipts.
+              </p>
+            </div>
+            <div class="pt-2 text-xs font-semibold text-[#D4AF37] flex items-center gap-1">
+              <span>Instant WhatsApp Delivery</span> <span>→</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Feature 2: Appointments -->
+        <article class="glass-card overflow-hidden flex flex-col" id="appointments">
+          <div class="feature-image-box">
+            <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80" 
+                 alt="Luxury styling station and chairs">
+          </div>
+          <div class="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-[#D4AF37] uppercase tracking-widest">02 / APPOINTMENTS</span>
+              <h3 class="text-xl font-bold text-white mt-1 mb-2">Chair Schedule & Walk-ins</h3>
+              <p class="text-xs sm:text-sm text-[#A7B0C3] leading-relaxed">
+                Manage appointment queues effortlessly. Mark clients as arrived, trigger pre-filled checkout, and eliminate chair wait times.
+              </p>
+            </div>
+            <div class="pt-2 text-xs font-semibold text-[#D4AF37] flex items-center gap-1">
+              <span>One-Click Bill & Close</span> <span>→</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Feature 3: Stylist Performance -->
+        <article class="glass-card overflow-hidden flex flex-col" id="stylists">
+          <div class="feature-image-box">
+            <img src="https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=800&q=80" 
+                 alt="Master hair stylist cut and styling">
+          </div>
+          <div class="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-[#D4AF37] uppercase tracking-widest">03 / STYLIST TEAM</span>
+              <h3 class="text-xl font-bold text-white mt-1 mb-2">Dedicated Stylist Portal</h3>
+              <p class="text-xs sm:text-sm text-[#A7B0C3] leading-relaxed">
+                Empower your artists with their own workspace. Stylists see daily chair appointments, service counts, tips, and commission tallies.
+              </p>
+            </div>
+            <div class="pt-2 text-xs font-semibold text-[#D4AF37] flex items-center gap-1">
+              <span>Stylist Transparency</span> <span>→</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- CALL TO ACTION BANNER -->
+    <section class="py-16 px-4 sm:px-8 max-w-5xl mx-auto">
+      <div class="glass-card p-10 sm:p-14 text-center relative overflow-hidden border border-[#D4AF37]/40 shadow-2xl">
+        <div class="max-w-2xl mx-auto space-y-4">
+          <span class="text-xs font-bold text-[#E0C068] uppercase tracking-widest">Your Salon's Next Chapter</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Make every salon day flow effortlessly.</h2>
+          <p class="text-sm sm:text-base text-[#A7B0C3] leading-relaxed">
+            Step into a more organised, elegant way to run your salon, serve your clients, and empower your styling team.
+          </p>
+          <div class="pt-4 flex flex-wrap justify-center gap-4">
+            <button onclick="openLogin('owner')" class="btn-primary-gold shimmer-btn py-3.5 px-8 text-base font-bold">
+              <span>Get Started Now</span>
+              <span>↗</span>
+            </button>
+            <button onclick="openLogin('stylist')" class="btn-outline-glass py-3.5 px-6 text-base font-semibold">
+              <span>Stylist Sign In</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-white/10 py-10 px-4 sm:px-8 bg-[#061224] text-xs text-[#737D92]">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <img src="assets/stylefleet-logo.png" alt="StyleFleet" class="w-7 h-7 object-contain">
+          <span class="text-white font-extrabold tracking-widest">STYLEFLEET</span>
+          <span>· Salon OS Platform</span>
+        </div>
+        <p>© 2026 StyleFleet Technologies. Designed for the craft of beauty.</p>
+        <div class="flex items-center gap-6 text-[#A7B0C3]">
+          <a href="#features" class="hover:text-white transition-colors">Features</a>
+          <a href="javascript:void(0)" onclick="openLogin('owner')" class="hover:text-white transition-colors">Owner Login</a>
+          <a href="javascript:void(0)" onclick="openLogin('stylist')" class="hover:text-white transition-colors">Stylist Login</a>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+
+  <!-- ================= VIEW 2: DEDICATED CLEAN LOGIN PAGE ================= -->
+  <section id="view-login" class="login-view-wrapper hidden">
+    
+    <div class="login-card-container">
+      
+      <!-- Left Visual Panel with High-End Salon Interior -->
+      <div class="login-visual-panel hidden md:block">
+        <img src="https://images.unsplash.com/photo-1633681926022-84c23e8cb2d2?auto=format&fit=crop&w=1200&q=85" 
+             alt="Luxury salon interior aesthetic">
+        
+        <div class="login-visual-caption space-y-2">
+          <div class="w-10 h-10 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/50 flex items-center justify-center p-1 mb-3">
+            <img src="assets/stylefleet-logo.png" alt="StyleFleet Logo" class="w-full h-full object-contain">
+          </div>
+          <h3 class="text-xl font-bold text-white tracking-tight">STYLEFLEET</h3>
+          <p id="visual-role-quote" class="text-xs text-[#A7B0C3] italic leading-relaxed">
+            "Complete visibility into salon operations, stylist performance, and client satisfaction."
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Form Panel (Clean, Uncluttered, Pure UI) -->
+      <div class="login-form-panel">
+        
+        <!-- Back to Home Button -->
+        <button onclick="returnHome()" class="self-start mb-6 inline-flex items-center gap-2 text-xs font-semibold text-[#A7B0C3] hover:text-[#E0C068] transition-colors">
+          <span>←</span> <span>Back to StyleFleet Home</span>
+        </button>
+
+        <!-- Header -->
+        <div class="space-y-1 mb-4">
+          <div class="flex items-center justify-between">
+            <h2 id="login-role-title" class="text-2xl font-extrabold text-white tracking-tight">Salon Owner Workspace</h2>
+            <span id="login-role-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#D4AF37]/15 text-[#E0C068] border border-[#D4AF37]/40">
+              <span>👑</span> <span>Salon Owner</span>
+            </span>
+          </div>
+          <p id="login-role-subtitle" class="text-xs text-[#A7B0C3] leading-relaxed">
+            Sign in to access your salon billing, appointments, staff team & real-time revenue analytics.
+          </p>
+        </div>
+
+        <!-- Role Tabs: Owner vs Stylist -->
+        <div class="role-tabs">
+          <button type="button" id="role-tab-owner" onclick="setRole('owner')" class="role-tab-btn active">
+            <span class="text-lg block mb-1">♛</span>
+            <strong class="text-xs block font-bold text-white">Salon Owner</strong>
+            <span class="text-[10px] text-[#A7B0C3] block mt-0.5">Billing & Management</span>
+          </button>
+          <button type="button" id="role-tab-stylist" onclick="setRole('stylist')" class="role-tab-btn">
+            <span class="text-lg block mb-1">✦</span>
+            <strong class="text-xs block font-bold text-white">Stylist</strong>
+            <span class="text-[10px] text-[#A7B0C3] block mt-0.5">Queue & Daily Tips</span>
+          </button>
+        </div>
+
+        <!-- STEP 1: MOBILE NUMBER ENTRY -->
+        <div id="step-phone" class="space-y-4">
+          <form onsubmit="handlePhoneSubmit(event)">
+            <div class="input-group">
+              <label for="input-phone" class="input-label">Mobile Number</label>
+              <div class="relative flex items-center">
+                <span class="absolute left-4 text-sm font-bold text-[#A7B0C3] select-none">+91</span>
+                <input type="tel" 
+                       id="input-phone" 
+                       maxlength="10" 
+                       inputmode="numeric" 
+                       placeholder="Enter 10-digit mobile number" 
+                       required 
+                       class="custom-input pl-14">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary-gold shimmer-btn w-full py-3.5 text-sm font-bold mt-2">
+              <span>Continue with Mobile</span>
+              <span>↗</span>
+            </button>
+          </form>
+
+          <p class="text-[11px] text-center text-[#5E697E] pt-2">
+            Secure authentication via SMS OTP verification code.
+          </p>
+        </div>
+
+        <!-- STEP 2: 6-DIGIT OTP VERIFICATION -->
+        <div id="step-otp" class="space-y-4 hidden">
+          <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <div>
+              <span class="text-[11px] text-[#A7B0C3] block">Verification code sent to</span>
+              <strong id="otp-sent-phone" class="text-xs font-bold text-white">+91 </strong>
+            </div>
+            <button type="button" onclick="switchToPhoneStep()" class="text-xs font-bold text-[#E0C068] hover:underline">
+              Change
+            </button>
+          </div>
+
+          <form onsubmit="handleOtpVerify(event)">
+            <label class="input-label">Enter 6-Digit OTP</label>
+            <div class="otp-container">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-1">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-2">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-3">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-4">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-5">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-6">
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-[#A7B0C3] mb-4">
+              <span id="resend-timer-text">Resend code in 30s</span>
+              <button type="button" id="btn-resend-otp" onclick="handleResendOtp()" class="text-[#E0C068] font-bold hover:underline hidden">
+                Resend code
+              </button>
+            </div>
+
+            <button type="submit" class="btn-primary-gold shimmer-btn w-full py-3.5 text-sm font-bold">
+              <span>Verify & Access Workspace</span>
+              <span>↗</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Application Controller Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>

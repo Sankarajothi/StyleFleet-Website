@@ -1,0 +1,441 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0B1F44;
+  --bg-card: #121B33;
+  --bg-surface: #1A2746;
+  --border-default: #2A3858;
+  --border-input: #2A3858;
+  --border-focus: #D4AF37;
+
+  --gold-primary: #D4AF37;
+  --gold-light: #E0C068;
+  --gold-warm: #B8863B;
+  --gold-dark: #8C6239;
+  --gold-gradient: #D4AF37;
+
+  --text-heading: #F8FAFC;
+  --text-primary: #F8FAFC;
+  --text-muted: #A7B0C3;
+  --text-dim: #737D92;
+
+  --chip-bg: rgba(212, 175, 55, 0.38);
+  --chip-text: #EAE6D6;
+
+  --error: #EF4444;
+
+  --btn-text: #0B1F44;
+  --ease-luxury: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.light, body.light, .light {
+  --bg-primary: #FAF8F3;
+  --bg-card: #FFFFFF;
+  --bg-surface: #F7F9FC;
+  --border-default: #CBD5E1;
+  --border-input: #CBD5E1;
+  --border-focus: #D4AF37;
+
+  --text-heading: #000000;
+  --text-primary: #0F172A;
+  --text-muted: #0F172A;
+  --text-dim: #1E293B;
+
+  --chip-bg: #FEF3C7;
+  --chip-text: #5B2500;
+
+  --error: #DC2626;
+
+  --btn-text: #000000;
+  --border-subtle: #CBD5E1;
+  --border-gold: rgba(212, 175, 55, 0.45);
+}
+
+/* High-contrast bold and dark typography engine in light mode */
+html.light body,
+html.light {
+  color: #0F172A;
+}
+
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4,
+html.light h5,
+html.light h6 {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+html.light strong,
+html.light b,
+html.light .font-black,
+html.light .font-extrabold {
+  color: #000000;
+  font-weight: 800;
+}
+
+html.light label {
+  color: #0F172A !important;
+  font-weight: 800 !important;
+}
+
+html.light p,
+html.light span:not([class*="text-emerald"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-blue"]):not([class*="text-[#D4AF37]"]):not([class*="text-[#8C6239]"]):not([class*="text-[#B8863B]"]):not([class*="text-[#5B2500]"]):not([class*="text-rose"]):not([class*="text-green"]) {
+  font-weight: 600;
+}
+
+/* Force any grey or faint text classes in light mode to deep black/dark charcoal & bold */
+html.light .text-\[\#1F2937\],
+html.light .text-\[\#374151\],
+html.light .text-\[\#4B5563\],
+html.light .text-\[\#737D92\],
+html.light .text-\[\#A7B0C3\],
+html.light .text-slate-400,
+html.light .text-slate-500,
+html.light .text-slate-600,
+html.light .text-gray-400,
+html.light .text-gray-500,
+html.light .text-gray-600 {
+  color: #0F172A !important;
+  font-weight: 700 !important;
+}
+
+/* Prevent accidental white text on white backgrounds in light mode */
+html.light .bg-white .text-white,
+html.light .bg-\[\#FAF8F3\] .text-white,
+html.light .bg-\[\#F7F9FC\] .text-white,
+html.light .bg-\[\#FFFDF7\] .text-white,
+html.light .bg-\[\#FFFDF5\] .text-white,
+html.light .bg-slate-50 .text-white,
+html.light .bg-slate-100 .text-white,
+html.light main .text-white:not([class*="bg-"]):not(button.bg-blue-600 *):not(button.bg-emerald-600 *):not(button.bg-rose-600 *):not(button.bg-red-600 *) {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+/* Crisp high-contrast borders for cards and tables in light mode */
+html.light .border-\[\#E2E8F0\],
+html.light .border-slate-200 {
+  border-color: #CBD5E1 !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ambient Drifting Glow Orbs */
+.ambient-glow-wrapper {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.16;
+  will-change: transform;
+}
+
+.glow-gold {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, #D4AF37 0%, rgba(212, 175, 55, 0) 70%); /* taste-skill-ignore */
+  top: -150px;
+  left: -120px;
+  animation: floatOrb 26s var(--ease-luxury) infinite alternate;
+}
+
+.glow-blue {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #2563EB 0%, rgba(37, 99, 235, 0) 70%); /* taste-skill-ignore */
+  bottom: -180px;
+  right: -100px;
+  animation: floatOrb2 30s var(--ease-luxury) infinite alternate;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(80px, 60px) scale(1.12); }
+  100% { transform: translate(30px, 120px) scale(0.95); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-100px, -50px) scale(1.15); }
+  100% { transform: translate(-40px, -110px) scale(0.92); }
+}
+
+.text-gold-gradient {
+  color: var(--gold-primary);
+}
+
+/* Glassmorphism */
+.glass-nav {
+  background: rgba(7, 21, 43, 0.84);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(15, 35, 68, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  transition: transform 0.35s var(--ease-luxury), border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(212, 175, 55, 0.35);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+
+/* Luxury Gold Button with Shimmer */
+.btn-primary-gold {
+  background: #D4AF37;
+  color: var(--btn-text);
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s var(--ease-luxury), background 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.25);
+}
+
+.btn-primary-gold:hover {
+  background: #E0C068;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(212, 175, 55, 0.35);
+}
+
+.btn-primary-gold:active {
+  transform: translateY(0);
+  background: #B8863B;
+}
+
+/* Focused input with gold glow */
+input:focus, select:focus, textarea:focus {
+  border-color: #D4AF37 !important;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.4);
+}
+
+.shimmer-btn::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -70%;
+  width: 45%;
+  height: 220%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); /* taste-skill-ignore */
+  transform: rotate(25deg);
+  transition: left 0.75s ease;
+}
+
+.shimmer-btn:hover::after {
+  left: 140%;
+}
+
+.btn-outline-glass {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s var(--ease-luxury);
+}
+
+.btn-outline-glass:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(212, 175, 55, 0.5);
+  color: var(--gold-light);
+  transform: translateY(-2px);
+}
+
+/* Floating Metric Badges */
+.floating-kpi-card {
+  position: absolute;
+  background: rgba(13, 32, 64, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  animation: kpiFloat 6s ease-in-out infinite;
+}
+
+@keyframes kpiFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Glassmorphism Luxury Suite */
+.glass-luxury-frame {
+  background: rgba(15, 35, 68, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.glass-luxury-card {
+  background: rgba(15, 33, 62, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  transition: all 0.4s var(--ease-luxury);
+}
+
+.glass-luxury-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(212, 175, 55, 0.45);
+  box-shadow: 0 25px 50px -10px rgba(212, 175, 55, 0.15), 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+}
+
+.glass-pill {
+  background: rgba(212, 175, 55, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.hero-mesh-bg {
+  background: 
+    radial-gradient(circle at 18% 25%, rgba(212, 175, 55, 0.14) 0%, transparent 45%), /* taste-skill-ignore */
+    radial-gradient(circle at 82% 35%, rgba(37, 99, 235, 0.18) 0%, transparent 50%), /* taste-skill-ignore */
+    radial-gradient(circle at 50% 80%, rgba(184, 134, 59, 0.12) 0%, transparent 60%); /* taste-skill-ignore */
+}
+
+.hero-grid-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px); /* taste-skill-ignore */
+  background-size: 32px 32px;
+}
+
+/* Dribbble 2026 Award-Grade UI Tokens */
+@keyframes borderShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.border-shimmer-gold {
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.2), rgba(255, 255, 255, 0.4), rgba(212, 175, 55, 0.2)); /* taste-skill-ignore */
+  background-size: 200% 200%;
+  animation: borderShimmer 4s ease infinite;
+}
+
+@keyframes gentleHover {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-gentle-hover {
+  animation: gentleHover 5s ease-in-out infinite;
+}
+
+@keyframes floatingDashboard {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(0.35deg); }
+}
+
+.animate-floating-dashboard {
+  animation: floatingDashboard 6s ease-in-out infinite;
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(6px) rotate(-0.35deg); }
+}
+
+.animate-float-reverse {
+  animation: floatReverse 5.5s ease-in-out infinite;
+}
+
+@keyframes slowPulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.animate-slow-pulse {
+  animation: slowPulse 3.5s ease-in-out infinite;
+}
+
+.bento-card-luxury {
+  background: #0B1E3B;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card-luxury:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 30px rgba(212, 175, 55, 0.12);
+}
+
+.floating-pill-nav {
+  background: rgba(9, 23, 48, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ================= PRINT STYLES FOR SALON THERMAL RECEIPT ================= */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 78mm;
+    max-width: 100%;
+    margin: 0;
+    padding: 8px 12px;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.35;
+    z-index: 999999;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+

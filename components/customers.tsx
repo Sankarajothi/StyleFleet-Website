@@ -1,0 +1,1560 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useSalon, Customer, Bill } from '@/components/SalonContext';
+
+interface CustomersProps {
+  onOpenAddClientModal?: () => void;
+}
+
+export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
+  const {
+    customers,
+    addCustomer,
+    toggleCustomerVip,
+    updateCustomer,
+    deleteCustomer,
+    markCustomerInactive,
+    reactivateCustomer,
+    importCustomers,
+    bills,
+    appointments,
+    setCurrentScreen,
+    setBillCustName,
+    setBillCustPhone,
+    shopProfile,
+    showToast,
+    isDarkMode,
+  } = useSalon();
+
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'vip' | 'dues' | 'inactive'>('all');
+
+  // Modals & Popovers
+  const [showAddChoiceModal, setShowAddChoiceModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  
+  // Three dots menu active customer id
+  const [openMenuCustId, setOpenMenuCustId] = useState<string | null>(null);
+
+  // Edit Customer Modal state
+  const [editingCust, setEditingCust] = useState<Customer | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editVip, setEditVip] = useState(false);
+  const [editDue, setEditDue] = useState<number>(0);
+  const [editNotes, setEditNotes] = useState('');
+
+  // Customer Visit History Modal (opened when touching client)
+  const [historyCust, setHistoryCust] = useState<Customer | null>(null);
+
+  // Notes Modal state (opened when touching notes)
+  const [notesCust, setNotesCust] = useState<Customer | null>(null);
+  const [tempNotes, setTempNotes] = useState('');
+
+  // Settle Due Modal state
+  const [settlingDueCust, setSettlingDueCust] = useState<Customer | null>(null);
+  const [settleAmount, setSettleAmount] = useState<number>(0);
+
+  // Manual Add Form State
+  const [formName, setFormName] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formDue, setFormDue] = useState<number>(0);
+  const [formVip, setFormVip] = useState(false);
+  const [formNotes, setFormNotes] = useState('');
+
+  // Contacts Import State (Clean real device / file import, no dummy names)
+  const [deviceContacts, setDeviceContacts] = useState<Array<{ name: string; phone: string; notes?: string }>>([]);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+
+  // Native Device Contact Picker (supported on mobile browsers)
+  const handlePickDeviceContacts = async () => {
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      try {
+        const props = ['name', 'tel'];
+        const contacts = await (navigator as any).contacts.select(props, { multiple: true });
+        if (contacts && contacts.length > 0) {
+          const formatted = contacts.map((c: any) => ({
+            name: Array.isArray(c.name) ? c.name[0] : (c.name || 'Contact'),
+            phone: Array.isArray(c.tel) ? c.tel[0].replace(/\D/g, '').slice(-10) : (c.tel || '').replace(/\D/g, '').slice(-10),
+            notes: 'Imported from phone contacts',
+          })).filter((c: any) => c.phone && c.phone.length >= 10);
+          setDeviceContacts(formatted);
+          setSelectedContacts(formatted.map((c: any) => c.phone));
+          showToast(`Loaded ${formatted.length} contacts from device.`);
+        }
+      } catch {
+        showToast('Contact selection cancelled or permission denied.', 'error');
+      }
+    } else {
+      showToast('Native Contact Picker is supported on mobile devices. You can also upload a .csv / .vcf contact file.', 'error');
+    }
+  };
+
+  // Contacts file upload (.csv or .vcf)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) return;
+      const parsed: Array<{ name: string; phone: string; notes?: string }> = [];
+      const lines = text.split('\n');
+      for (const line of lines) {
+        const parts = line.split(/[,\t;]/);
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          const phone = parts[1].replace(/\D/g, '').slice(-10);
+          if (name && phone.length === 10) {
+            parsed.push({ name, phone, notes: 'Imported via contact file' });
+          }
+        }
+      }
+      if (parsed.length > 0) {
+        setDeviceContacts(parsed);
+        setSelectedContacts(parsed.map((c) => c.phone));
+        showToast(`Loaded ${parsed.length} contacts from file.`);
+      } else {
+        showToast('No valid name & 10-digit phone pairs found in file. Format: Name, Phone', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Split Active vs Inactive Customers
+  const activeCustomers = customers.filter((c) => c.status !== 'inactive');
+  const inactiveCustomers = customers.filter((c) => c.status === 'inactive');
+
+  // KPI Calculations (based on active client base)
+  const totalClients = activeCustomers.length;
+  const vipCount = activeCustomers.filter((c) => c.vip).length;
+  const totalDue = activeCustomers.reduce((sum, c) => sum + (c.due || 0), 0);
+  const dueClientsCount = activeCustomers.filter((c) => (c.due || 0) > 0).length;
+  const inactiveCount = inactiveCustomers.length;
+
+  // Filtered Customers based on activeTab and searchTerm
+  const filteredCustomers = customers.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm) ||
+      (c.notes && c.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'inactive') {
+      return c.status === 'inactive';
+    }
+
+    // Default tabs show active clients
+    if (c.status === 'inactive') return false;
+
+    if (activeTab === 'vip') return c.vip;
+    if (activeTab === 'dues') return (c.due || 0) > 0;
+    return true;
+  });
+
+  // Handle trigger phone contacts API or modal fallback
+  const handleTriggerImportContacts = async () => {
+    setShowAddChoiceModal(false);
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      try {
+        const props = ['name', 'tel'];
+        const opts = { multiple: true };
+        const deviceContacts = await (navigator as any).contacts.select(props, opts);
+        if (deviceContacts && deviceContacts.length > 0) {
+          const newClients = deviceContacts.map((c: any) => {
+            const name = (Array.isArray(c.name) ? c.name[0] : c.name) || 'Imported Contact';
+            const rawTel = (Array.isArray(c.tel) ? c.tel[0] : c.tel) || '';
+            const phone = rawTel.replace(/\D/g, '').slice(-10);
+            return {
+              name,
+              phone: phone.length >= 7 ? phone : (rawTel.replace(/\D/g, '') || '9876543210'),
+              vip: false,
+              due: 0,
+              notes: 'Imported from phone contacts',
+              lastVisit: 'New Client',
+            };
+          });
+          importCustomers(newClients);
+          showToast(`Imported ${newClients.length} contacts from your phone!`);
+          return;
+        }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+    // Desktop or unsupported/denied browser fallback
+    setShowImportModal(true);
+  };
+
+  // Handle Manual Add Client Submit
+  const handleSaveManualClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim() || !formPhone.trim()) {
+      showToast('Please enter both name and mobile number', 'error');
+      return;
+    }
+    if (formPhone.replace(/\D/g, '').length < 10) {
+      showToast('Please enter a valid 10-digit mobile number', 'error');
+      return;
+    }
+
+    addCustomer({
+      name: formName.trim(),
+      phone: formPhone.replace(/\D/g, ''),
+      vip: formVip,
+      due: Number(formDue) || 0,
+      notes: formNotes.trim(),
+      lastVisit: 'Today',
+    });
+
+    setFormName('');
+    setFormPhone('');
+    setFormDue(0);
+    setFormVip(false);
+    setFormNotes('');
+    setShowManualModal(false);
+  };
+
+  // Open Edit Client Modal
+  const handleOpenEdit = (c: Customer) => {
+    setEditingCust(c);
+    setEditName(c.name);
+    setEditPhone(c.phone);
+    setEditVip(c.vip);
+    setEditDue(c.due || 0);
+    setEditNotes(c.notes || '');
+    setOpenMenuCustId(null);
+  };
+
+  // Save Edit Client
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCust) return;
+    if (!editName.trim() || !editPhone.trim()) {
+      showToast('Name and mobile cannot be empty', 'error');
+      return;
+    }
+
+    updateCustomer(editingCust.id, {
+      name: editName.trim(),
+      phone: editPhone.replace(/\D/g, ''),
+      vip: editVip,
+      due: Number(editDue) || 0,
+      notes: editNotes.trim(),
+    });
+
+    setEditingCust(null);
+  };
+
+  // Handle Contacts Import
+  const handleImportContacts = () => {
+    if (selectedContacts.length === 0) {
+      showToast('Please select at least one contact to import', 'error');
+      return;
+    }
+
+    const toImport = deviceContacts
+      .filter((sc) => selectedContacts.includes(sc.phone))
+      .map((sc) => ({
+        name: sc.name,
+        phone: sc.phone,
+        vip: false,
+        due: 0,
+        notes: sc.notes,
+        lastVisit: 'New Client',
+      }));
+
+    importCustomers(toImport);
+    setSelectedContacts([]);
+    setDeviceContacts([]);
+    setShowImportModal(false);
+  };
+
+  // Handle Due Settle
+  const handleSettleDue = () => {
+    if (!settlingDueCust) return;
+    const currentDue = settlingDueCust.due || 0;
+    const payment = Math.min(currentDue, Math.max(0, settleAmount));
+    const newDue = currentDue - payment;
+
+    updateCustomer(settlingDueCust.id, { due: newDue });
+    showToast(`Received ₹${payment} due payment for ${settlingDueCust.name}. Remaining: ₹${newDue}`);
+    setSettlingDueCust(null);
+  };
+
+  // Get Bills & Visits for a specific customer
+  const getCustomerBills = (c: Customer): Bill[] => {
+    return bills.filter(
+      (b) =>
+        b.phone === c.phone ||
+        b.cust.toLowerCase() === c.name.toLowerCase()
+    );
+  };
+
+  return (
+    <section className="space-y-6 animate-fadeIn pb-16">
+      {/* ================= 3 TOP KPI CARDS ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* KPI 1: Total Clients */}
+        <div
+          className={`p-5 rounded-2xl border transition-all shadow-md relative overflow-hidden group ${
+            isDarkMode
+              ? 'bg-[#121B33] border-[#2A3858] hover:border-[#2A3858]'
+              : 'bg-white border-[#E2E8F0] shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
+                Total Registered Clients
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
+                  {totalClients}
+                </span>
+                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-0.5">
+                  ↑ Active
+                </span>
+              </div>
+              <p className={`text-[11px] pt-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                Full salon client database ledger
+              </p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-blue-500/5 rounded-full blur-xl" />
+        </div>
+
+        {/* KPI 2: VIP / MVP Customers */}
+        <div
+          className={`p-5 rounded-2xl border transition-all shadow-md relative overflow-hidden group ${
+            isDarkMode
+              ? 'bg-[#121B33] border-[#2A3858] hover:border-amber-500/30'
+              : 'bg-white border-[#E2E8F0] shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-wider flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                </svg>
+                <span>VIP / MVP Clients</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-[#D4AF37] tracking-tight">
+                  {vipCount}
+                </span>
+                <span className={`text-xs font-semibold ${isDarkMode ? 'text-amber-300/80' : 'text-[#8C6239]'}`}>
+                  ({Math.round((vipCount / Math.max(1, totalClients)) * 100)}% of total)
+                </span>
+              </div>
+              <p className={`text-[11px] pt-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                High-spend loyalty regulars & priority booking
+              </p>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[#D4AF37] flex items-center justify-center">
+              <svg className="w-5 h-5 fill-amber-400" viewBox="0 0 24 24">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-amber-500/5 rounded-full blur-xl" />
+        </div>
+
+        {/* KPI 3: Total Amount Due */}
+        <div
+          className={`p-5 rounded-2xl border transition-all shadow-md relative overflow-hidden group ${
+            isDarkMode
+              ? 'bg-[#121B33] border-[#2A3858] hover:border-rose-500/30'
+              : 'bg-white border-[#E2E8F0] shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-rose-400' : 'text-[#DC2626]'}`}>
+                Total Pending Dues
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-3xl font-extrabold tracking-tight ${totalDue > 0 ? (isDarkMode ? 'text-rose-400' : 'text-[#DC2626]') : (isDarkMode ? 'text-emerald-400' : 'text-emerald-600')}`}>
+                  ₹{totalDue.toLocaleString('en-IN')}
+                </span>
+                <span className={`text-xs font-semibold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
+                  {dueClientsCount} {dueClientsCount === 1 ? 'client' : 'clients'}
+                </span>
+              </div>
+              <p className={`text-[11px] pt-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                {totalDue > 0 ? 'Outstanding client credit to collect' : 'All customer balances fully settled!'}
+              </p>
+            </div>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${
+              totalDue > 0 ? 'bg-rose-500/10 border-rose-500/25 text-rose-400' : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+            }`}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-rose-500/5 rounded-full blur-xl" />
+        </div>
+      </div>
+
+      {/* ================= CONTROLS & FILTER BAR ================= */}
+      <div
+        className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-[#E2E8F0] shadow-sm'
+        }`}
+      >
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-md">
+          <svg
+            className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by client name, mobile or preference notes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full pl-10 pr-4 py-2 rounded-xl border text-xs focus:outline-none focus:border-[#D4AF37] transition-all ${
+    isDarkMode
+      ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC] placeholder:text-[#737D92]'
+      : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937] placeholder:text-[#4B5563]'
+  }`}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A7B0C3] hover:text-white text-xs cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Tab Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'all'
+                ? `bg-[#D4AF37] ${isDarkMode ? 'text-[#0B1F44]' : 'text-[#1F2937]'} shadow-md shadow-amber-400/20`
+                : isDarkMode
+                ? 'bg-[#1A2746] text-[#A7B0C3] hover:text-[#F8FAFC] border border-[#2A3858]'
+                : 'bg-[#F7F9FC] text-[#374151] hover:text-[#1F2937] border border-[#E2E8F0]'
+            }`}
+          >
+            All Clients ({totalClients})
+          </button>
+          <button
+            onClick={() => setActiveTab('vip')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+              activeTab === 'vip'
+                ? `bg-[#D4AF37] ${isDarkMode ? 'text-[#0B1F44]' : 'text-[#1F2937]'} shadow-md shadow-amber-400/20`
+                : isDarkMode
+                ? 'bg-[#1A2746] text-[#A7B0C3] hover:text-[#F8FAFC] border border-[#2A3858]'
+                : 'bg-[#F7F9FC] text-[#374151] hover:text-[#1F2937] border border-[#E2E8F0]'
+            }`}
+          >
+            <svg className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]" viewBox="0 0 24 24">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+            </svg>
+            <span>VIP / MVPs ({vipCount})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('dues')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+              activeTab === 'dues'
+                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                : isDarkMode
+                ? 'bg-[#1A2746] text-[#A7B0C3] hover:text-[#F8FAFC] border border-[#2A3858]'
+                : 'bg-[#F7F9FC] text-[#374151] hover:text-[#1F2937] border border-[#E2E8F0]'
+            }`}
+          >
+            <svg className="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>With Dues ({dueClientsCount})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('inactive')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+              activeTab === 'inactive'
+                ? 'bg-slate-700 text-[#D4AF37] border border-[#D4AF37]/50 shadow-md'
+                : isDarkMode
+                ? 'bg-[#1A2746] text-[#A7B0C3] hover:text-[#F8FAFC] border border-[#2A3858]'
+                : 'bg-[#F7F9FC] text-[#374151] hover:text-[#1F2937] border border-[#E2E8F0]'
+            }`}
+          >
+            <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            <span>Inactive Records ({inactiveCount})</span>
+          </button>
+        </div>
+
+        {/* Add Client Trigger Button (Ultra-Luxury Premium) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
+            className="relative group px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
+          >
+            <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            <span className="tracking-wide text-[11px] font-black">Add Client</span>
+            <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Add Choice Dropdown Popover */}
+          {showAddChoiceModal && (
+            <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-40 space-y-1 animate-fadeIn ${
+    isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'
+  }`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddChoiceModal(false);
+                  setShowManualModal(true);
+                }}
+                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+                <div>
+                  <strong className={`text-xs font-bold block group-hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                    Add Client Manually
+                  </strong>
+                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                    Full name, mobile, initial due & notes
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTriggerImportContacts}
+                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                    Import from Contacts
+                  </strong>
+                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                    Device address book or contacts selector
+                  </span>
+                </div>
+              </button>
+
+              <div className={`pt-1 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddChoiceModal(false)}
+                  className="w-full py-1 text-center text-[10px] font-semibold text-[#737D92] hover:text-slate-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= 2 CUSTOMERS PER LINE GRID ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredCustomers.length === 0 ? (
+          <div
+            className={`col-span-full p-12 rounded-2xl border text-center space-y-3 ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#A7B0C3]' : 'bg-white border-slate-200 text-[#737D92]'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h4 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>No clients found</h4>
+            <p className={`text-xs font-bold max-w-sm mx-auto ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#0F172A]'}`}>
+              No clients match &ldquo;{searchTerm}&rdquo;. Try adjusting your search term or add a new client to your CRM.
+            </p>
+            <button
+              onClick={() => setShowManualModal(true)}
+              className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs inline-flex items-center gap-1.5"
+            >
+              + Add Client Manually
+            </button>
+          </div>
+        ) : (
+          filteredCustomers.map((c) => {
+            const hasDue = (c.due || 0) > 0;
+            const isMenuOpen = openMenuCustId === c.id;
+
+            return (
+              <div
+                key={c.id}
+                className={`p-4 sm:p-5 rounded-2xl border transition-all shadow-md relative group flex flex-col justify-between gap-3 ${
+                  isDarkMode
+                    ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/40'
+                    : 'bg-white border-[#E2E8F0] hover:border-[#D4AF37]/60 shadow-sm'
+                }`}
+              >
+                {/* TOP ROW: Star Button + Avatar + Name/Phone + Icon Actions (WhatsApp, Call, Bill, 3 Dots) */}
+                <div className="flex items-start justify-between gap-2">
+                  {/* Left: Star + Avatar + Name/Phone (Touching client opens Visit History) */}
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    {/* STAR VIP BUTTON */}
+                    <button
+                      type="button"
+                      title={c.vip ? 'VIP / MVP Client (Click to remove)' : 'Mark as VIP / MVP Client'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCustomerVip(c.id);
+                      }}
+                      className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
+                        c.vip
+                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] shadow-sm shadow-amber-400/30'
+                          : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#737D92] hover:text-[#D4AF37] hover:border-[#D4AF37]/50' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#4B5563] hover:text-[#D4AF37] hover:border-[#D4AF37]/50'
+                      }`}
+                    >
+                      <svg
+                        className={`w-3.5 h-3.5 ${c.vip ? 'fill-amber-400 text-[#D4AF37]' : 'fill-none stroke-current'}`}
+                        viewBox="0 0 24 24"
+                        strokeWidth="2"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                        />
+                      </svg>
+                    </button>
+
+                    {/* TOUCH CLIENT FOR VISIT HISTORY */}
+                    <div
+                      onClick={() => setHistoryCust(c)}
+                      className="cursor-pointer flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90 transition-opacity"
+                      title="Touch to view complete visits and billing history"
+                    >
+                      {/* Avatar */}
+                      <div
+                        className={`w-10 h-10 rounded-xl border text-xs font-black flex items-center justify-center shrink-0 ${
+                          c.vip
+                            ? isDarkMode
+                              ? 'bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]'
+                              : 'bg-[#FEF3C7] border-[#D4AF37]/50 text-[#5B2500]'
+                            : isDarkMode
+                            ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3]'
+                            : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151]'
+                        }`}
+                      >
+                        {c.name.slice(0, 2).toUpperCase()}
+                      </div>
+
+                      {/* Name & Phone */}
+                      <div className="overflow-hidden min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <strong className={`text-xs sm:text-sm font-extrabold tracking-tight truncate hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
+                            {c.name}
+                          </strong>
+                          {c.vip && (
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 font-black tracking-wider uppercase">
+                              VIP
+                            </span>
+                          )}
+                          {c.status === 'inactive' && (
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-slate-500/20 text-slate-400 border border-slate-500/40 font-black tracking-wider uppercase">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[11px] block truncate ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
+                          +91 {c.phone}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Only Icons for WhatsApp, Call, Bill, and 3 Vertical Dots */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* WHATSAPP ICON BUTTON */}
+                    <button
+                      type="button"
+                      title={`WhatsApp message to ${c.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const msg = encodeURIComponent(
+                          `Hello ${c.name}! Greetings from ${shopProfile.shopName}. We hope to see you soon for your next salon experience!`
+                        );
+                        window.open(`https://wa.me/91${c.phone}?text=${msg}`, '_blank');
+                        showToast(`Opened WhatsApp chat for ${c.name}`);
+                      }}
+                      className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
+                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                      </svg>
+                    </button>
+
+                    {/* CALL ICON BUTTON */}
+                    <button
+                      type="button"
+                      title={`Call ${c.name} (+91 ${c.phone})`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`tel:+91${c.phone}`);
+                      }}
+                      className="w-8 h-8 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-400 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </button>
+
+                    {/* BILL ICON BUTTON */}
+                    <button
+                      type="button"
+                      title={`Create Express Bill for ${c.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBillCustName(c.name);
+                        setBillCustPhone(c.phone);
+                        setCurrentScreen('billing');
+                        showToast(`Pre-filled ${c.name} for Express Billing!`);
+                      }}
+                      className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+
+                    {/* THREE VERTICAL DOTS (MORE OPTIONS) */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        title="More options"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuCustId(isMenuOpen ? null : c.id);
+                        }}
+                        className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+                          isMenuOpen
+                            ? isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-200 border-slate-300 text-slate-900'
+                            : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3] hover:text-white' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151] hover:text-black'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                          <circle cx="12" cy="5" r="2" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="19" r="2" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown Menu for Edit and Inactive / Delete */}
+                      {isMenuOpen && (
+                        <div
+                          className={`absolute right-0 mt-1.5 w-44 rounded-xl border shadow-2xl p-1 z-30 animate-fadeIn ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(c)}
+                            className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors ${isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-[#1F2937] hover:bg-[#F7F9FC] hover:text-[#B8863B]'}`}
+                          >
+                            <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                            <span>Edit Client</span>
+                          </button>
+
+                          {c.status !== 'inactive' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuCustId(null);
+                                markCustomerInactive(c.id);
+                              }}
+                              className="w-full px-2.5 py-1.5 rounded-lg hover:bg-amber-500/15 text-left text-xs font-semibold text-amber-400 flex items-center gap-2 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                              </svg>
+                              <span>Mark Inactive</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuCustId(null);
+                                  reactivateCustomer(c.id);
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/15 text-left text-xs font-semibold text-emerald-400 flex items-center gap-2 transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Reactivate Client</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuCustId(null);
+                                  if (confirm(`Permanently remove ${c.name} from CRM ledger?`)) {
+                                    deleteCustomer(c.id);
+                                  }
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-lg hover:bg-rose-500/15 text-left text-xs font-semibold text-rose-400 flex items-center gap-2 transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                <span>Permanent Delete</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* MIDDLE: 4 Horizontal Metrics Pills */}
+                <div
+                  onClick={() => setHistoryCust(c)}
+                  className={`grid grid-cols-4 gap-2 py-2 px-3 rounded-xl border cursor-pointer transition-colors ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/40' : 'bg-[#F7F9FC] border-[#E2E8F0] hover:border-[#D4AF37]/50'}`}
+                  title="Touch to view complete visit history"
+                >
+                  <div className="text-center">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Visits</span>
+                    <strong className={`text-xs font-extrabold ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>{c.visits || 1}</strong>
+                  </div>
+                  <div className="text-center">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Last Visit</span>
+                    <strong className={`text-[11px] font-bold truncate block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>{c.lastVisit || 'Recently'}</strong>
+                  </div>
+                  <div className="text-center">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Spent</span>
+                    <strong className="text-xs font-extrabold text-[#D4AF37]">₹{(c.spend || 0).toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div className="text-center">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Due</span>
+                    {hasDue ? (
+                      <span className={`text-xs font-black block truncate ${isDarkMode ? 'text-rose-400' : 'text-[#DC2626]'}`}>₹{c.due}</span>
+                    ) : (
+                      <span className={`text-xs font-semibold block truncate ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>₹0</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* BOTTOM ROW: Client CRM Notes (Touch notes to view/edit) */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setNotesCust(c);
+                      setTempNotes(c.notes || '');
+                    }}
+                    className="flex-1 cursor-pointer group/notes hover:text-[#D4AF37] transition-colors mr-2 overflow-hidden"
+                    title="Touch client CRM notes to view or edit"
+                  >
+                    {c.notes ? (
+                      <div className={`p-1.5 rounded-lg border text-[11px] flex items-center gap-1.5 truncate ${isDarkMode ? 'bg-[#D4AF37]/15 border-[#D4AF37]/30 text-[#EAE6D6]' : 'bg-[#FEF3C7] border-[#D4AF37]/40 text-[#5B2500]'}`}>
+                        <svg className="w-3 h-3 text-[#D4AF37] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span className="truncate italic font-medium">{c.notes}</span>
+                      </div>
+                    ) : (
+                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${isDarkMode ? 'text-[#737D92] hover:text-[#D4AF37]' : 'text-[#4B5563] hover:text-[#B8863B]'}`}>
+                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>+ Add client CRM notes</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Visit History indicator pill */}
+                  <button
+                    type="button"
+                    onClick={() => setHistoryCust(c)}
+                    className={`text-[10px] font-bold shrink-0 flex items-center gap-0.5 transition-colors cursor-pointer ${isDarkMode ? 'text-[#A7B0C3] hover:text-[#D4AF37]' : 'text-[#374151] hover:text-[#B8863B]'}`}
+                  >
+                    <span>History</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ================= MODAL: CLIENT VISIT & BILLING HISTORY (TOUCHING CLIENT) ================= */}
+      {historyCust && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className={`p-6 rounded-3xl border max-w-lg w-full space-y-4 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-[#2A3858] pb-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-12 h-12 rounded-2xl border text-sm font-black flex items-center justify-center shrink-0 ${
+                    historyCust.vip
+                      ? 'bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]'
+                      : 'bg-[#1A2746] border-[#2A3858] text-slate-300'
+                  }`}
+                >
+                  {historyCust.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>{historyCust.name}</h3>
+                    {historyCust.vip && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 font-black">
+                        VIP MVP
+                      </span>
+                    )}
+                    {historyCust.status === 'inactive' && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/40 font-black tracking-wider uppercase">
+                        Inactive Record
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#A7B0C3]">+91 {historyCust.phone}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryCust(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-sm cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Quick Stats Banner */}
+            <div className={`grid grid-cols-3 gap-2 p-3 rounded-xl border text-center shrink-0 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
+              <div>
+                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Total Visits</span>
+                <strong className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>{historyCust.visits || 1}</strong>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Total Spent</span>
+                <strong className="text-sm font-extrabold text-[#D4AF37]">₹{(historyCust.spend || 0).toLocaleString('en-IN')}</strong>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Pending Due</span>
+                <strong className={`text-sm font-extrabold ${(historyCust.due || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  ₹{historyCust.due || 0}
+                </strong>
+              </div>
+            </div>
+
+            {/* Client CRM Notes In Banner */}
+            {historyCust.notes && (
+              <div className="p-3 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-xs text-amber-300/90 flex items-start gap-2 shrink-0">
+                <svg className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <div className="flex-1">
+                  <strong className="text-[11px] font-bold text-[#D4AF37] block">Client CRM Preference:</strong>
+                  <span>{historyCust.notes}</span>
+                </div>
+              </div>
+            )}
+
+            {/* History Feed List */}
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-[160px]">
+              <h4 className={`text-xs font-bold sticky top-0 py-1 ${isDarkMode ? 'text-[#A7B0C3] bg-[#1A2746]' : 'text-[#374151] bg-[#FFFFFF]'}`}>
+                Visit & Bill Ledger History
+              </h4>
+
+              {(() => {
+                const customerBills = getCustomerBills(historyCust);
+                if (customerBills.length === 0) {
+                  return (
+                    <div className="p-4 rounded-xl bg-[#121B33] border border-[#2A3858] text-center space-y-2">
+                      <p className="text-xs text-[#A7B0C3]">
+                        No previous digital invoices logged yet for this client.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBillCustName(historyCust.name);
+                          setBillCustPhone(historyCust.phone);
+                          setCurrentScreen('billing');
+                          setHistoryCust(null);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#D4AF37] text-[#0B1F44] font-bold text-xs"
+                      >
+                        Create First Bill
+                      </button>
+                    </div>
+                  );
+                }
+
+                return customerBills.map((bill) => (
+                  <div
+                    key={bill.id}
+                    className={`p-3.5 rounded-xl border space-y-2 transition-colors ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>#{bill.id}</strong>
+                        <span className="text-[11px] text-[#A7B0C3]">{bill.dateStr}</span>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                        bill.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        {bill.status} ({bill.mode})
+                      </span>
+                    </div>
+
+                    {/* Services Availed */}
+                    <div className="text-xs text-slate-300 space-y-1 pt-1 border-t border-[#2A3858]">
+                      {bill.items.map((it, idx) => (
+                        <div key={idx} className="flex justify-between text-[11px]">
+                          <span>{it.name} × {it.qty}</span>
+                          <span className="font-mono text-[#A7B0C3]">₹{it.price * it.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs pt-1 border-t border-[#2A3858]">
+                      <span className="text-[11px] text-[#A7B0C3]">Stylist: <strong className="text-slate-200">{bill.staff}</strong></span>
+                      <span className="font-extrabold text-[#D4AF37] font-mono">Total: ₹{bill.total}</span>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex gap-2.5 pt-3 border-t border-[#2A3858] shrink-0">
+              {historyCust.status === 'inactive' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    reactivateCustomer(historyCust.id);
+                    setHistoryCust({ ...historyCust, status: 'active' });
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Reactivate to Active CRM</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBillCustName(historyCust.name);
+                    setBillCustPhone(historyCust.phone);
+                    setCurrentScreen('billing');
+                    setHistoryCust(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <span>Create New Bill</span>
+                  <span>→</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setHistoryCust(null)}
+                className={`px-4 py-2.5 rounded-xl border border-[#2A3858] text-xs font-semibold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'}`}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT CLIENT CRM NOTES (TOUCHING NOTES) ================= */}
+      {notesCust && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className={`p-6 rounded-3xl border max-w-sm w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
+            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>Client CRM Notes</h3>
+                  <p className="text-[11px] text-[#A7B0C3]">{notesCust.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotesCust(null)}
+                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div>
+              <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>
+                Preferences, Haircut Style, Allergies or Notes
+              </label>
+              <textarea
+                rows={4}
+                placeholder="e.g. Skin fade cut, sensitive scalp, likes warm black tea, weekend appointments..."
+                value={tempNotes}
+                onChange={(e) => setTempNotes(e.target.value)}
+                className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none transition-all ${isDarkMode ? 'placeholder-[#737D92]' : 'placeholder-[#4B5563]'} resize-none`}
+              />
+            </div>
+
+            <div className="flex gap-2.5 pt-2 border-t border-[#2A3858]">
+              <button
+                type="button"
+                onClick={() => setNotesCust(null)}
+                className={`flex-1 py-2 rounded-xl border border-[#2A3858] text-xs font-bold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'}`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateCustomer(notesCust.id, { notes: tempNotes.trim() });
+                  setNotesCust(null);
+                }}
+                className={`flex-1 py-2 rounded-xl bg-[#D4AF37] text-xs font-extrabold ${isDarkMode ? 'text-[#0B1F44]' : 'text-[#1F2937]'} hover:brightness-105 cursor-pointer`}
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT CLIENT (FROM 3 DOTS) ================= */}
+      {editingCust && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
+            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>Edit Client Details</h3>
+                  <p className="text-[11px] text-[#A7B0C3]">{editingCust.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCust(null)}
+                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5">
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Mobile Number *</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#D4AF37]">+91</span>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ''))}
+                    className={`w-full pl-12 pr-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} font-mono focus:border-[#D4AF37] outline-none`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Outstanding Due Balance (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editDue || ''}
+                  onChange={(e) => setEditDue(Number(e.target.value))}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} font-mono focus:border-[#D4AF37] outline-none`}
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#121B33] border border-[#2A3858] flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]" viewBox="0 0 24 24">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                  <span>VIP / MVP Client</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={editVip}
+                  onChange={(e) => setEditVip(e.target.checked)}
+                  className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Client CRM Notes / Preferences</label>
+                <textarea
+                  rows={2}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none resize-none`}
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+                <button
+                  type="button"
+                  onClick={() => setEditingCust(null)}
+                  className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-xs font-extrabold ${isDarkMode ? 'text-[#0B1F44]' : 'text-[#1F2937]'} cursor-pointer`}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ADD CLIENT MANUALLY ================= */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="p-6 rounded-3xl bg-[#1A2746] border border-[#2A3858] max-w-md w-full space-y-4 shadow-2xl animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center text-sm">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>Add Client Manually</h3>
+                  <p className="text-[11px] text-[#A7B0C3]">Register new customer to salon CRM ledger</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualModal(false)}
+                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveManualClient} className="space-y-3.5">
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none transition-all ${isDarkMode ? 'placeholder-[#737D92]' : 'placeholder-[#4B5563]'}`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Mobile Number (WhatsApp) *</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#D4AF37]">+91</span>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    placeholder="10-digit mobile number"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ''))}
+                    className={`w-full pl-12 pr-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} font-mono focus:border-[#D4AF37] outline-none transition-all ${isDarkMode ? 'placeholder-[#737D92]' : 'placeholder-[#4B5563]'}`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Initial Due or Opening Balance (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0 (if no pending balance)"
+                  value={formDue || ''}
+                  onChange={(e) => setFormDue(Number(e.target.value))}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none transition-all ${isDarkMode ? 'placeholder-[#737D92]' : 'placeholder-[#4B5563]'} font-mono`}
+                />
+              </div>
+
+              <div className={`p-3 rounded-xl border flex items-center justify-between ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#FFFDF5] border-[#D4AF37]/50'}`}>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#D4AF37] fill-[#D4AF37]" viewBox="0 0 24 24">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                  <div>
+                    <strong className={`text-xs font-black block ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Mark as VIP / MVP Client</strong>
+                    <span className={`text-[10px] font-bold block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#0F172A]'}`}>Priority service & gold highlight</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormVip(!formVip)}
+                  className={`w-12 h-6 rounded-full transition-colors relative flex items-center px-1 cursor-pointer ${
+                    formVip ? 'bg-[#D4AF37]' : 'bg-slate-700'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${formVip ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'} mb-1.5 uppercase tracking-wider`}>Client Preference or Notes</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Skin fade cut, prefers green tea, allergic to ammonia bleach..."
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs ${isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'} focus:border-[#D4AF37] outline-none transition-all ${isDarkMode ? 'placeholder-[#737D92]' : 'placeholder-[#4B5563]'} resize-none`}
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+                <button
+                  type="button"
+                  onClick={() => setShowManualModal(false)}
+                  className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'} hover:bg-slate-800 transition-all`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-xs font-extrabold ${isDarkMode ? 'text-[#0B1F44]' : 'text-[#1F2937]'} shadow-md active:scale-98 transition-all cursor-pointer`}
+                >
+                  Save Client
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: IMPORT FROM CONTACTS ================= */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className={`p-6 rounded-3xl border max-w-lg w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
+            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-sm">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>Import from Contacts</h3>
+                  <p className="text-[11px] text-[#A7B0C3]">Select contacts to import into StyleFleet CRM</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-[#A7B0C3] pt-1">
+              <span>{deviceContacts.length} contacts loaded</span>
+              {deviceContacts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedContacts.length === deviceContacts.length) {
+                      setSelectedContacts([]);
+                    } else {
+                      setSelectedContacts(deviceContacts.map((c) => c.phone));
+                    }
+                  }}
+                  className="text-[#D4AF37] font-bold hover:underline cursor-pointer"
+                >
+                  {selectedContacts.length === deviceContacts.length ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+            </div>
+
+            {/* Quick action buttons to load contacts from mobile phone or file */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 pb-2">
+              <button
+                type="button"
+                onClick={handlePickDeviceContacts}
+                className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-[#0B1F44] border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                    : 'bg-[#FFFDF5] border-[#D4AF37] text-[#8C6239] hover:bg-[#FFF9E6]'
+                }`}
+              >
+                <svg className="w-4 h-4 text-inherit" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span>Open Phone Contacts</span>
+              </button>
+
+              <label
+                className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold cursor-pointer transition-all ${
+                  isDarkMode
+                    ? 'bg-[#0B1F44] border-white/10 text-white hover:border-[#D4AF37]/40'
+                    : 'bg-white border-slate-300 text-[#0F172A] hover:border-[#D4AF37]'
+                }`}
+              >
+                <svg className="w-4 h-4 text-inherit" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <span>Upload CSV / VCF File</span>
+                <input
+                  type="file"
+                  accept=".csv,.vcf,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {deviceContacts.length === 0 ? (
+                <div className={`p-6 rounded-2xl border text-center ${isDarkMode ? 'bg-[#0B1F44]/50 border-white/5 text-[#A7B0C3]' : 'bg-slate-50 border-slate-200 text-[#4B5563]'}`}>
+                  <p className="text-xs font-semibold">
+                    No contacts loaded yet. Tap &quot;Open Phone Contacts&quot; on your mobile phone or upload a contact file (.csv / .vcf) to import clients.
+                  </p>
+                </div>
+              ) : (
+                deviceContacts.map((contact) => {
+                  const isSelected = selectedContacts.includes(contact.phone);
+                  return (
+                    <div
+                      key={contact.phone}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedContacts(selectedContacts.filter((p) => p !== contact.phone));
+                        } else {
+                          setSelectedContacts([...selectedContacts, contact.phone]);
+                        }
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-[#D4AF37]/10 border-[#D4AF37]/50'
+                          : 'bg-[#121B33] border-[#2A3858] hover:border-[#2A3858]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center text-xs font-bold ${
+                            isSelected
+                              ? 'bg-[#D4AF37] border-[#D4AF37] text-[#0B1F44]'
+                              : 'border-[#2A3858] bg-transparent'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <strong className={`text-xs font-black block ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{contact.name}</strong>
+                          <span className={`text-[10px] font-bold block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#0F172A]'}`}>+91 {contact.phone}</span>
+                          {contact.notes && (
+                            <span className={`text-[10px] block font-bold italic ${isDarkMode ? 'text-amber-300/70' : 'text-[#8C6239]'}`}>
+                              {contact.notes}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-black ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#0F172A]'}`}>
+                        {isSelected ? 'Selected' : 'Click to select'}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'} hover:bg-slate-800 transition-all cursor-pointer`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleImportContacts}
+                disabled={selectedContacts.length === 0}
+                className={`flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-md active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+              >
+                Import {selectedContacts.length} Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
