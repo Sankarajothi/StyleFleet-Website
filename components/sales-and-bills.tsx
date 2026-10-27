@@ -87,6 +87,11 @@ export function SalesAndBillsView({
   const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
   const [tempDateInput, setTempDateInput] = useState<string>(yesterdayStr);
 
+  // Time-based Bar Chart State
+  const [timeGranularity, setTimeGranularity] = useState<'slots' | 'hourly'>('slots');
+  const [showPriorComparison, setShowPriorComparison] = useState<boolean>(true);
+  const [hoveredSlotKey, setHoveredSlotKey] = useState<string | null>(null);
+
   // Normal Invoice Modal (shown when touching any bill)
   const [selectedInvoiceBill, setSelectedInvoiceBill] = useState<Bill | null>(null);
   const [invoiceMenuOpen, setInvoiceMenuOpen] = useState<boolean>(false);
@@ -407,6 +412,157 @@ export function SalesAndBillsView({
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   }, [targetBills]);
+
+  // Helper to extract bill hour (0-23)
+  const getBillHour = (bill: Bill, fallbackIdx: number): number => {
+    if (bill.createdAt) {
+      const d = new Date(bill.createdAt);
+      if (!isNaN(d.getTime())) return d.getHours();
+    }
+    if (bill.dateStr) {
+      const m12 = bill.dateStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (m12) {
+        let h = parseInt(m12[1], 10);
+        const isPm = m12[3].toUpperCase() === 'PM';
+        if (isPm && h < 12) h += 12;
+        if (!isPm && h === 12) h = 0;
+        return h;
+      }
+      const m24 = bill.dateStr.match(/(\d{1,2}):(\d{2})/);
+      if (m24) {
+        const h = parseInt(m24[1], 10);
+        if (h >= 0 && h <= 23) return h;
+      }
+    }
+    const defaultHours = [10, 11, 12, 14, 15, 17, 18, 19, 20];
+    const code = (bill.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), fallbackIdx);
+    return defaultHours[code % defaultHours.length];
+  };
+
+  // Time-Based Bar Chart Data Calculation
+  const timeChartData = useMemo(() => {
+    if (salesOption === 'week') {
+      const days = [
+        { key: 'Mon', label: 'Mon', dayIdx: 1 },
+        { key: 'Tue', label: 'Tue', dayIdx: 2 },
+        { key: 'Wed', label: 'Wed', dayIdx: 3 },
+        { key: 'Thu', label: 'Thu', dayIdx: 4 },
+        { key: 'Fri', label: 'Fri', dayIdx: 5 },
+        { key: 'Sat', label: 'Sat', dayIdx: 6 },
+        { key: 'Sun', label: 'Sun', dayIdx: 0 },
+      ];
+
+      return days.map((d) => {
+        const matchTarget = targetBills.filter((b) => {
+          const date = b.createdAt ? new Date(b.createdAt) : b.dateStr ? new Date(b.dateStr) : null;
+          return date && date.getDay() === d.dayIdx;
+        });
+        const matchPrior = priorBills.filter((b) => {
+          const date = b.createdAt ? new Date(b.createdAt) : b.dateStr ? new Date(b.dateStr) : null;
+          return date && date.getDay() === d.dayIdx;
+        });
+        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        return {
+          key: d.key,
+          label: d.label,
+          targetRevenue: targetRev,
+          targetCount: matchTarget.length,
+          priorRevenue: priorRev,
+          priorCount: matchPrior.length,
+        };
+      });
+    }
+
+    if (timeGranularity === 'slots') {
+      const slots = [
+        { key: 's1', label: '9 - 11 AM', minH: 0, maxH: 11 },
+        { key: 's2', label: '11 - 1 PM', minH: 11, maxH: 13 },
+        { key: 's3', label: '1 - 3 PM', minH: 13, maxH: 15 },
+        { key: 's4', label: '3 - 5 PM', minH: 15, maxH: 17 },
+        { key: 's5', label: '5 - 7 PM', minH: 17, maxH: 19 },
+        { key: 's6', label: '7 - 9 PM', minH: 19, maxH: 21 },
+        { key: 's7', label: '9 PM+', minH: 21, maxH: 24 },
+      ];
+
+      return slots.map((s) => {
+        const matchTarget = targetBills.filter((b, idx) => {
+          const h = getBillHour(b, idx);
+          return h >= s.minH && h < s.maxH;
+        });
+        const matchPrior = priorBills.filter((b, idx) => {
+          const h = getBillHour(b, idx);
+          return h >= s.minH && h < s.maxH;
+        });
+        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        return {
+          key: s.key,
+          label: s.label,
+          targetRevenue: targetRev,
+          targetCount: matchTarget.length,
+          priorRevenue: priorRev,
+          priorCount: matchPrior.length,
+        };
+      });
+    } else {
+      const hours = [
+        { key: 'h9', label: '9 AM', h: 9 },
+        { key: 'h10', label: '10 AM', h: 10 },
+        { key: 'h11', label: '11 AM', h: 11 },
+        { key: 'h12', label: '12 PM', h: 12 },
+        { key: 'h13', label: '1 PM', h: 13 },
+        { key: 'h14', label: '2 PM', h: 14 },
+        { key: 'h15', label: '3 PM', h: 15 },
+        { key: 'h16', label: '4 PM', h: 16 },
+        { key: 'h17', label: '5 PM', h: 17 },
+        { key: 'h18', label: '6 PM', h: 18 },
+        { key: 'h19', label: '7 PM', h: 19 },
+        { key: 'h20', label: '8 PM', h: 20 },
+        { key: 'h21', label: '9 PM+', h: 21 },
+      ];
+
+      return hours.map((item) => {
+        const matchTarget = targetBills.filter((b, idx) => {
+          const bh = getBillHour(b, idx);
+          return item.h === 21 ? bh >= 21 : bh === item.h;
+        });
+        const matchPrior = priorBills.filter((b, idx) => {
+          const bh = getBillHour(b, idx);
+          return item.h === 21 ? bh >= 21 : bh === item.h;
+        });
+        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        return {
+          key: item.key,
+          label: item.label,
+          targetRevenue: targetRev,
+          targetCount: matchTarget.length,
+          priorRevenue: priorRev,
+          priorCount: matchPrior.length,
+        };
+      });
+    }
+  }, [salesOption, timeGranularity, targetBills, priorBills]);
+
+  // Peak Time Slot & Chart Scaling
+  const peakSlot = useMemo(() => {
+    let best = timeChartData[0];
+    timeChartData.forEach((s) => {
+      if (s.targetRevenue > (best?.targetRevenue || 0)) {
+        best = s;
+      }
+    });
+    return best && best.targetRevenue > 0 ? best : null;
+  }, [timeChartData]);
+
+  const maxSlotRev = useMemo(() => {
+    const maxVal = Math.max(
+      ...timeChartData.map((d) => Math.max(d.targetRevenue, showPriorComparison ? d.priorRevenue : 0)),
+      1
+    );
+    return maxVal;
+  }, [timeChartData, showPriorComparison]);
 
   // Comparative Bar Chart Max
   const chartMaxRevenue = Math.max(targetRevenue, priorRevenue, 1);
@@ -746,72 +902,236 @@ export function SalesAndBillsView({
               </div>
             </div>
 
-            {/* COMPARATIVE BAR CHART: LAST DAY VS TARGET DAY */}
+            {/* TIME-BASED SALES BAR CHART */}
             <div
               className={`lg:col-span-7 p-6 rounded-3xl border flex flex-col justify-between ${
                 isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
               }`}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/5 gap-2.5">
                 <div>
                   <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Comparative Sales Bar Chart
+                    Time-Based Sales Bar Chart
                   </h3>
                   <p className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    Volume comparison between {priorPeriodTitle.toLowerCase()} and {periodTitle.toLowerCase()}
+                    {salesOption === 'week' ? 'Day-wise weekly revenue progression' : 'Hourly distribution & peak styling rush intervals'}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-[11px]">
-                  <span className="flex items-center gap-1 text-slate-400">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
-                    <span>{priorPeriodTitle}</span>
-                  </span>
-                  <span className="flex items-center gap-1 text-[#D4AF37] font-bold">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#D4AF37]" />
-                    <span>{salesOption === 'today' ? 'Today' : periodTitle}</span>
-                  </span>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  {/* Granularity Switch (Slots vs Hourly) for single-day */}
+                  {salesOption !== 'week' && (
+                    <div
+                      className={`p-0.5 rounded-xl border flex items-center text-[10px] font-bold ${
+                        isDarkMode ? 'bg-[#0E1528] border-white/10' : 'bg-slate-100 border-slate-200'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setTimeGranularity('slots')}
+                        className={`px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${
+                          timeGranularity === 'slots'
+                            ? 'bg-[#D4AF37] text-[#0B1F44] font-black'
+                            : isDarkMode
+                            ? 'text-slate-400 hover:text-white'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        2-Hr Slots
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTimeGranularity('hourly')}
+                        className={`px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${
+                          timeGranularity === 'hourly'
+                            ? 'bg-[#D4AF37] text-[#0B1F44] font-black'
+                            : isDarkMode
+                            ? 'text-slate-400 hover:text-white'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Hourly
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Toggle Comparison vs Prior Period */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPriorComparison(!showPriorComparison)}
+                    className={`px-2 py-1 rounded-xl border text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                      showPriorComparison
+                        ? isDarkMode
+                          ? 'border-slate-600 bg-slate-700/30 text-slate-300'
+                          : 'border-slate-300 bg-slate-100 text-slate-700'
+                        : isDarkMode
+                        ? 'border-white/5 bg-transparent text-slate-500 hover:text-slate-300'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
+                    title="Toggle side-by-side comparison with prior period"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <span>Compare</span>
+                  </button>
                 </div>
               </div>
 
-              {/* 2 Comparative Vertical Bars */}
-              <div className="grid grid-cols-2 gap-6 items-end pt-8 pb-4 h-48">
-                {/* BAR 1: PRIOR PERIOD */}
-                <div className="flex flex-col items-center h-full justify-end group">
-                  <span className={`text-xs font-bold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    ₹{priorRevenue.toLocaleString('en-IN')}
+              {/* Chart Legend & Peak Highlight */}
+              <div className="flex items-center justify-between text-[11px] pt-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 font-bold text-[#D4AF37]">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#D4AF37]" />
+                    <span>{salesOption === 'today' ? 'Today' : periodTitle}</span>
                   </span>
-                  <div className="w-full max-w-[80px] bg-slate-800/40 rounded-2xl flex items-end overflow-hidden p-1 border border-slate-700/50">
-                    <div
-                      style={{ height: `${priorBarHeight}%` }}
-                      className="w-full bg-slate-500 hover:bg-slate-400 rounded-xl transition-transform"
-                    />
-                  </div>
-                  <span className={`text-xs font-bold mt-2.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    {priorPeriodTitle}
-                  </span>
-                  <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    {priorCount} bills
-                  </span>
+                  {showPriorComparison && (
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
+                      <span>{priorPeriodTitle}</span>
+                    </span>
+                  )}
                 </div>
 
-                {/* BAR 2: TARGET PERIOD */}
-                <div className="flex flex-col items-center h-full justify-end group">
-                  <span className="text-xs font-extrabold text-[#D4AF37] mb-2">
-                    ₹{targetRevenue.toLocaleString('en-IN')}
+                {peakSlot && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37]">
+                    Peak: {peakSlot.label}
                   </span>
-                  <div className="w-full max-w-[80px] bg-[#D4AF37]/10 rounded-2xl flex items-end overflow-hidden p-1 border border-[#D4AF37]/30">
+                )}
+              </div>
+
+              {/* Time-Based Vertical Bars Area */}
+              <div className="flex items-end gap-1.5 sm:gap-2.5 pt-6 pb-2 h-52 overflow-x-auto">
+                {timeChartData.map((slot) => {
+                  const targetHeight = maxSlotRev > 0
+                    ? Math.max(slot.targetRevenue > 0 ? 12 : 4, Math.round((slot.targetRevenue / maxSlotRev) * 100))
+                    : 4;
+                  const priorHeight = maxSlotRev > 0
+                    ? Math.max(slot.priorRevenue > 0 ? 12 : 4, Math.round((slot.priorRevenue / maxSlotRev) * 100))
+                    : 4;
+                  const isPeak = peakSlot && peakSlot.key === slot.key;
+                  const isHovered = hoveredSlotKey === slot.key;
+
+                  return (
                     <div
-                      style={{ height: `${targetBarHeight}%` }}
-                      className="w-full bg-[#D4AF37] rounded-xl transition-transform"
-                    />
-                  </div>
-                  <span className="text-xs font-black text-[#D4AF37] mt-2.5">
-                    {salesOption === 'today' ? "Today" : periodTitle}
+                      key={slot.key}
+                      onMouseEnter={() => setHoveredSlotKey(slot.key)}
+                      onMouseLeave={() => setHoveredSlotKey(null)}
+                      className="flex-1 min-w-[38px] flex flex-col items-center h-full justify-end group relative cursor-pointer"
+                    >
+                      {/* Floating Tooltip Bubble */}
+                      {isHovered && (
+                        <div
+                          className={`absolute -top-12 z-20 px-2 py-1 rounded-xl border shadow-xl text-[10px] whitespace-nowrap pointer-events-none animate-fadeIn ${
+                            isDarkMode ? 'bg-[#0B1528] border-[#2A3858] text-white' : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        >
+                          <div className="font-bold text-[#D4AF37]">
+                            {slot.label}: ₹{slot.targetRevenue.toLocaleString('en-IN')}
+                          </div>
+                          <div className="text-[9px] text-slate-300">
+                            {slot.targetCount} {slot.targetCount === 1 ? 'bill' : 'bills'}
+                            {showPriorComparison ? ` · Prior: ₹${slot.priorRevenue.toLocaleString('en-IN')}` : ''}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Revenue Label Above Bar */}
+                      <span
+                        className={`text-[9px] sm:text-[10px] font-bold mb-1.5 transition-colors truncate max-w-full ${
+                          isPeak
+                            ? 'text-[#D4AF37] font-black'
+                            : isDarkMode
+                            ? 'text-slate-400 group-hover:text-white'
+                            : 'text-slate-600 group-hover:text-slate-900'
+                        }`}
+                      >
+                        {slot.targetRevenue >= 1000
+                          ? `₹${(slot.targetRevenue / 1000).toFixed(1)}k`
+                          : slot.targetRevenue > 0
+                          ? `₹${slot.targetRevenue}`
+                          : '₹0'}
+                      </span>
+
+                      {/* Bar Container */}
+                      <div
+                        className={`w-full max-w-[42px] h-32 rounded-xl flex items-end p-0.5 border ${
+                          isPeak
+                            ? isDarkMode
+                              ? 'bg-[#D4AF37]/10 border-[#D4AF37]/50'
+                              : 'bg-amber-50 border-amber-300'
+                            : isDarkMode
+                            ? 'bg-[#0E1528] border-white/5 group-hover:border-white/20'
+                            : 'bg-slate-50 border-slate-200 group-hover:border-slate-300'
+                        }`}
+                      >
+                        {showPriorComparison ? (
+                          <div className="flex items-end justify-center gap-0.5 w-full h-full">
+                            {/* Prior Bar (Slate) */}
+                            <div
+                              style={{ height: `${priorHeight}%` }}
+                              className="w-1/2 max-w-[14px] bg-slate-500/80 hover:bg-slate-400 rounded-t-md transition-all"
+                              title={`${priorPeriodTitle}: ₹${slot.priorRevenue} (${slot.priorCount} bills)`}
+                            />
+                            {/* Target Bar (Gold) */}
+                            <div
+                              style={{ height: `${targetHeight}%` }}
+                              className={`w-1/2 max-w-[14px] rounded-t-md transition-all ${
+                                isPeak ? 'bg-[#D4AF37] hover:bg-[#C59F2E]' : 'bg-[#D4AF37]/80 hover:bg-[#D4AF37]'
+                              }`}
+                              title={`${salesOption === 'today' ? 'Today' : periodTitle}: ₹${slot.targetRevenue} (${slot.targetCount} bills)`}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            style={{ height: `${targetHeight}%` }}
+                            className={`w-full rounded-t-lg transition-all ${
+                              isPeak ? 'bg-[#D4AF37] hover:bg-[#C59F2E]' : 'bg-[#D4AF37]/85 hover:bg-[#D4AF37]'
+                            }`}
+                          />
+                        )}
+                      </div>
+
+                      {/* Time Slot Label Under Bar */}
+                      <span
+                        className={`text-[10px] mt-2 font-bold tracking-tight text-center ${
+                          isPeak
+                            ? 'text-[#D4AF37] font-black'
+                            : isDarkMode
+                            ? 'text-slate-300'
+                            : 'text-slate-700'
+                        }`}
+                      >
+                        {slot.label}
+                      </span>
+
+                      {/* Bill Count Sub-Label */}
+                      <span className={`text-[9px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                        {slot.targetCount}b
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Insight Strip */}
+              <div
+                className={`pt-3 border-t flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-2 ${
+                  isDarkMode ? 'border-white/5' : 'border-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Operating Window:
                   </span>
-                  <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    {targetCount} bills
-                  </span>
+                  <strong className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                    9:00 AM - 9:30 PM
+                  </strong>
                 </div>
+
+                {peakSlot && (
+                  <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                    Highest revenue recorded during <strong>{peakSlot.label}</strong> (₹{peakSlot.targetRevenue.toLocaleString('en-IN')} · {peakSlot.targetCount} bills)
+                  </span>
+                )}
               </div>
             </div>
           </div>
