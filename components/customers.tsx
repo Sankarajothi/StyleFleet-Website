@@ -25,7 +25,10 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
     shopProfile,
     showToast,
     isDarkMode,
+    role,
   } = useSalon();
+
+  const isStylist = role === 'stylist';
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -526,77 +529,93 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
 
         {/* Add Client Trigger Button (Ultra-Luxury Premium) */}
         <div className="relative">
-          <button
-            onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
-            className="relative group px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
-          >
-            <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            <span className="tracking-wide text-[11px] font-black">Add Client</span>
-            <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          {/* Add Choice Dropdown Popover */}
-          {showAddChoiceModal && (
-            <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-40 space-y-1 animate-fadeIn ${
-    isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'
-  }`}>
+          {isStylist ? (
+            <button
+              type="button"
+              onClick={() => setShowManualModal(true)}
+              className="px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span className="tracking-wide text-[11px] font-black">Add Client</span>
+            </button>
+          ) : (
+            <>
               <button
                 type="button"
-                onClick={() => {
-                  setShowAddChoiceModal(false);
-                  setShowManualModal(true);
-                }}
-                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group"
+                onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
+                className="relative group px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </div>
-                <div>
-                  <strong className={`text-xs font-bold block group-hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                    Add Client Manually
-                  </strong>
-                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-                    Full name, mobile, initial due & notes
-                  </span>
-                </div>
+                <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span className="tracking-wide text-[11px] font-black">Add Client</span>
+                <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
 
-              <button
-                type="button"
-                onClick={handleTriggerImportContacts}
-                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                    Import from Contacts
-                  </strong>
-                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-                    Device address book or contacts selector
-                  </span>
-                </div>
-              </button>
+              {/* Add Choice Dropdown Popover (Owner only) */}
+              {showAddChoiceModal && (
+                <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-40 space-y-1 animate-fadeIn ${
+                  isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddChoiceModal(false);
+                      setShowManualModal(true);
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <strong className={`text-xs font-bold block group-hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                        Add Client Manually
+                      </strong>
+                      <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                        Full name, mobile, initial due & notes
+                      </span>
+                    </div>
+                  </button>
 
-              <div className={`pt-1 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddChoiceModal(false)}
-                  className="w-full py-1 text-center text-[10px] font-semibold text-[#737D92] hover:text-slate-300 cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleTriggerImportContacts}
+                    className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                        Import from Contacts
+                      </strong>
+                      <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                        Device address book or contacts selector
+                      </span>
+                    </div>
+                  </button>
+
+                  <div className={`pt-1 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddChoiceModal(false)}
+                      className="w-full py-1 text-center text-[10px] font-semibold text-[#737D92] hover:text-slate-300 cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

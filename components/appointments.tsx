@@ -109,6 +109,18 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   const estimatedAmount = selectedServices.reduce((sum, s) => sum + s.price * s.qty, 0);
   const estimatedDuration = selectedServices.reduce((sum, s) => sum + s.dur * s.qty, 0);
 
+  const sendAppointmentReminder = (appt: Appointment) => {
+    const cleanPhone = (appt.phone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      showToast('Customer does not have a valid 10-digit mobile number.', 'error');
+      return;
+    }
+    const msg = `Hello ${appt.cust}! 👋\n\nThis is a friendly appointment reminder from *${shopProfile.shopName || 'StyleFleet Salon'}* for your *${appt.service}* appointment with stylist *${appt.staff}* scheduled for *${appt.startsAt}*.\n\nWe look forward to welcoming you! Please reply if you need to reschedule.`;
+    const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    showToast(`Dispatched WhatsApp reminder to ${appt.cust}!`);
+  };
+
   const handleSelectRecentClient = (client: { name: string; phone: string; preferredService?: string }) => {
     setClientName(client.name);
     setClientPhone(client.phone);
@@ -484,30 +496,53 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                       Stylist: <strong className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-[#1F2937]'}`}>{appt.staff}</strong>
                     </span>
 
-                    <div className="flex items-center gap-1.5">
-                      {appt.status !== 'Done' && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* 1. CONFIRMED STATUS: REMIND & MARK ARRIVED */}
+                      {appt.status === 'Confirmed' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => sendAppointmentReminder(appt)}
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                            title="Send WhatsApp appointment reminder"
+                          >
+                            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                            </svg>
+                            <span>Remind</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAppointmentStatus(appt.id, 'In chair');
+                              showToast(`${appt.cust} marked In Chair!`, 'success');
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Mark Arrived</span>
+                          </button>
+                        </>
+                      )}
+
+                      {/* 2. IN CHAIR STATUS: BILL & CLOSE */}
+                      {appt.status === 'In chair' && (
                         <button
                           type="button"
                           onClick={() => markArrivedAndBill(appt)}
                           className="px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black active:scale-95 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
                         >
-                          <span>Checkout & Bill</span>
-                          <span>→</span>
+                          <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                          </svg>
+                          <span>Bill & Close</span>
                         </button>
                       )}
 
-                      {appt.status === 'Confirmed' && (
-                        <button
-                          type="button"
-                          onClick={() => updateAppointmentStatus(appt.id, 'Done')}
-                          className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all ${
-                            isDarkMode
-                              ? 'bg-[#1A2746] border-[#2A3858] text-slate-300 hover:text-white'
-                              : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-                          }`}
-                        >
-                          Mark Done
-                        </button>
+                      {appt.status === 'Done' && (
+                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/25">
+                          Completed
+                        </span>
                       )}
 
                       <button
@@ -518,7 +553,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                             updateAppointmentStatus(appt.id, 'Cancelled');
                           }
                         }}
-                        className="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 flex items-center justify-center transition-colors cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

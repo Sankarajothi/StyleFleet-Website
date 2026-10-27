@@ -1065,22 +1065,6 @@ export default function HomePage() {
                   <p className="text-[11px] text-center text-[#5E697E] pt-2">
                     Secure authentication via SMS verification code.
                   </p>
-
-                  {role === 'owner' && (
-                    <div className="pt-3 border-t border-white/5 text-center">
-                      <p className="text-xs text-[#94A3B8]">
-                        New salon owner?{' '}
-                        <button
-                          type="button"
-                          onClick={() => setView('register')}
-                          className="text-[#D4AF37] font-bold hover:underline inline-flex items-center gap-1"
-                        >
-                          <span>Register your salon</span>
-                          <span>→</span>
-                        </button>
-                      </p>
-                    </div>
-                  )}
                 </form>
               )}
 

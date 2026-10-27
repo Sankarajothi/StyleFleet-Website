@@ -185,11 +185,31 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
     setRatingStylist(null);
   };
 
+  const DEFAULT_STYLIST_PERMISSIONS = ['customers', 'sales', 'appointments', 'reminders', 'whatsapp'];
+
+  const DAILY_WORK_PERMISSIONS = [
+    { id: 'customers', label: 'Client CRM & Profiles', desc: 'Add & view assigned clients' },
+    { id: 'sales', label: 'Sales & Express Billing', desc: 'Create bills & accept payments' },
+    { id: 'appointments', label: 'Appointments & Queue', desc: 'Book slots & mark in-chair' },
+    { id: 'reminders', label: 'Service Reminders', desc: 'View upcoming due visits' },
+    { id: 'whatsapp', label: 'WhatsApp Marketing', desc: 'Send direct client messages' },
+  ];
+
+  const MONEY_TEAM_PERMISSIONS = [
+    { id: 'expenses', label: 'Add & View Salon Expenses', desc: 'Shop supplies, tea, rent ledger' },
+    { id: 'reports', label: 'Financial Reports & P&L', desc: 'Net profit, total revenue, tax' },
+    { id: 'team', label: 'Team Management & Roles', desc: 'Add, remove or edit staff' },
+    { id: 'past_expenses', label: 'Past Expense Audits', desc: 'Full historical expense archive' },
+    { id: 'share_bills', label: 'Share & Export Bills / CSV', desc: 'Download financial ledgers' },
+  ];
+
+  const ALL_PERMISSIONS = [...DAILY_WORK_PERMISSIONS, ...MONEY_TEAM_PERMISSIONS];
+
   // Open Permissions Modal
   const handleOpenPermissions = (st: StaffMember) => {
     setActiveMenuId(null);
     setPermissionsStylist(st);
-    setStylistPerms(st.permissions || ['billing', 'appointments']);
+    setStylistPerms(st.permissions && st.permissions.length > 0 ? st.permissions : DEFAULT_STYLIST_PERMISSIONS);
   };
 
   const handleSavePermissions = () => {
@@ -230,13 +250,6 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
   const handlePrintPDF = () => {
     window.print();
   };
-
-  const availablePermissions = [
-    { id: 'billing', label: 'Express Billing & POS Checkout' },
-    { id: 'appointments', label: 'Appointments & Chair Live Queue' },
-    { id: 'clients', label: 'View Client CRM History & Notes' },
-    { id: 'reports', label: 'View Stylist Commission & Reports' },
-  ];
 
   return (
     <section className="space-y-6 animate-fadeIn pb-12">
@@ -895,7 +908,7 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
       {permissionsStylist && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div
-            className={`p-6 rounded-3xl border max-w-sm w-full space-y-4 shadow-2xl relative ${
+            className={`p-6 rounded-3xl border max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl relative ${
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
@@ -905,7 +918,7 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                   Stylist Permissions
                 </h3>
                 <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                  Configure role access for <strong>{permissionsStylist.name}</strong>
+                  Configure workspace access for <strong>{permissionsStylist.name}</strong>
                 </p>
               </div>
               <button
@@ -919,41 +932,150 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               </button>
             </div>
 
-            <div className="space-y-2.5 py-1">
-              {availablePermissions.map((perm) => {
-                const isChecked = stylistPerms.includes(perm.id);
-                return (
-                  <div
-                    key={perm.id}
-                    onClick={() => {
-                      if (isChecked) {
-                        setStylistPerms(stylistPerms.filter((p) => p !== perm.id));
-                      } else {
-                        setStylistPerms([...stylistPerms, perm.id]);
-                      }
-                    }}
-                    className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                      isChecked
-                        ? isDarkMode
-                          ? 'bg-[#121B33] border-[#D4AF37]/50'
-                          : 'bg-[#FFFDF7] border-[#D4AF37]/60'
-                        : isDarkMode
-                        ? 'bg-[#0B172E] border-white/5'
-                        : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <span className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {perm.label}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => {}} // handled by parent div
-                      className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
-                    />
-                  </div>
-                );
-              })}
+            {/* Top Permission Summary & Action Controls */}
+            <div
+              className={`p-3.5 rounded-2xl border flex items-center justify-between flex-wrap gap-2.5 ${
+                isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div>
+                <span className={`text-[11px] block uppercase font-bold tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                  Access Scope
+                </span>
+                <span className="text-sm font-black text-[#D4AF37]">
+                  {stylistPerms.length} of {ALL_PERMISSIONS.length} allowed
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setStylistPerms(ALL_PERMISSIONS.map((p) => p.id))}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-lg border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 cursor-pointer transition-colors"
+                >
+                  Allow All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStylistPerms([])}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-lg border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 cursor-pointer transition-colors"
+                >
+                  Block All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStylistPerms(DEFAULT_STYLIST_PERMISSIONS)}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-lg border border-sky-500/30 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20 cursor-pointer transition-colors"
+                >
+                  Default
+                </button>
+              </div>
+            </div>
+
+            {/* Group 1: Daily Work (Default Allowed) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  Daily Work (Default Allowed)
+                </span>
+                <span className="text-[11px] text-[#A7B0C3] font-medium">Core operational tasks</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {DAILY_WORK_PERMISSIONS.map((perm) => {
+                  const isChecked = stylistPerms.includes(perm.id);
+                  return (
+                    <div
+                      key={perm.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setStylistPerms(stylistPerms.filter((p) => p !== perm.id));
+                        } else {
+                          setStylistPerms([...stylistPerms, perm.id]);
+                        }
+                      }}
+                      className={`p-2.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? isDarkMode
+                            ? 'bg-[#121B33] border-[#D4AF37]/50 shadow-sm'
+                            : 'bg-[#FFFDF7] border-[#D4AF37]/60 shadow-xs'
+                          : isDarkMode
+                          ? 'bg-[#0B172E] border-white/5 opacity-70'
+                          : 'bg-slate-50 border-slate-200 opacity-70'
+                      }`}
+                    >
+                      <div className="pr-2">
+                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {perm.label}
+                        </span>
+                        <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                          {perm.desc}
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by parent div
+                        className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Group 2: Money & Team (Default Restricted) */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  Money & Team (Default Restricted)
+                </span>
+                <span className="text-[11px] text-[#A7B0C3] font-medium">Owner sensitive data</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {MONEY_TEAM_PERMISSIONS.map((perm) => {
+                  const isChecked = stylistPerms.includes(perm.id);
+                  return (
+                    <div
+                      key={perm.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setStylistPerms(stylistPerms.filter((p) => p !== perm.id));
+                        } else {
+                          setStylistPerms([...stylistPerms, perm.id]);
+                        }
+                      }}
+                      className={`p-2.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? isDarkMode
+                            ? 'bg-[#121B33] border-[#D4AF37]/50 shadow-sm'
+                            : 'bg-[#FFFDF7] border-[#D4AF37]/60 shadow-xs'
+                          : isDarkMode
+                          ? 'bg-[#0B172E] border-white/5 opacity-70'
+                          : 'bg-slate-50 border-slate-200 opacity-70'
+                      }`}
+                    >
+                      <div className="pr-2">
+                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {perm.label}
+                        </span>
+                        <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                          {perm.desc}
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by parent div
+                        className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className={`flex gap-3 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>

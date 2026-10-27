@@ -154,6 +154,8 @@ interface SalonContextType {
 
   services: ServiceItem[];
   addService: (service: Omit<ServiceItem, 'id' | 'active'>) => void;
+  updateService: (id: string, updated: Partial<ServiceItem>) => void;
+  deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
 
   customers: Customer[];
@@ -348,6 +350,18 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setServices((prev) =>
       prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s))
     );
+  };
+
+  const updateService = (id: string, updated: Partial<ServiceItem>) => {
+    setServices((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updated } : s))
+    );
+    showToast('Service updated successfully.');
+  };
+
+  const deleteService = (id: string) => {
+    setServices((prev) => prev.filter((s) => s.id !== id));
+    showToast('Service removed from menu.');
   };
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -873,6 +887,8 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addCategory,
         services,
         addService,
+        updateService,
+        deleteService,
         toggleServiceActive,
         customers,
         addCustomer,
