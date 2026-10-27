@@ -7,11 +7,21 @@ import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-
 
 interface SalesAndBillsProps {
   onViewInvoice?: (bill: Bill) => void;
+  initialOpenNewBill?: boolean;
+  onOpenAddClientModal?: () => void;
+  onOpenImportContactsModal?: () => void;
+  onOpenMenuCatalogModal?: () => void;
 }
 
 type SalesOption = 'today' | 'custom' | 'deleted';
 
-export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
+export function SalesAndBillsView({
+  onViewInvoice,
+  initialOpenNewBill = false,
+  onOpenAddClientModal,
+  onOpenImportContactsModal,
+  onOpenMenuCatalogModal,
+}: SalesAndBillsProps) {
   const {
     role,
     loggedInStaffName,
@@ -26,6 +36,24 @@ export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
     setCurrentScreen,
     isDarkMode,
     showToast,
+    billCartItems,
+    billCustName,
+    setBillCustName,
+    billCustPhone,
+    setBillCustPhone,
+    billStaffSelect,
+    setBillStaffSelect,
+    billDiscount,
+    setBillDiscount,
+    billPaymentMode,
+    setBillPaymentMode,
+    partialPaidAmount,
+    setPartialPaidAmount,
+    addCartItem,
+    removeCartItem,
+    updateCartItemQty,
+    clearCart,
+    createBill,
   } = useSalon();
 
   const isStylist = role === 'stylist';
@@ -75,6 +103,119 @@ export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
 
   // Optional: Toggle for Full Financial Reports & P&L (Annual / Monthly)
   const [showFullFinancialReports, setShowFullFinancialReports] = useState(false);
+
+  // Express Billing POS State
+  const [showNewBillModal, setShowNewBillModal] = useState<boolean>(Boolean(initialOpenNewBill));
+  const [billTip, setBillTip] = useState<number>(0);
+  const [newBillDate, setNewBillDate] = useState<string>(todayStr);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  React.useEffect(() => {
+    if (initialOpenNewBill) {
+      setShowNewBillModal(true);
+    }
+  }, [initialOpenNewBill]);
+
+  React.useEffect(() => {
+    if (role === 'stylist' && loggedInStaffName) {
+      setBillStaffSelect(loggedInStaffName);
+    }
+  }, [role, loggedInStaffName, setBillStaffSelect]);
+
+  // Cart Calculations for Express Billing POS
+  const cartSubtotal = useMemo(() => {
+    return billCartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+  }, [billCartItems]);
+
+  const safeDiscount = Math.min(cartSubtotal, Math.max(0, billDiscount || 0));
+  const safeTip = Math.max(0, billTip || 0);
+  const gstRate = shopProfile?.gstRate || 0;
+  const taxAmount = shopProfile?.applyGst ? Math.round((cartSubtotal - safeDiscount) * (gstRate / 100)) : 0;
+  const cartTotal = Math.max(0, cartSubtotal - safeDiscount + taxAmount + safeTip);
+
+  let finalPaid = cartTotal;
+  let finalDue = 0;
+  let billStatus: Bill['status'] = 'paid';
+
+  if (billPaymentMode === 'Partial Pay') {
+    finalPaid = Math.min(cartTotal, partialPaidAmount);
+    finalDue = Math.max(0, cartTotal - partialPaidAmount);
+    billStatus = finalDue > 0 ? 'partially_paid' : 'paid';
+  } else if (billPaymentMode === 'Fully Pending') {
+    finalPaid = 0;
+    finalDue = cartTotal;
+    billStatus = 'pending';
+  } else {
+    finalPaid = cartTotal;
+    finalDue = 0;
+    billStatus = 'paid';
+  }
+
+  // Categories & Filtered Services for Express Billing Catalog
+  const serviceCategories = useMemo(() => {
+    const cats = new Set<string>();
+    services.forEach((s) => {
+      if (s.cat) cats.add(s.cat);
+    });
+    return ['All', ...Array.from(cats)];
+  }, [services]);
+
+  const filteredServices = useMemo(() => {
+    return services.filter((s) => {
+      if (!s.active) return false;
+      const matchesCat = selectedCategory === 'All' || s.cat === selectedCategory;
+      const matchesSearch =
+        !serviceSearchQuery ||
+        s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+        (s.cat && s.cat.toLowerCase().includes(serviceSearchQuery.toLowerCase()));
+      return matchesCat && matchesSearch;
+    });
+  }, [services, selectedCategory, serviceSearchQuery]);
+
+  const handleCompleteBill = () => {
+    if (billCartItems.length === 0) {
+      showToast('Please add at least one service to the bill.', 'error');
+      return;
+    }
+    const cust = billCustName.trim() || 'Walk-in Client';
+    const phone = billCustPhone.trim();
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const selectedD = new Date(newBillDate + 'T12:00:00');
+    const day = selectedD.getDate();
+    const month = selectedD.toLocaleString('en-US', { month: 'short' });
+    const year = selectedD.getFullYear();
+    const customDateStr = `${day} ${month} ${year}, ${timeStr}`;
+    const isToday = newBillDate === todayStr;
+
+    const newBill = createBill(
+      {
+        cust,
+        phone,
+        items: [...billCartItems],
+        staff: billStaffSelect || staff[0]?.name || 'Staff',
+        total: cartTotal,
+        paidAmount: finalPaid,
+        dueAmount: finalDue,
+        mode: billPaymentMode,
+        status: billStatus,
+        discount: safeDiscount,
+        tax: taxAmount,
+        tip: safeTip,
+      },
+      customDateStr,
+      isToday
+    );
+
+    clearCart();
+    setBillTip(0);
+    setNewBillDate(todayStr);
+    setShowNewBillModal(false);
+    setSelectedInvoiceBill(newBill);
+    showToast(`Bill #${newBill.id} created successfully!`, 'success');
+  };
 
   // Effective Active Bills (scoped for stylist vs owner)
   const effectiveBills = useMemo(() => {
@@ -303,7 +444,7 @@ export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
         {/* LARGEST BEAUTIFUL NEW BILL BUTTON */}
         <button
           type="button"
-          onClick={() => setCurrentScreen('billing')}
+          onClick={() => setShowNewBillModal(true)}
           className="px-6 py-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-lg shadow-[#D4AF37]/25 hover:scale-[1.02] active:scale-95 transition-transform cursor-pointer shrink-0"
         >
           <svg className="w-5 h-5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -693,7 +834,7 @@ export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setCurrentScreen('billing')}
+                  onClick={() => setShowNewBillModal(true)}
                   className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-black text-xs cursor-pointer hover:bg-[#C59F2E]"
                 >
                   Create First Bill
@@ -1336,6 +1477,435 @@ export function SalesAndBillsView({ onViewInvoice }: SalesAndBillsProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= 9. EXPRESS BILLING POS MODAL ================= */}
+      {showNewBillModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div
+            className={`rounded-3xl border w-full max-w-5xl shadow-2xl animate-scaleUp my-auto flex flex-col max-h-[92vh] overflow-hidden ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-slate-200 text-[#1F2937]'
+            }`}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-base sm:text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Express Billing POS
+                  </h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                    Quick-tap services, client details, payment modes & instant bill generation
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {billCartItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Clear Cart
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowNewBillModal(false)}
+                  className="w-8 h-8 rounded-xl border border-white/10 flex items-center justify-center text-[#A7B0C3] hover:text-white cursor-pointer transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: 2 Columns */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Left Column: Client Details & Service Catalog */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* Client Details Card */}
+                <div
+                  className={`p-4 rounded-2xl border ${
+                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-extrabold text-[#D4AF37]">
+                      1. Client Details
+                    </span>
+                    <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                      Leave empty for Walk-in Client
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Client Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Client name"
+                        value={billCustName}
+                        onChange={(e) => setBillCustName(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        WhatsApp Mobile
+                      </label>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        placeholder="10-digit number"
+                        value={billCustPhone}
+                        onChange={(e) => setBillCustPhone(e.target.value.replace(/\D/g, ''))}
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Bill Date (Max: Today)
+                      </label>
+                      <input
+                        type="date"
+                        max={todayStr}
+                        value={newBillDate}
+                        onChange={(e) => setNewBillDate(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold cursor-pointer ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Catalog & Tap to Add */}
+                <div
+                  className={`p-4 rounded-2xl border space-y-3 ${
+                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-[#D4AF37]">
+                      2. Tap Services to Add
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search services..."
+                      value={serviceSearchQuery}
+                      onChange={(e) => setServiceSearchQuery(e.target.value)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs outline-none ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                    {serviceCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap transition-colors cursor-pointer ${
+                          selectedCategory === cat
+                            ? 'bg-[#D4AF37] text-[#0B1F44]'
+                            : isDarkMode
+                            ? 'bg-[#121B33] border border-[#2A3858] text-slate-300 hover:text-white'
+                            : 'bg-white border border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Services Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
+                    {filteredServices.length === 0 ? (
+                      <div className="col-span-full py-8 text-center text-xs text-slate-400">
+                        No services match your search.
+                      </div>
+                    ) : (
+                      filteredServices.map((srv) => (
+                        <button
+                          key={srv.id}
+                          type="button"
+                          onClick={() => addCartItem(srv)}
+                          className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-transform active:scale-95 cursor-pointer ${
+                            isDarkMode
+                              ? 'bg-[#121B33] border-white/5 hover:border-[#D4AF37]/50'
+                              : 'bg-white border-slate-200 hover:border-[#D4AF37]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <strong className={`text-xs font-bold line-clamp-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {srv.name}
+                            </strong>
+                            <span className="w-4 h-4 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-[10px] font-black shrink-0">
+                              +
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-2 text-[11px]">
+                            <span className="font-extrabold text-[#D4AF37]">₹{srv.price}</span>
+                            <span className={isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}>
+                              {srv.dur}m
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Stylist, Cart, Discounts, Payment Mode & Checkout */}
+              <div
+                className={`lg:col-span-5 p-4 rounded-2xl border space-y-3.5 flex flex-col justify-between ${
+                  isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="space-y-3.5">
+                  {/* Serving Stylist */}
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1 uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Serving Stylist / Chair
+                    </label>
+                    <select
+                      value={billStaffSelect}
+                      onChange={(e) => setBillStaffSelect(e.target.value)}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none cursor-pointer ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      {staff.map((s) => (
+                        <option key={s.id} value={s.name}>
+                          {s.name} ({s.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Cart Items List */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-extrabold text-[#D4AF37]">
+                        Active Cart ({billCartItems.length})
+                      </span>
+                      <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        Adjust quantity
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                      {billCartItems.length === 0 ? (
+                        <div className={`p-4 text-center text-xs border border-dashed rounded-xl ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-300 text-slate-500'}`}>
+                          No services added yet. Tap services on the left to add.
+                        </div>
+                      ) : (
+                        billCartItems.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                              isDarkMode ? 'bg-[#121B33] border-white/5' : 'bg-white border-slate-200'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <strong className={`block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {item.name}
+                              </strong>
+                              <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                                ₹{item.price} each
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className={`flex items-center rounded-lg border ${isDarkMode ? 'border-white/10' : 'border-slate-300'}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => updateCartItemQty(idx, item.qty - 1)}
+                                  className="px-2 py-0.5 text-xs hover:text-[#D4AF37] font-bold cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="px-1 text-xs font-bold">{item.qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateCartItemQty(idx, item.qty + 1)}
+                                  className="px-2 py-0.5 text-xs hover:text-[#D4AF37] font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <strong className="text-xs font-black text-[#D4AF37] w-14 text-right">
+                                ₹{item.price * item.qty}
+                              </strong>
+
+                              <button
+                                type="button"
+                                onClick={() => removeCartItem(idx)}
+                                className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer"
+                              >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Discount & Tip Inputs */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Discount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={billDiscount || ''}
+                        onChange={(e) => setBillDiscount(Math.max(0, Number(e.target.value)))}
+                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Tip (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={billTip || ''}
+                        onChange={(e) => setBillTip(Math.max(0, Number(e.target.value)))}
+                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment Mode Selector */}
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Payment Mode
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 text-xs font-bold">
+                      {(['UPI', 'Cash', 'Card', 'Partial Pay', 'Fully Pending'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setBillPaymentMode(mode)}
+                          className={`py-1.5 px-2 rounded-xl border text-center transition-colors cursor-pointer text-[11px] ${
+                            billPaymentMode === mode
+                              ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                              : isDarkMode
+                              ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                              : 'bg-white border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Partial Pay Received Amount Input */}
+                    {billPaymentMode === 'Partial Pay' && (
+                      <div className="mt-2 p-2.5 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 space-y-1">
+                        <label className="block text-[10px] font-bold text-[#D4AF37]">
+                          Amount Received Now (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={cartTotal}
+                          value={partialPaidAmount}
+                          onChange={(e) => setPartialPaidAmount(Number(e.target.value))}
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-bold outline-none ${
+                            isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                        <div className="flex justify-between text-[11px] font-bold pt-1">
+                          <span className="text-slate-400">Due Balance:</span>
+                          <span className="text-rose-400">₹{Math.max(0, cartTotal - partialPaidAmount)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Summary & Checkout Button */}
+                <div className="space-y-3 pt-2 border-t border-white/10">
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-400">
+                      <span>Subtotal:</span>
+                      <span>₹{cartSubtotal}</span>
+                    </div>
+                    {safeDiscount > 0 && (
+                      <div className="flex justify-between text-emerald-400">
+                        <span>Discount:</span>
+                        <span>-₹{safeDiscount}</span>
+                      </div>
+                    )}
+                    {taxAmount > 0 && (
+                      <div className="flex justify-between text-slate-400">
+                        <span>GST ({gstRate}%):</span>
+                        <span>₹{taxAmount}</span>
+                      </div>
+                    )}
+                    {safeTip > 0 && (
+                      <div className="flex justify-between text-[#D4AF37]">
+                        <span>Tip:</span>
+                        <span>+₹{safeTip}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-black pt-1 border-t border-white/5">
+                      <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Net Payable:</span>
+                      <span className="text-[#D4AF37] text-base">₹{cartTotal}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={billCartItems.length === 0}
+                    onClick={handleCompleteBill}
+                    className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-transform cursor-pointer shadow-lg ${
+                      billCartItems.length === 0
+                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
+                        : 'bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] active:scale-95 shadow-[#D4AF37]/25'
+                    }`}
+                  >
+                    <svg className="w-5 h-5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Generate Bill & Open Invoice (₹{cartTotal})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

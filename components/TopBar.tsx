@@ -36,7 +36,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
     switch (currentScreen) {
       case 'home': return t.dashboard;
       case 'appointments': return t.appointments;
-      case 'billing': return t.billing;
+      case 'billing': return 'Sales';
       case 'customers': return t.customers;
       case 'pricelist': return t.pricelist;
       case 'staff': return t.team;

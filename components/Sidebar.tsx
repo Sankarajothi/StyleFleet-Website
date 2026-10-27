@@ -58,8 +58,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
           ),
         },
         {
-          id: 'billing',
-          label: t.billing,
+          id: 'sales',
+          label: 'Sales',
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
@@ -131,17 +131,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
               <circle cx="9" cy="7" r="4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M22 21v-2a4 4 0 00-3-3.87" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 010 7.75" />
-            </svg>
-          ),
-        },
-        {
-          id: 'sales',
-          label: 'Sales',
-          icon: (
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
           ),
         },

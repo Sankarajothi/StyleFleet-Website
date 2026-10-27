@@ -321,16 +321,18 @@ function DashboardContent() {
                 }}
               />
             )}
-            {/* ================= 2. EXPRESS BILLING ================= */}
-            {currentScreen === 'billing' && (
-              <ExpressBillingView
-                onOpenAddClientModal={() => setShowAddClientModal(true)}
-                onOpenImportContactsModal={() => setShowImportContactsModal(true)}
-                onOpenMenuCatalogModal={() => setShowMenuCatalogModal(true)}
-                onInvoiceCreated={() => {
+            {/* ================= 2. SALES & EXPRESS BILLING ================= */}
+            {(currentScreen === 'billing' || currentScreen === 'sales') && (
+              <SalesAndBillsView
+                initialOpenNewBill={currentScreen === 'billing'}
+                onViewInvoice={(bill) => {
+                  setActiveInvoice(bill);
                   setIsWhatsAppShared(false);
                   setShowInvoiceModal(true);
                 }}
+                onOpenAddClientModal={() => setShowAddClientModal(true)}
+                onOpenImportContactsModal={() => setShowImportContactsModal(true)}
+                onOpenMenuCatalogModal={() => setShowMenuCatalogModal(true)}
               />
             )}
 
@@ -342,17 +344,6 @@ function DashboardContent() {
             {/* ================= 4. CUSTOMERS (CRM) ================= */}
             {currentScreen === 'customers' && (
               <CustomersView onOpenAddClientModal={() => setShowAddClientModal(true)} />
-            )}
-
-            {/* ================= 5. SALES & BILLS ================= */}
-            {currentScreen === 'sales' && (
-              <SalesAndBillsView
-                onViewInvoice={(bill) => {
-                  setActiveInvoice(bill);
-                  setIsWhatsAppShared(false);
-                  setShowInvoiceModal(true);
-                }}
-              />
             )}
 
             {/* ================= 6. PRICE LIST ================= */}
