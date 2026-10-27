@@ -87,9 +87,8 @@ export function SalesAndBillsView({
   const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
   const [tempDateInput, setTempDateInput] = useState<string>(yesterdayStr);
 
-  // Time-based Bar Chart State
+  // Peak Hours Time-based Bar Chart State
   const [timeGranularity, setTimeGranularity] = useState<'slots' | 'hourly'>('slots');
-  const [showPriorComparison, setShowPriorComparison] = useState<boolean>(true);
   const [hoveredSlotKey, setHoveredSlotKey] = useState<string | null>(null);
 
   // Normal Invoice Modal (shown when touching any bill)
@@ -557,12 +556,8 @@ export function SalesAndBillsView({
   }, [timeChartData]);
 
   const maxSlotRev = useMemo(() => {
-    const maxVal = Math.max(
-      ...timeChartData.map((d) => Math.max(d.targetRevenue, showPriorComparison ? d.priorRevenue : 0)),
-      1
-    );
-    return maxVal;
-  }, [timeChartData, showPriorComparison]);
+    return Math.max(...timeChartData.map((d) => d.targetRevenue), 1);
+  }, [timeChartData]);
 
   // Comparative Bar Chart Max
   const chartMaxRevenue = Math.max(targetRevenue, priorRevenue, 1);
@@ -902,7 +897,7 @@ export function SalesAndBillsView({
               </div>
             </div>
 
-            {/* TIME-BASED SALES BAR CHART */}
+            {/* PEAK HOURS TIME-BASED BAR CHART */}
             <div
               className={`lg:col-span-7 p-6 rounded-3xl border flex flex-col justify-between ${
                 isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
@@ -910,11 +905,11 @@ export function SalesAndBillsView({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/5 gap-2.5">
                 <div>
-                  <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Time-Based Sales Bar Chart
+                  <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Peak Hours
                   </h3>
                   <p className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    {salesOption === 'week' ? 'Day-wise weekly revenue progression' : 'Hourly distribution & peak styling rush intervals'}
+                    {salesOption === 'week' ? 'Day-wise weekly revenue progression' : 'Today\'s time-based revenue distribution & rush intervals'}
                   </p>
                 </div>
 
@@ -954,58 +949,28 @@ export function SalesAndBillsView({
                       </button>
                     </div>
                   )}
-
-                  {/* Toggle Comparison vs Prior Period */}
-                  <button
-                    type="button"
-                    onClick={() => setShowPriorComparison(!showPriorComparison)}
-                    className={`px-2 py-1 rounded-xl border text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
-                      showPriorComparison
-                        ? isDarkMode
-                          ? 'border-slate-600 bg-slate-700/30 text-slate-300'
-                          : 'border-slate-300 bg-slate-100 text-slate-700'
-                        : isDarkMode
-                        ? 'border-white/5 bg-transparent text-slate-500 hover:text-slate-300'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                    title="Toggle side-by-side comparison with prior period"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                    <span>Compare</span>
-                  </button>
                 </div>
               </div>
 
               {/* Chart Legend & Peak Highlight */}
               <div className="flex items-center justify-between text-[11px] pt-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1.5 font-bold text-[#D4AF37]">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#D4AF37]" />
-                    <span>{salesOption === 'today' ? 'Today' : periodTitle}</span>
-                  </span>
-                  {showPriorComparison && (
-                    <span className="flex items-center gap-1.5 text-slate-400">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
-                      <span>{priorPeriodTitle}</span>
-                    </span>
-                  )}
+                <div className="flex items-center gap-2 font-bold text-[#D4AF37]">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#D4AF37]" />
+                  <span>{salesOption === 'today' ? "Today's Time Slots" : `${periodTitle} Slots`}</span>
                 </div>
 
                 {peakSlot && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37]">
-                    Peak: {peakSlot.label}
+                    Peak Slot: {peakSlot.label}
                   </span>
                 )}
               </div>
 
-              {/* Time-Based Vertical Bars Area */}
+              {/* Time-Based Vertical Bars Area (Today Only) */}
               <div className="flex items-end gap-1.5 sm:gap-2.5 pt-6 pb-2 h-52 overflow-x-auto">
                 {timeChartData.map((slot) => {
                   const targetHeight = maxSlotRev > 0
                     ? Math.max(slot.targetRevenue > 0 ? 12 : 4, Math.round((slot.targetRevenue / maxSlotRev) * 100))
-                    : 4;
-                  const priorHeight = maxSlotRev > 0
-                    ? Math.max(slot.priorRevenue > 0 ? 12 : 4, Math.round((slot.priorRevenue / maxSlotRev) * 100))
                     : 4;
                   const isPeak = peakSlot && peakSlot.key === slot.key;
                   const isHovered = hoveredSlotKey === slot.key;
@@ -1020,7 +985,7 @@ export function SalesAndBillsView({
                       {/* Floating Tooltip Bubble */}
                       {isHovered && (
                         <div
-                          className={`absolute -top-12 z-20 px-2 py-1 rounded-xl border shadow-xl text-[10px] whitespace-nowrap pointer-events-none animate-fadeIn ${
+                          className={`absolute -top-12 z-20 px-2.5 py-1 rounded-xl border shadow-xl text-[10px] whitespace-nowrap pointer-events-none animate-fadeIn ${
                             isDarkMode ? 'bg-[#0B1528] border-[#2A3858] text-white' : 'bg-slate-900 border-slate-700 text-white'
                           }`}
                         >
@@ -1029,7 +994,6 @@ export function SalesAndBillsView({
                           </div>
                           <div className="text-[9px] text-slate-300">
                             {slot.targetCount} {slot.targetCount === 1 ? 'bill' : 'bills'}
-                            {showPriorComparison ? ` · Prior: ₹${slot.priorRevenue.toLocaleString('en-IN')}` : ''}
                           </div>
                         </div>
                       )}
@@ -1051,7 +1015,7 @@ export function SalesAndBillsView({
                           : '₹0'}
                       </span>
 
-                      {/* Bar Container */}
+                      {/* Single Elegant Target Bar (Today) */}
                       <div
                         className={`w-full max-w-[42px] h-32 rounded-xl flex items-end p-0.5 border ${
                           isPeak
@@ -1063,31 +1027,13 @@ export function SalesAndBillsView({
                             : 'bg-slate-50 border-slate-200 group-hover:border-slate-300'
                         }`}
                       >
-                        {showPriorComparison ? (
-                          <div className="flex items-end justify-center gap-0.5 w-full h-full">
-                            {/* Prior Bar (Slate) */}
-                            <div
-                              style={{ height: `${priorHeight}%` }}
-                              className="w-1/2 max-w-[14px] bg-slate-500/80 hover:bg-slate-400 rounded-t-md transition-all"
-                              title={`${priorPeriodTitle}: ₹${slot.priorRevenue} (${slot.priorCount} bills)`}
-                            />
-                            {/* Target Bar (Gold) */}
-                            <div
-                              style={{ height: `${targetHeight}%` }}
-                              className={`w-1/2 max-w-[14px] rounded-t-md transition-all ${
-                                isPeak ? 'bg-[#D4AF37] hover:bg-[#C59F2E]' : 'bg-[#D4AF37]/80 hover:bg-[#D4AF37]'
-                              }`}
-                              title={`${salesOption === 'today' ? 'Today' : periodTitle}: ₹${slot.targetRevenue} (${slot.targetCount} bills)`}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            style={{ height: `${targetHeight}%` }}
-                            className={`w-full rounded-t-lg transition-all ${
-                              isPeak ? 'bg-[#D4AF37] hover:bg-[#C59F2E]' : 'bg-[#D4AF37]/85 hover:bg-[#D4AF37]'
-                            }`}
-                          />
-                        )}
+                        <div
+                          style={{ height: `${targetHeight}%` }}
+                          className={`w-full rounded-t-lg transition-transform ${
+                            isPeak ? 'bg-[#D4AF37] hover:bg-[#C59F2E]' : 'bg-[#D4AF37]/85 hover:bg-[#D4AF37]'
+                          }`}
+                          title={`${salesOption === 'today' ? 'Today' : periodTitle} - ${slot.label}: ₹${slot.targetRevenue} (${slot.targetCount} bills)`}
+                        />
                       </div>
 
                       {/* Time Slot Label Under Bar */}
@@ -1129,7 +1075,7 @@ export function SalesAndBillsView({
 
                 {peakSlot && (
                   <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    Highest revenue recorded during <strong>{peakSlot.label}</strong> (₹{peakSlot.targetRevenue.toLocaleString('en-IN')} · {peakSlot.targetCount} bills)
+                    Busiest rush recorded at <strong>{peakSlot.label}</strong> (₹{peakSlot.targetRevenue.toLocaleString('en-IN')} · {peakSlot.targetCount} bills)
                   </span>
                 )}
               </div>
