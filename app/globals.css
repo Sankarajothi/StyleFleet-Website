@@ -406,7 +406,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-/* ================= PRINT STYLES FOR SALON THERMAL RECEIPT ================= */
+/* ================= PRINT STYLES FOR SALON INVOICE & THERMAL RECEIPT ================= */
 @media print {
   body {
     background: #ffffff !important;
@@ -414,6 +414,31 @@ input:focus, select:focus, textarea:focus {
   }
   body * {
     visibility: hidden;
+  }
+  .no-print, .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  #printable-luxury-invoice,
+  #printable-luxury-invoice * {
+    visibility: visible !important;
+  }
+  #printable-luxury-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    z-index: 999999;
   }
   #printable-receipt,
   #printable-receipt * {

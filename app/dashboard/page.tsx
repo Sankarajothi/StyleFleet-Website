@@ -16,6 +16,7 @@ import { WhatsAppMarketingView } from '@/components/whatsapp-marketing';
 import { RemindersView } from '@/components/reminders';
 import { AccountsView } from '@/components/accounts';
 import { SettingsView } from '@/components/settings';
+import { InvoiceTemplate } from '@/components/invoice-template';
 
 function DashboardContent() {
   const router = useRouter();
@@ -858,215 +859,51 @@ function DashboardContent() {
 
 
 
-      {/* ================= MODAL: INVOICE & WHATSAPP RECEIPT ================= */}
+      {/* ================= MODAL: INVOICE & LUXURY RECEIPT ================= */}
       {showInvoiceModal && activeInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div
-            className={`p-6 rounded-3xl border max-w-sm w-full space-y-4 text-center transition-all shadow-2xl relative ${
-              isDarkMode
-                ? 'bg-[#0F2344] border-[#D4AF37]/50 text-white'
-                : 'bg-white border-[#D4AF37]/60 text-[#1F2937]'
-            }`}
-          >
-            {/* Top-Right Close Icon Button */}
-            <button
-              type="button"
-              onClick={() => {
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
+          <div className="relative w-full max-w-3xl my-auto">
+            <InvoiceTemplate
+              bill={activeInvoice}
+              shopProfile={shopProfile}
+              onClose={() => {
                 setShowInvoiceModal(false);
                 setIsWhatsAppShared(false);
               }}
-              className={`absolute top-4 right-4 w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold transition-all ${
-                isDarkMode
-                  ? 'bg-[#142C52] border-[#2A3858] text-[#A7B0C3] hover:text-white hover:bg-red-500/20 hover:border-red-500/40'
-                  : 'bg-[#F1F5F9] border-slate-300 text-slate-600 hover:text-black hover:bg-red-100'
-              }`}
-              title="Close"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+              onShareWhatsApp={() => {
+                setIsWhatsAppShared(true);
+                const itemsText = (activeInvoice.items || [])
+                  .map((it) => `• ${it.name} (x${it.qty || 1}) - ₹${(it.price || 0) * (it.qty || 1)}`)
+                  .join('\n');
+                const msgText =
+                  `*${shopProfile.shopName.toUpperCase()}*\n` +
+                  `*Invoice #${activeInvoice.id}*\n` +
+                  `Date: ${activeInvoice.dateStr}\n` +
+                  `Client: ${activeInvoice.cust}\n` +
+                  `Stylist: ${activeInvoice.staff}\n` +
+                  `--------------------\n` +
+                  `*Services Availed:*\n${itemsText}\n` +
+                  `--------------------\n` +
+                  `Total: ₹${activeInvoice.total}\n` +
+                  `Paid (${activeInvoice.mode}): ₹${activeInvoice.paidAmount}\n` +
+                  (activeInvoice.dueAmount > 0
+                    ? `Pending Due: ₹${activeInvoice.dueAmount}\n`
+                    : `Status: Fully Paid\n`) +
+                  `--------------------\n` +
+                  `Thank you for visiting ${shopProfile.shopName}!`;
 
-            {/* Salon Badge */}
-            <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] font-black text-sm flex items-center justify-center mx-auto">
-              SF
-            </div>
-
-            <div>
-              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                {shopProfile.shopName}
-              </h3>
-              <p className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#64748B]'}`}>
-                Invoice #{activeInvoice.id} · {activeInvoice.dateStr}
-                {activeInvoice.isEdited && (
-                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">
-                    Edited
-                  </span>
-                )}
-              </p>
-            </div>
-
-            {/* Bill Details Summary Card */}
-            <div
-              className={`p-3.5 rounded-2xl text-left text-xs space-y-2.5 ${
-                isDarkMode ? 'bg-[#142C52] border border-white/5' : 'bg-[#F7F9FC] border border-slate-200'
-              }`}
-            >
-              <div className={`flex justify-between font-bold border-b pb-2 ${isDarkMode ? 'text-white border-white/10' : 'text-[#1F2937] border-slate-200'}`}>
-                <span>{activeInvoice.cust}</span>
-                <span className="text-[#D4AF37]">{activeInvoice.phone ? `+91 ${activeInvoice.phone}` : 'Walk-in'}</span>
-              </div>
-
-              <div className="space-y-1">
-                {activeInvoice.items.map((item, idx) => (
-                  <div key={idx} className={`flex justify-between ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#64748B]'}`}>
-                    <span>{item.name} × {item.qty}</span>
-                    <span className="font-semibold">₹{item.price * item.qty}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className={`border-t pt-2 flex justify-between font-extrabold text-sm ${isDarkMode ? 'text-white border-white/10' : 'text-[#1F2937] border-slate-200'}`}>
-                <span>Total Amount</span>
-                <span className="text-[#D4AF37]">₹ {activeInvoice.total}</span>
-              </div>
-
-              <div className="flex justify-between text-[11px] pt-1">
-                <span className={isDarkMode ? 'text-[#A7B0C3]' : 'text-[#64748B]'}>
-                  Paid ({activeInvoice.mode})
-                </span>
-                <span className="font-bold text-emerald-500">₹ {activeInvoice.paidAmount}</span>
-              </div>
-
-              {activeInvoice.dueAmount > 0 && (
-                <div className="flex justify-between text-amber-500 font-bold text-xs pt-1 border-t border-amber-500/20">
-                  <span>Balance Due</span>
-                  <span>₹ {activeInvoice.dueAmount}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Action State: WhatsApp Share, Print Receipt, and Close & New Bill */}
-            <div className="space-y-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsWhatsAppShared(true);
-                  const itemsText = activeInvoice.items.map(it => `• ${it.name} (x${it.qty}) - ₹${it.price * it.qty}`).join('\n');
-                  const msgText = `*${shopProfile.shopName.toUpperCase()}*\n` +
-                    `*Invoice #${activeInvoice.id}*\n` +
-                    `Date: ${activeInvoice.dateStr}\n` +
-                    `Client: ${activeInvoice.cust}\n` +
-                    `Stylist: ${activeInvoice.staff}\n` +
-                    `--------------------\n` +
-                    `*Services Availed:*\n${itemsText}\n` +
-                    `--------------------\n` +
-                    `Total: ₹${activeInvoice.total}\n` +
-                    `Paid (${activeInvoice.mode}): ₹${activeInvoice.paidAmount}\n` +
-                    (activeInvoice.dueAmount > 0 ? `Pending Due: ₹${activeInvoice.dueAmount}\n` : `Status: Fully Paid\n`) +
-                    `--------------------\n` +
-                    `Thank you for visiting ${shopProfile.shopName}!`;
-
-                  const phoneTarget = activeInvoice.phone ? `91${activeInvoice.phone}` : '';
-                  window.open(`https://wa.me/${phoneTarget}?text=${encodeURIComponent(msgText)}`, '_blank');
-                  showToast(activeInvoice.phone ? `Invoice shared via WhatsApp to +91 ${activeInvoice.phone}!` : 'Invoice prefilled in WhatsApp!');
-                }}
-                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 transition-all"
-              >
-                <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-                </svg>
-                <span>Share Bill on WhatsApp</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="btn-primary-gold shimmer-btn w-full py-3 text-xs font-bold flex items-center justify-center gap-2 shadow-lg"
-              >
-                <svg className="w-4 h-4 text-[#07152B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                <span>Print Bill / Thermal POS Slip</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowInvoiceModal(false);
-                  setIsWhatsAppShared(false);
-                }}
-                className={`w-full py-2.5 rounded-xl border text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                  isDarkMode ? 'border-[#2A3858] bg-white/5 text-[#A7B0C3] hover:text-white' : 'border-slate-300 bg-slate-50 text-[#374151] hover:text-slate-900'
-                }`}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-                <span>Close & Generate New Bill</span>
-              </button>
-            </div>
-
-            {/* Hidden on Screen / Visible on Print POS Thermal Receipt */}
-            <div id="printable-receipt" className="hidden">
-              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                <h2 style={{ fontSize: '15px', fontWeight: 'bold', margin: '0' }}>{shopProfile.shopName}</h2>
-                <p style={{ margin: '2px 0', fontSize: '10px' }}>{shopProfile.address}, {shopProfile.city}</p>
-                <p style={{ margin: '2px 0', fontSize: '10px' }}>Phone: +91 {shopProfile.phone}</p>
-                {shopProfile.gstin && <p style={{ margin: '2px 0', fontSize: '10px' }}>GSTIN: {shopProfile.gstin}</p>}
-                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0' }} />
-              </div>
-
-              <div style={{ fontSize: '10px', marginBottom: '6px' }}>
-                <p style={{ margin: '2px 0' }}><strong>Invoice:</strong> #{activeInvoice.id}</p>
-                <p style={{ margin: '2px 0' }}><strong>Date:</strong> {activeInvoice.dateStr}</p>
-                <p style={{ margin: '2px 0' }}><strong>Client:</strong> {activeInvoice.cust} (+91 {activeInvoice.phone})</p>
-                <p style={{ margin: '2px 0' }}><strong>Stylist:</strong> {activeInvoice.staff}</p>
-                <p style={{ margin: '2px 0' }}><strong>Payment:</strong> {activeInvoice.mode}</p>
-              </div>
-
-              <div style={{ borderBottom: '1px solid #000', margin: '6px 0' }} />
-
-              <table style={{ width: '100%', fontSize: '10px', textAlign: 'left', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px dashed #000' }}>
-                    <th style={{ padding: '3px 0' }}>Item</th>
-                    <th style={{ textAlign: 'center', padding: '3px 0' }}>Qty</th>
-                    <th style={{ textAlign: 'right', padding: '3px 0' }}>Amt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeInvoice.items.map((it, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '3px 0' }}>{it.name}</td>
-                      <td style={{ textAlign: 'center', padding: '3px 0' }}>{it.qty}</td>
-                      <td style={{ textAlign: 'right', padding: '3px 0' }}>₹{it.price * it.qty}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div style={{ borderBottom: '1px dashed #000', margin: '6px 0' }} />
-
-              <div style={{ fontSize: '11px', textAlign: 'right' }}>
-                <p style={{ margin: '2px 0', fontSize: '13px', fontWeight: 'bold' }}>
-                  Total: ₹{activeInvoice.total}
-                </p>
-                <p style={{ margin: '2px 0' }}>Paid: ₹{activeInvoice.paidAmount}</p>
-                {activeInvoice.dueAmount > 0 && (
-                  <p style={{ margin: '2px 0', fontWeight: 'bold' }}>Balance Due: ₹{activeInvoice.dueAmount}</p>
-                )}
-              </div>
-
-              <div style={{ borderBottom: '1px dashed #000', margin: '8px 0' }} />
-
-              <div style={{ textAlign: 'center', fontSize: '10px' }}>
-                <p style={{ margin: '2px 0', fontWeight: 'bold' }}>Thank You For Visiting!</p>
-                <p style={{ margin: '2px 0', color: '#555' }}>Powered by StyleFleet Salon OS</p>
-              </div>
-            </div>
+                const phoneTarget = activeInvoice.phone ? `91${activeInvoice.phone}` : '';
+                window.open(
+                  `https://wa.me/${phoneTarget}?text=${encodeURIComponent(msgText)}`,
+                  '_blank'
+                );
+                showToast(
+                  activeInvoice.phone
+                    ? `Invoice shared via WhatsApp to +91 ${activeInvoice.phone}!`
+                    : 'Invoice prefilled in WhatsApp!'
+                );
+              }}
+            />
           </div>
         </div>
       )}
