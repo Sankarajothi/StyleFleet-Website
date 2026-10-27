@@ -49,6 +49,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
 
   // Customer Visit History Modal (opened when touching client)
   const [historyCust, setHistoryCust] = useState<Customer | null>(null);
+  const [openDetailMenu, setOpenDetailMenu] = useState(false);
 
   // Notes Modal state (opened when touching notes)
   const [notesCust, setNotesCust] = useState<Customer | null>(null);
@@ -246,6 +247,21 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       due: Number(editDue) || 0,
       notes: editNotes.trim(),
     });
+
+    if (historyCust && historyCust.id === editingCust.id) {
+      setHistoryCust((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: editName.trim(),
+              phone: editPhone.replace(/\D/g, ''),
+              vip: editVip,
+              due: Number(editDue) || 0,
+              notes: editNotes.trim(),
+            }
+          : null
+      );
+    }
 
     setEditingCust(null);
   };
@@ -699,7 +715,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                     </div>
                   </div>
 
-                  {/* Right: Only Icons for WhatsApp, Call, Bill, and 3 Vertical Dots */}
+                  {/* Right: Only Icons for WhatsApp and Call */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     {/* WHATSAPP ICON BUTTON */}
                     <button
@@ -713,7 +729,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                         window.open(`https://wa.me/91${c.phone}?text=${msg}`, '_blank');
                         showToast(`Opened WhatsApp chat for ${c.name}`);
                       }}
-                      className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                      className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
                     >
                       <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
                         <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
@@ -728,119 +744,12 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                         e.stopPropagation();
                         window.open(`tel:+91${c.phone}`);
                       }}
-                      className="w-8 h-8 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-400 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                      className="w-8 h-8 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                     </button>
-
-                    {/* BILL ICON BUTTON */}
-                    <button
-                      type="button"
-                      title={`Create Express Bill for ${c.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setBillCustName(c.name);
-                        setBillCustPhone(c.phone);
-                        setCurrentScreen('billing');
-                        showToast(`Pre-filled ${c.name} for Express Billing!`);
-                      }}
-                      className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </button>
-
-                    {/* THREE VERTICAL DOTS (MORE OPTIONS) */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        title="More options"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuCustId(isMenuOpen ? null : c.id);
-                        }}
-                        className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
-                          isMenuOpen
-                            ? isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-200 border-slate-300 text-slate-900'
-                            : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3] hover:text-white' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151] hover:text-black'
-                        }`}
-                      >
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                          <circle cx="12" cy="5" r="2" />
-                          <circle cx="12" cy="12" r="2" />
-                          <circle cx="12" cy="19" r="2" />
-                        </svg>
-                      </button>
-
-                      {/* Dropdown Menu for Edit and Inactive / Delete */}
-                      {isMenuOpen && (
-                        <div
-                          className={`absolute right-0 mt-1.5 w-44 rounded-xl border shadow-2xl p-1 z-30 animate-fadeIn ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(c)}
-                            className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors ${isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-[#1F2937] hover:bg-[#F7F9FC] hover:text-[#B8863B]'}`}
-                          >
-                            <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                            <span>Edit Client</span>
-                          </button>
-
-                          {c.status !== 'inactive' ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setOpenMenuCustId(null);
-                                markCustomerInactive(c.id);
-                              }}
-                              className="w-full px-2.5 py-1.5 rounded-lg hover:bg-amber-500/15 text-left text-xs font-semibold text-amber-400 flex items-center gap-2 transition-colors"
-                            >
-                              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                              </svg>
-                              <span>Mark Inactive</span>
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuCustId(null);
-                                  reactivateCustomer(c.id);
-                                }}
-                                className="w-full px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/15 text-left text-xs font-semibold text-emerald-400 flex items-center gap-2 transition-colors"
-                              >
-                                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Reactivate Client</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuCustId(null);
-                                  if (confirm(`Permanently remove ${c.name} from CRM ledger?`)) {
-                                    deleteCustomer(c.id);
-                                  }
-                                }}
-                                className="w-full px-2.5 py-1.5 rounded-lg hover:bg-rose-500/15 text-left text-xs font-semibold text-rose-400 flex items-center gap-2 transition-colors"
-                              >
-                                <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                <span>Permanent Delete</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
 
@@ -920,7 +829,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       {historyCust && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className={`p-6 rounded-3xl border max-w-lg w-full space-y-4 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
-            {/* Modal Header */}
+            {/* Modal Header & Visibility Area */}
             <div className="flex items-start justify-between border-b border-[#2A3858] pb-3 shrink-0">
               <div className="flex items-center gap-3">
                 <div
@@ -949,34 +858,288 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                   <p className="text-xs text-[#A7B0C3]">+91 {historyCust.phone}</p>
                 </div>
               </div>
+
+              {/* Action Buttons: Star VIP, Call, WhatsApp, Three-dot Menu, Close */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* STAR BUTTON FOR VIP */}
+                <button
+                  type="button"
+                  title={historyCust.vip ? 'Remove VIP Status' : 'Mark as VIP Client'}
+                  onClick={() => {
+                    toggleCustomerVip(historyCust.id);
+                    setHistoryCust((prev) => prev ? ({ ...prev, vip: !prev.vip }) : null);
+                    showToast(historyCust.vip ? `Removed VIP status from ${historyCust.name}` : `Marked ${historyCust.name} as VIP!`);
+                  }}
+                  className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-transform active:scale-95 cursor-pointer ${
+                    historyCust.vip
+                      ? 'bg-[#D4AF37]/20 border-[#D4AF37]/60 text-[#D4AF37]'
+                      : isDarkMode
+                      ? 'bg-[#121B33] border-[#2A3858] text-slate-400 hover:text-[#D4AF37]'
+                      : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-[#B8863B]'
+                  }`}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill={historyCust.vip ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </button>
+
+                {/* CALL BUTTON */}
+                <button
+                  type="button"
+                  title={`Call ${historyCust.name} (+91 ${historyCust.phone})`}
+                  onClick={() => window.open(`tel:+91${historyCust.phone}`)}
+                  className="w-8 h-8 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </button>
+
+                {/* WHATSAPP BUTTON */}
+                <button
+                  type="button"
+                  title={`WhatsApp message to ${historyCust.name}`}
+                  onClick={() => {
+                    const msg = encodeURIComponent(`Hello ${historyCust.name}! Greetings from ${shopProfile.shopName}. We hope to see you soon!`);
+                    window.open(`https://wa.me/91${historyCust.phone}?text=${msg}`, '_blank');
+                  }}
+                  className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                  </svg>
+                </button>
+
+                {/* THREE-DOT MENU BUTTON (IN VISIBILITY AREA) */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    title="Client options"
+                    onClick={() => setOpenDetailMenu((prev) => !prev)}
+                    className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+                      openDetailMenu
+                        ? isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-200 border-slate-300 text-slate-900'
+                        : isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#A7B0C3] hover:text-white' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151] hover:text-black'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {openDetailMenu && (
+                    <div
+                      className={`absolute right-0 mt-1.5 w-48 rounded-xl border p-1 z-30 animate-fadeIn ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0]'}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenDetailMenu(false);
+                          handleOpenEdit(historyCust);
+                        }}
+                        className={`w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-[#1F2937] hover:bg-[#F7F9FC] hover:text-[#B8863B]'}`}
+                      >
+                        <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        <span>Edit Client</span>
+                      </button>
+
+                      {historyCust.status !== 'inactive' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenDetailMenu(false);
+                            markCustomerInactive(historyCust.id);
+                            setHistoryCust((prev) => prev ? ({ ...prev, status: 'inactive' }) : null);
+                            showToast(`Marked ${historyCust.name} as inactive`);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg hover:bg-amber-500/15 text-left text-xs font-semibold text-amber-400 flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                          <span>Mark Inactive</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenDetailMenu(false);
+                            reactivateCustomer(historyCust.id);
+                            setHistoryCust((prev) => prev ? ({ ...prev, status: 'active' }) : null);
+                            showToast(`Reactivated ${historyCust.name}`);
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg hover:bg-emerald-500/15 text-left text-xs font-semibold text-emerald-400 flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Reactivate Client</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenDetailMenu(false);
+                          if (confirm(`Permanently remove ${historyCust.name} from CRM ledger?`)) {
+                            deleteCustomer(historyCust.id);
+                            setHistoryCust(null);
+                          }
+                        }}
+                        className="w-full px-2.5 py-2 rounded-lg hover:bg-rose-500/15 text-left text-xs font-semibold text-rose-400 flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Permanent Delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* CLOSE BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHistoryCust(null);
+                    setOpenDetailMenu(false);
+                  }}
+                  className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-sm cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* ACTION OPTIONS: New Bill, Book Slot, WhatsApp, Chat (Marketing) */}
+            <div className="grid grid-cols-4 gap-2 shrink-0">
+              {/* NEW BILL */}
               <button
                 type="button"
-                onClick={() => setHistoryCust(null)}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-sm cursor-pointer"
+                onClick={() => {
+                  setBillCustName(historyCust.name);
+                  setBillCustPhone(historyCust.phone);
+                  setCurrentScreen('billing');
+                  setHistoryCust(null);
+                  showToast(`Pre-filled ${historyCust.name} for Express Billing!`);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl border transition-transform active:scale-95 cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border-[#D4AF37]/40 text-[#D4AF37]'
+                    : 'bg-[#FEF3C7] hover:bg-[#FDE68A] border-[#D4AF37]/40 text-[#B8863B]'
+                }`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-4 h-4 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
+                <span className="text-[10px] font-extrabold tracking-tight">New Bill</span>
+              </button>
+
+              {/* BOOK SLOT */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentScreen('appointments');
+                  setHistoryCust(null);
+                  showToast(`Opening Calendar for ${historyCust.name}`);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl border transition-transform active:scale-95 cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-blue-600/15 hover:bg-blue-600/25 border-blue-500/40 text-blue-400'
+                    : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600'
+                }`}
+              >
+                <svg className="w-4 h-4 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-[10px] font-extrabold tracking-tight">Book Slot</span>
+              </button>
+
+              {/* WHATSAPP */}
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = encodeURIComponent(`Hello ${historyCust.name}! Greetings from ${shopProfile.shopName}. We hope to see you soon!`);
+                  window.open(`https://wa.me/91${historyCust.phone}?text=${msg}`, '_blank');
+                  showToast(`Opened WhatsApp chat for ${historyCust.name}`);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl border transition-transform active:scale-95 cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-emerald-600/15 hover:bg-emerald-600/25 border-emerald-500/40 text-emerald-400'
+                    : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-600'
+                }`}
+              >
+                <svg className="w-4 h-4 mb-1 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                </svg>
+                <span className="text-[10px] font-extrabold tracking-tight">WhatsApp</span>
+              </button>
+
+              {/* CHAT (MARKETING) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentScreen('whatsapp');
+                  setHistoryCust(null);
+                  showToast(`Opened WhatsApp Marketing for ${historyCust.name}`);
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl border transition-transform active:scale-95 cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-400'
+                    : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-600'
+                }`}
+              >
+                <svg className="w-4 h-4 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="text-[10px] font-extrabold tracking-tight">Chat</span>
               </button>
             </div>
 
-            {/* Quick Stats Banner */}
-            <div className={`grid grid-cols-3 gap-2 p-3 rounded-xl border text-center shrink-0 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
-              <div>
-                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Total Visits</span>
-                <strong className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>{historyCust.visits || 1}</strong>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Total Spent</span>
-                <strong className="text-sm font-extrabold text-[#D4AF37]">₹{(historyCust.spend || 0).toLocaleString('en-IN')}</strong>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#737D92] font-bold uppercase block">Pending Due</span>
-                <strong className={`text-sm font-extrabold ${(historyCust.due || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  ₹{historyCust.due || 0}
-                </strong>
-              </div>
-            </div>
+            {/* Quick Stats Banner: Visits, Lifetime Spend, Average Bill, Pending Due */}
+            {(() => {
+              const visitsCount = historyCust.visits || 0;
+              const spendAmount = historyCust.spend || 0;
+              const avgBill = visitsCount > 0 ? Math.round(spendAmount / visitsCount) : 0;
+              const dueAmount = historyCust.due || 0;
+
+              return (
+                <div className={`grid grid-cols-4 gap-2 p-3 rounded-2xl border text-center shrink-0 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
+                  <div>
+                    <span className="text-[9px] text-[#737D92] font-bold uppercase block">Visits</span>
+                    <strong className={`text-xs sm:text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                      {visitsCount}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-[#737D92] font-bold uppercase block">Lifetime Spend</span>
+                    <strong className="text-xs sm:text-sm font-extrabold text-[#D4AF37]">
+                      ₹{spendAmount.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-[#737D92] font-bold uppercase block">Average Bill</span>
+                    <strong className={`text-xs sm:text-sm font-extrabold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      ₹{avgBill.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-[#737D92] font-bold uppercase block">Pending Due</span>
+                    <strong className={`text-xs sm:text-sm font-extrabold ${dueAmount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      ₹{dueAmount}
+                    </strong>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Client CRM Notes In Banner */}
             {historyCust.notes && (
@@ -991,107 +1154,199 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               </div>
             )}
 
-            {/* History Feed List */}
-            <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-[160px]">
-              <h4 className={`text-xs font-bold sticky top-0 py-1 ${isDarkMode ? 'text-[#A7B0C3] bg-[#1A2746]' : 'text-[#374151] bg-[#FFFFFF]'}`}>
-                Visit & Bill Ledger History
-              </h4>
-
+            {/* Content Feed: Last Order + Order History */}
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-[160px]">
               {(() => {
                 const customerBills = getCustomerBills(historyCust);
-                if (customerBills.length === 0) {
-                  return (
-                    <div className="p-4 rounded-xl bg-[#121B33] border border-[#2A3858] text-center space-y-2">
-                      <p className="text-xs text-[#A7B0C3]">
-                        No previous digital invoices logged yet for this client.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBillCustName(historyCust.name);
-                          setBillCustPhone(historyCust.phone);
-                          setCurrentScreen('billing');
-                          setHistoryCust(null);
-                        }}
-                        className="px-3 py-1.5 rounded-lg bg-[#D4AF37] text-[#0B1F44] font-bold text-xs"
-                      >
-                        Create First Bill
-                      </button>
-                    </div>
-                  );
-                }
+                const lastBill = customerBills.length > 0 ? customerBills[0] : null;
 
-                return customerBills.map((bill) => (
-                  <div
-                    key={bill.id}
-                    className={`p-3.5 rounded-xl border space-y-2 transition-colors ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>#{bill.id}</strong>
-                        <span className="text-[11px] text-[#A7B0C3]">{bill.dateStr}</span>
+                return (
+                  <>
+                    {/* LAST ORDER CARD */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-[#D4AF37]' : 'text-[#B8863B]'}`}>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Last Order</span>
+                        </h4>
+                        {lastBill && (
+                          <span className="text-[10px] text-[#737D92] font-semibold">{lastBill.dateStr}</span>
+                        )}
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                        bill.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                      }`}>
-                        {bill.status} ({bill.mode})
-                      </span>
-                    </div>
 
-                    {/* Services Availed */}
-                    <div className="text-xs text-slate-300 space-y-1 pt-1 border-t border-[#2A3858]">
-                      {bill.items.map((it, idx) => (
-                        <div key={idx} className="flex justify-between text-[11px]">
-                          <span>{it.name} × {it.qty}</span>
-                          <span className="font-mono text-[#A7B0C3]">₹{it.price * it.qty}</span>
+                      {lastBill ? (
+                        <div className={`p-3.5 rounded-2xl border space-y-2 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                                #{lastBill.id}
+                              </strong>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                lastBill.status === 'paid'
+                                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                              }`}>
+                                {lastBill.status} ({lastBill.mode})
+                              </span>
+                            </div>
+                            <span className="text-xs font-extrabold text-[#D4AF37]">
+                              ₹{lastBill.total}
+                            </span>
+                          </div>
+
+                          {/* Services in Last Order */}
+                          <div className="space-y-1 pt-1.5 border-t border-[#2A3858]/60 text-xs">
+                            {lastBill.items.map((it, idx) => (
+                              <div key={idx} className="flex justify-between text-[11px]">
+                                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
+                                  {it.name} × {it.qty}
+                                </span>
+                                <span className="text-[#A7B0C3]">
+                                  ₹{it.price * it.qty}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center text-[11px] pt-1.5 border-t border-[#2A3858]/60">
+                            <span className="text-[#A7B0C3]">Stylist: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{lastBill.staff}</strong></span>
+                            {lastBill.notes && <span className="italic text-slate-400 text-[10px] truncate max-w-[160px]">{lastBill.notes}</span>}
+                          </div>
                         </div>
-                      ))}
+                      ) : (
+                        <div className={`p-3.5 rounded-2xl border text-center space-y-1.5 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
+                          <p className="text-xs text-[#A7B0C3]">No previous orders logged yet for {historyCust.name}.</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex justify-between items-center text-xs pt-1 border-t border-[#2A3858]">
-                      <span className="text-[11px] text-[#A7B0C3]">Stylist: <strong className="text-slate-200">{bill.staff}</strong></span>
-                      <span className="font-extrabold text-[#D4AF37] font-mono">Total: ₹{bill.total}</span>
+                    {/* ORDER HISTORY LIST */}
+                    <div className="space-y-2 pt-2">
+                      <h4 className={`text-xs font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                        Order History ({customerBills.length})
+                      </h4>
+
+                      {customerBills.length === 0 ? (
+                        <div className={`p-4 rounded-2xl border text-center space-y-2 ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}>
+                          <p className="text-xs text-[#A7B0C3]">No historical invoices logged in system.</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBillCustName(historyCust.name);
+                              setBillCustPhone(historyCust.phone);
+                              setCurrentScreen('billing');
+                              setHistoryCust(null);
+                            }}
+                            className="px-3.5 py-1.5 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs cursor-pointer hover:bg-[#C59F2E]"
+                          >
+                            Create First Bill
+                          </button>
+                        </div>
+                      ) : (
+                        customerBills.map((bill) => (
+                          <div
+                            key={bill.id}
+                            className={`p-3 rounded-2xl border space-y-1.5 transition-colors ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-[#F7F9FC] border-[#E2E8F0]'}`}
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>#{bill.id}</strong>
+                                <span className="text-[11px] text-[#A7B0C3]">{bill.dateStr}</span>
+                              </div>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                bill.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                              }`}>
+                                {bill.status} ({bill.mode})
+                              </span>
+                            </div>
+
+                            <div className="space-y-1 text-xs">
+                              {bill.items.map((it, idx) => (
+                                <div key={idx} className="flex justify-between text-[11px]">
+                                  <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{it.name} × {it.qty}</span>
+                                  <span className="text-[#A7B0C3]">₹{it.price * it.qty}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-between items-center text-xs pt-1 border-t border-[#2A3858]/60">
+                              <span className="text-[11px] text-[#A7B0C3]">Stylist: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{bill.staff}</strong></span>
+                              <span className="font-extrabold text-[#D4AF37]">₹{bill.total}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                  </div>
-                ));
+                  </>
+                );
               })()}
             </div>
 
-            {/* Modal Footer Actions */}
-            <div className="flex gap-2.5 pt-3 border-t border-[#2A3858] shrink-0">
+            {/* Modal Footer Actions: Edit Button, Inactive / Reactivate Button, Close Button */}
+            <div className="flex gap-2 pt-3 border-t border-[#2A3858] shrink-0">
+              {/* EDIT BUTTON */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenEdit(historyCust);
+                }}
+                className={`flex-1 py-2.5 rounded-xl border font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'bg-[#121B33] border-[#2A3858] text-[#D4AF37] hover:border-[#D4AF37]/50'
+                    : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Edit Profile</span>
+              </button>
+
+              {/* INACTIVE / REACTIVATE BUTTON */}
               {historyCust.status === 'inactive' ? (
                 <button
                   type="button"
                   onClick={() => {
                     reactivateCustomer(historyCust.id);
-                    setHistoryCust({ ...historyCust, status: 'active' });
+                    setHistoryCust((prev) => prev ? ({ ...prev, status: 'active' }) : null);
+                    showToast(`Reactivated ${historyCust.name}`);
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Reactivate to Active CRM</span>
+                  <span>Reactivate</span>
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    setBillCustName(historyCust.name);
-                    setBillCustPhone(historyCust.phone);
-                    setCurrentScreen('billing');
-                    setHistoryCust(null);
+                    markCustomerInactive(historyCust.id);
+                    setHistoryCust((prev) => prev ? ({ ...prev, status: 'inactive' }) : null);
+                    showToast(`Marked ${historyCust.name} as inactive`);
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-400 font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <span>Create New Bill</span>
-                  <span>→</span>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  <span>Mark Inactive</span>
                 </button>
               )}
+
+              {/* CLOSE BUTTON */}
               <button
                 type="button"
-                onClick={() => setHistoryCust(null)}
-                className={`px-4 py-2.5 rounded-xl border border-[#2A3858] text-xs font-semibold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'}`}
+                onClick={() => {
+                  setHistoryCust(null);
+                  setOpenDetailMenu(false);
+                }}
+                className={`px-4 py-2.5 rounded-xl border border-[#2A3858] text-xs font-semibold cursor-pointer transition-colors ${
+                  isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'
+                }`}
               >
                 Close
               </button>
