@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
   } = useSalon();
 
   const isStylist = role === 'stylist';
-  const RESTRICTED_FOR_STYLIST = new Set(['accounts', 'staff', 'settings', 'whatsapp', 'reports', 'reminders', 'pricelist']);
+  const RESTRICTED_FOR_STYLIST = new Set(['accounts', 'staff', 'settings', 'whatsapp', 'reports', 'reminders', 'pricelist', 'analytics']);
 
   const t = useTranslationHelper(language);
 
@@ -131,6 +131,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
               <circle cx="9" cy="7" r="4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M22 21v-2a4 4 0 00-3-3.87" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          ),
+        },
+        {
+          id: 'analytics',
+          label: 'Deep Analytics',
+          icon: (
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
           ),
         },

@@ -16,6 +16,7 @@ import { WhatsAppMarketingView } from '@/components/whatsapp-marketing';
 import { RemindersView } from '@/components/reminders';
 import { AccountsView } from '@/components/accounts';
 import { ReportsView } from '@/components/reports';
+import { DeepAnalyticsView } from '@/components/deep-analytics';
 import { SettingsView } from '@/components/settings';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
@@ -402,7 +403,18 @@ function DashboardContent() {
               )
             )}
 
-            {/* ================= 12. SETTINGS & SHOP PROFILE ================= */}
+            {/* ================= 12. DEEP ANALYTICS 360 (OWNER ONLY) ================= */}
+            {currentScreen === 'analytics' && (
+              role === 'stylist' ? (
+                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
+                  Store Intelligence & Deep Analytics are restricted to Salon Owners.
+                </div>
+              ) : (
+                <DeepAnalyticsView />
+              )
+            )}
+
+            {/* ================= 13. SETTINGS & SHOP PROFILE ================= */}
             {currentScreen === 'settings' && (
               role === 'stylist' ? (
                 <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
