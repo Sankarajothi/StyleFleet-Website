@@ -123,21 +123,34 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
 
   const kpiLabels = getKpiLabels();
 
+  // Helper to accurately identify if a bill occurred today
+  const isBillToday = (b: Bill): boolean => {
+    if (b.isToday) return true;
+    if (b.createdAt && b.createdAt.startsWith(todayStr)) return true;
+    if (b.dateStr && (b.dateStr.startsWith(todayStr) || b.dateStr.includes(todayStr))) return true;
+    if (b.dateStr) {
+      const d = new Date(b.dateStr);
+      if (!isNaN(d.getTime())) {
+        const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (dStr === todayStr) return true;
+      }
+    }
+    return false;
+  };
+
   // Today's appointments for this chair/salon (excluding cancelled)
   const todayAppointments = effectiveAppointments.filter(
-    (a) => a.date === todayStr && a.status !== 'Cancelled'
+    (a) => (a.date === todayStr || a.date?.startsWith(todayStr)) && a.status !== 'Cancelled'
   );
 
   // Today's bills
-  const todayBills = effectiveBills.filter((b) => b.isToday);
+  const todayBills = effectiveBills.filter((b) => isBillToday(b));
 
   // Metrics Calculation: strictly from real database records with zero artificial additions
   const totalRevenueNumber = effectiveBills.reduce((acc, b) => acc + (b.paidAmount || 0), 0);
-  const todayRevenueNumber = isStylist
-    ? todayBills.reduce((acc, b) => acc + (b.paidAmount || 0), 0)
-    : todayAppointments.reduce((acc, a) => acc + (a.amount || 0), 0);
+  const todayRevenueNumber = todayBills.reduce((acc, b) => acc + (b.paidAmount || 0), 0);
   const totalPendingDues = isStylist
-    ? effectiveBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0)
+    ? todayBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0)
     : effectiveBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0) + customers.reduce((acc, c) => acc + (c.due || 0), 0);
   const confirmedAppointments = effectiveAppointments.filter((a) => a.status === 'Confirmed');
 
