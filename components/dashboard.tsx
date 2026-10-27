@@ -549,7 +549,7 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
                 isDarkMode ? 'text-[#D4AF37]' : 'text-amber-800'
               }`}
             >
-              <span>Sales Ledger</span>
+              <span>Sales & Analytics</span>
               <span className="group-hover:translate-x-0.5 transition-transform">→</span>
             </button>
           </div>
