@@ -9,6 +9,8 @@ import {
   updateAppointmentStatusInDb,
   saveBillToDb,
   deleteBillInDb,
+  updateBillInDb,
+  restoreBillInDb,
   saveExpenseToDb,
   saveStaffMemberToDb,
   updateShopProfileInDb,
@@ -115,6 +117,7 @@ export interface Bill {
   discount?: number;
   tax?: number;
   tip?: number;
+  deletedAt?: string;
 }
 
 export interface Expense {
@@ -177,6 +180,7 @@ interface SalonContextType {
   createBill: (bill: Omit<Bill, 'id' | 'dateStr' | 'isDeleted' | 'isToday'>, customDateStr?: string, customIsToday?: boolean) => Bill;
   editBill: (id: string, updated: Partial<Bill>) => void;
   deleteBill: (id: string) => void;
+  restoreBill: (id: string) => void;
 
   expenses: Expense[];
   addExpense: (expense: Omit<Expense, 'id' | 'date'> & { id?: string; date?: string }) => void;
@@ -637,17 +641,31 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setBills((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updated, isEdited: true, editedAt: editedTime } : b))
     );
+    if (currentShopId) {
+      updateBillInDb(currentShopId, id, updated);
+    }
     showToast(`Bill #${id} updated successfully.`);
   };
 
   const deleteBill = (id: string) => {
+    const nowIso = new Date().toISOString();
     setBills((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, isDeleted: true } : b))
+      prev.map((b) => (b.id === id ? { ...b, isDeleted: true, deletedAt: nowIso } : b))
     );
     if (currentShopId) {
       deleteBillInDb(currentShopId, id);
     }
-    showToast(`Bill #${id} deleted.`);
+    showToast(`Bill #${id} moved to Recently Deleted (kept for 30 days).`);
+  };
+
+  const restoreBill = (id: string) => {
+    setBills((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, isDeleted: false, deletedAt: undefined } : b))
+    );
+    if (currentShopId) {
+      restoreBillInDb(currentShopId, id);
+    }
+    showToast(`Bill #${id} restored successfully.`);
   };
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -877,6 +895,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         createBill,
         editBill,
         deleteBill,
+        restoreBill,
         expenses,
         addExpense,
         updateExpense,

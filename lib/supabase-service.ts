@@ -1239,3 +1239,71 @@ export async function deleteBillInDb(shopId: string, invoiceNumberOrId: string):
     return false;
   }
 }
+
+/**
+ * Update an existing bill in Supabase.
+ */
+export async function updateBillInDb(
+  shopId: string,
+  invoiceNumberOrId: string,
+  updated: Partial<Bill>
+): Promise<boolean> {
+  try {
+    const updatePayload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updated.total !== undefined) {
+      updatePayload.total_minor = Math.round(updated.total * 100);
+      updatePayload.subtotal_minor = Math.round(updated.total * 100);
+    }
+    if (updated.discount !== undefined) {
+      updatePayload.discount_minor = Math.round(updated.discount * 100);
+    }
+    if (updated.paidAmount !== undefined) {
+      updatePayload.paid_amount_minor = Math.round(updated.paidAmount * 100);
+    }
+    if (updated.dueAmount !== undefined) {
+      updatePayload.due_amount_minor = Math.round(updated.dueAmount * 100);
+    }
+    if (updated.mode !== undefined) {
+      updatePayload.payment_mode = updated.mode;
+    }
+    if (updated.status !== undefined) {
+      updatePayload.status = updated.status;
+    }
+    if (updated.notes !== undefined) {
+      updatePayload.notes = updated.notes;
+    }
+
+    const { error } = await supabase
+      .from('bills')
+      .update(updatePayload)
+      .eq('shop_id', shopId)
+      .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Restore a soft-deleted bill in Supabase.
+ */
+export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('bills')
+      .update({
+        status: 'paid',
+        deleted_at: null,
+      })
+      .eq('shop_id', shopId)
+      .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
