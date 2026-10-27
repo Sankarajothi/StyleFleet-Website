@@ -14,6 +14,11 @@ export function generateUuid(): string {
   });
 }
 
+export function isValidUuid(str?: string | null): boolean {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
+
 export interface RegisterShopParams {
   shopName: string;
   ownerName: string;
@@ -520,6 +525,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       let serviceName = a.services?.name || 'Salon Service';
       let staffName = a.staff?.name || 'Any Stylist';
       let amount = Math.round((a.services?.price_minor || 0) / 100);
+      let isDeleted = false;
 
       if (a.notes) {
         try {
@@ -529,18 +535,46 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
           if (parsed.service && serviceName === 'Salon Service') serviceName = parsed.service;
           if (parsed.staff_name && staffName === 'Any Stylist') staffName = parsed.staff_name;
           if (parsed.amount && amount === 0) amount = parsed.amount;
+          if (parsed.is_deleted) isDeleted = true;
         } catch {
           if (custName === 'Client') custName = a.notes;
         }
       }
 
-      const dateObj = new Date(a.starts_at || Date.now());
-      const dateStr = !isNaN(dateObj.getTime())
-        ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`
-        : new Date().toISOString().split('T')[0];
-      const timeStr = !isNaN(dateObj.getTime())
-        ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : '10:00 AM';
+      // Parse starts_at: Handles shared format "YYYY-MM-DD hh:mm AM/PM" or fallback ISO
+      const rawStartsAt = (a.starts_at || '').trim();
+      let dateStr = '';
+      let timeStr = '';
+
+      if (rawStartsAt.includes(' ')) {
+        // Space-separated format: "YYYY-MM-DD hh:mm AM/PM"
+        const parts = rawStartsAt.split(' ');
+        dateStr = parts[0];
+        timeStr = parts.slice(1).join(' ');
+      } else if (rawStartsAt.includes('T')) {
+        // Legacy ISO timestamp fallback: convert strictly to IST Asia/Kolkata
+        const d = new Date(rawStartsAt);
+        if (!isNaN(d.getTime())) {
+          dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+          timeStr = d.toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          });
+        }
+      } else if (rawStartsAt) {
+        if (rawStartsAt.includes('-')) {
+          dateStr = rawStartsAt;
+          timeStr = '10:00 AM';
+        } else {
+          dateStr = new Date().toISOString().split('T')[0];
+          timeStr = rawStartsAt;
+        }
+      }
+
+      if (!dateStr) dateStr = new Date().toISOString().split('T')[0];
+      if (!timeStr) timeStr = '10:00 AM';
 
       return {
         id: a.id,
@@ -551,7 +585,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         startsAt: timeStr,
         date: dateStr,
         amount,
-        status: (a.status as Appointment['status']) || 'Confirmed',
+        status: (isDeleted || a.status === 'Cancelled') ? 'Cancelled' : ((a.status as Appointment['status']) || 'Confirmed'),
       };
     });
 
@@ -736,36 +770,34 @@ export async function saveCustomerToDb(shopId: string, customer: {
 
 /**
  * Persist an appointment strictly into the current salon's appointments table.
+ * Guaranteed format: starts_at = "YYYY-MM-DD hh:mm AM/PM" (matching StyleFleet Android)
  */
-export async function saveAppointmentToDb(shopId: string, appt: Omit<Appointment, 'id'>): Promise<string | null> {
+export async function saveAppointmentToDb(
+  shopId: string,
+  appt: Omit<Appointment, 'id'>,
+  providedId?: string
+): Promise<string | null> {
   try {
-    const apptId = generateUuid();
-    
-    // Parse start time into ISO string safely
-    let startsAtIso = new Date().toISOString();
-    try {
-      if (appt.date && appt.startsAt) {
-        let hour = 10;
-        let minute = 0;
-        const timeMatch = appt.startsAt.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-        if (timeMatch) {
-          hour = parseInt(timeMatch[1], 10);
-          minute = parseInt(timeMatch[2], 10);
-          const ampm = timeMatch[3]?.toUpperCase();
-          if (ampm === 'PM' && hour < 12) hour += 12;
-          if (ampm === 'AM' && hour === 12) hour = 0;
-        }
-        const d = new Date(appt.date);
-        d.setHours(hour, minute, 0, 0);
-        if (!isNaN(d.getTime())) {
-          startsAtIso = d.toISOString();
-        }
-      }
-    } catch {}
+    const apptId = (providedId && isValidUuid(providedId)) ? providedId : generateUuid();
+
+    // Format starts_at strictly as local space-separated string expected by mobile & web:
+    // e.g. "2026-10-27 10:30 AM"
+    let cleanSlot = (appt.startsAt || '10:00 AM').trim();
+    const timeMatch = cleanSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (timeMatch) {
+      const h = timeMatch[1].padStart(2, '0');
+      const m = timeMatch[2];
+      const ampm = (timeMatch[3] || 'AM').toUpperCase();
+      cleanSlot = `${h}:${m} ${ampm}`;
+    }
+
+    const cleanDate = (appt.date || new Date().toISOString().split('T')[0]).trim();
+    const formattedStartsAt = `${cleanDate} ${cleanSlot}`;
 
     // Resolve customer and staff foreign keys
     let customerId: string | null = null;
     let staffId: string | null = null;
+    let serviceId: string | null = null;
 
     if (appt.phone) {
       const cleanPhone = appt.phone.replace(/\D/g, '').slice(-10);
@@ -778,6 +810,17 @@ export async function saveAppointmentToDb(shopId: string, appt: Omit<Appointment
           .limit(1);
         if (custRows && custRows.length > 0) {
           customerId = custRows[0].id;
+        } else if (appt.cust && appt.cust.trim() !== 'Client' && appt.cust.trim() !== '') {
+          const newCustId = generateUuid();
+          await supabase.from('customers').insert({
+            id: newCustId,
+            shop_id: shopId,
+            name: appt.cust.trim(),
+            phone: cleanPhone,
+            is_starred: false,
+            is_active: true,
+          });
+          customerId = newCustId;
         }
       } catch {}
     }
@@ -796,6 +839,21 @@ export async function saveAppointmentToDb(shopId: string, appt: Omit<Appointment
       } catch {}
     }
 
+    if (appt.service) {
+      try {
+        const primaryService = appt.service.split(',')[0].replace(/\(x\d+\)/, '').trim();
+        const { data: srvRows } = await supabase
+          .from('services')
+          .select('id')
+          .eq('shop_id', shopId)
+          .ilike('name', primaryService)
+          .limit(1);
+        if (srvRows && srvRows.length > 0) {
+          serviceId = srvRows[0].id;
+        }
+      } catch {}
+    }
+
     const notesJson = JSON.stringify({
       cust: appt.cust,
       service: appt.service,
@@ -810,7 +868,8 @@ export async function saveAppointmentToDb(shopId: string, appt: Omit<Appointment
         shop_id: shopId,
         customer_id: customerId,
         staff_id: staffId,
-        starts_at: startsAtIso,
+        service_id: serviceId,
+        starts_at: formattedStartsAt,
         duration_minutes: 30,
         status: appt.status || 'Confirmed',
         notes: notesJson,
@@ -829,13 +888,66 @@ export async function saveAppointmentToDb(shopId: string, appt: Omit<Appointment
 }
 
 /**
- * Update appointment status in Supabase.
+ * Update appointment status in Supabase with full mobile audit parity.
  */
-export async function updateAppointmentStatusInDb(shopId: string, apptId: string, status: string): Promise<boolean> {
+export async function updateAppointmentStatusInDb(
+  shopId: string,
+  apptId: string,
+  status: string,
+  audit?: { role: 'owner' | 'stylist'; name: string }
+): Promise<boolean> {
   try {
+    const updatePayload: any = { status };
+    if (status === 'Cancelled') {
+      try {
+        const { data: existing } = await supabase
+          .from('appointments')
+          .select('notes')
+          .eq('id', apptId)
+          .eq('shop_id', shopId)
+          .single();
+
+        let notesObj: any = {};
+        if (existing?.notes) {
+          try {
+            notesObj = JSON.parse(existing.notes);
+          } catch {
+            notesObj = { note: existing.notes };
+          }
+        }
+        notesObj.is_deleted = true;
+        notesObj.deleted_at = new Date().toISOString();
+        if (audit) {
+          notesObj.deleted_by_role = audit.role;
+          notesObj.deleted_by_name = audit.name;
+        }
+        updatePayload.notes = JSON.stringify(notesObj);
+      } catch {}
+    } else if (status === 'Confirmed') {
+      try {
+        const { data: existing } = await supabase
+          .from('appointments')
+          .select('notes')
+          .eq('id', apptId)
+          .eq('shop_id', shopId)
+          .single();
+
+        if (existing?.notes) {
+          try {
+            const notesObj = JSON.parse(existing.notes);
+            delete notesObj.is_deleted;
+            delete notesObj.deleted_at;
+            delete notesObj.deleted_by_role;
+            delete notesObj.deleted_by_name;
+            updatePayload.notes = JSON.stringify(notesObj);
+          } catch {}
+        }
+      } catch {}
+    }
+
     const { error } = await supabase
       .from('appointments')
-      .update({ status })
+      .update(updatePayload)
       .eq('id', apptId)
       .eq('shop_id', shopId);
     return !error;

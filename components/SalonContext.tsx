@@ -12,6 +12,7 @@ import {
   saveExpenseToDb,
   saveStaffMemberToDb,
   updateShopProfileInDb,
+  generateUuid,
 } from '@/lib/supabase-service';
 
 export interface ShopProfile {
@@ -529,13 +530,14 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [appointments, isHydrated]);
 
   const addAppointment = (newAppt: Omit<Appointment, 'id'>) => {
+    const apptId = generateUuid();
     const a: Appointment = {
       ...newAppt,
-      id: `ap-${Date.now()}`,
+      id: apptId,
     };
     setAppointments((prev) => [a, ...prev]);
     if (currentShopId) {
-      saveAppointmentToDb(currentShopId, a);
+      saveAppointmentToDb(currentShopId, a, apptId);
     }
     showToast(`Appointment booked for ${a.cust} at ${a.startsAt}!`);
   };
@@ -545,7 +547,11 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       prev.map((a) => (a.id === id ? { ...a, status } : a))
     );
     if (currentShopId) {
-      updateAppointmentStatusInDb(currentShopId, id, status);
+      const audit = {
+        role: role === 'stylist' ? ('stylist' as const) : ('owner' as const),
+        name: role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile.ownerName || 'Owner'),
+      };
+      updateAppointmentStatusInDb(currentShopId, id, status, audit);
     }
     showToast(`Appointment marked as ${status}.`);
   };
