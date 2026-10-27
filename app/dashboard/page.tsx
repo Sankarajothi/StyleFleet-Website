@@ -15,6 +15,7 @@ import { StaffTeamView } from '@/components/staff-team';
 import { WhatsAppMarketingView } from '@/components/whatsapp-marketing';
 import { RemindersView } from '@/components/reminders';
 import { AccountsView } from '@/components/accounts';
+import { ReportsView } from '@/components/reports';
 import { SettingsView } from '@/components/settings';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
@@ -380,7 +381,7 @@ function DashboardContent() {
             )}
 
             {/* ================= 10. ACCOUNTS & EXPENSES ================= */}
-            {currentScreen === 'accounts' && (
+            {(currentScreen === 'accounts' || currentScreen === 'expenses') && (
               role === 'stylist' ? (
                 <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
                   Accounts & Salon Expenses are restricted to Salon Owners.
@@ -390,7 +391,18 @@ function DashboardContent() {
               )
             )}
 
-            {/* ================= 11. SETTINGS & SHOP PROFILE ================= */}
+            {/* ================= 11. REPORTS & BUSINESS INTELLIGENCE ================= */}
+            {currentScreen === 'reports' && (
+              role === 'stylist' ? (
+                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
+                  Financial & Business Reports are restricted to Salon Owners.
+                </div>
+              ) : (
+                <ReportsView />
+              )
+            )}
+
+            {/* ================= 12. SETTINGS & SHOP PROFILE ================= */}
             {currentScreen === 'settings' && (
               role === 'stylist' ? (
                 <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">

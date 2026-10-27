@@ -13,7 +13,7 @@ interface SalesAndBillsProps {
   onOpenMenuCatalogModal?: () => void;
 }
 
-type SalesOption = 'today' | 'custom' | 'deleted';
+type SalesOption = 'today' | 'week' | 'month' | 'custom' | 'deleted';
 
 export function SalesAndBillsView({
   onViewInvoice,
@@ -257,24 +257,96 @@ export function SalesAndBillsView({
     return getPreviousDateStr(targetDate);
   }, [targetDate]);
 
-  // Check if a bill falls on a specific date
-  const isBillOnDate = (b: Bill, dStr: string) => {
+  // Date range helpers for periods (Today, Week, Month, Custom)
+  const dateRanges = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(todayEnd);
+    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+
+    // Week: Last 7 days
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const priorWeekEnd = new Date(weekStart.getTime() - 1);
+    const priorWeekStart = new Date(weekStart);
+    priorWeekStart.setDate(priorWeekStart.getDate() - 7);
+
+    // Month: Current Month (1st of this month to today)
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const priorMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const priorMonthStart = new Date(priorMonthEnd.getFullYear(), priorMonthEnd.getMonth(), 1, 0, 0, 0, 0);
+
+    // Custom Date
+    const parts = customDate.split('-');
+    const customDStart = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+    const customDEnd = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+    const customPriorStart = new Date(customDStart);
+    customPriorStart.setDate(customPriorStart.getDate() - 1);
+    const customPriorEnd = new Date(customDEnd);
+    customPriorEnd.setDate(customPriorEnd.getDate() - 1);
+
+    return {
+      today: { target: { start: todayStart, end: todayEnd }, prior: { start: yesterdayStart, end: yesterdayEnd } },
+      week: { target: { start: weekStart, end: todayEnd }, prior: { start: priorWeekStart, end: priorWeekEnd } },
+      month: { target: { start: monthStart, end: todayEnd }, prior: { start: priorMonthStart, end: priorMonthEnd } },
+      custom: { target: { start: customDStart, end: customDEnd }, prior: { start: customPriorStart, end: customPriorEnd } },
+    };
+  }, [customDate]);
+
+  const activeRange = useMemo(() => {
+    if (salesOption === 'week') return dateRanges.week;
+    if (salesOption === 'month') return dateRanges.month;
+    if (salesOption === 'custom') return dateRanges.custom;
+    return dateRanges.today;
+  }, [salesOption, dateRanges]);
+
+  const periodTitle = useMemo(() => {
+    switch (salesOption) {
+      case 'today': return `Today (${formatDateReadable(todayStr)})`;
+      case 'week': return 'This Week';
+      case 'month': return 'This Month';
+      case 'custom': return customDate === yesterdayStr ? `Yesterday (${formatDateReadable(yesterdayStr)})` : formatDateReadable(customDate);
+      default: return 'Sales Analytics';
+    }
+  }, [salesOption, todayStr, yesterdayStr, customDate]);
+
+  const priorPeriodTitle = useMemo(() => {
+    switch (salesOption) {
+      case 'today': return 'Yesterday';
+      case 'week': return 'Last Week';
+      case 'month': return 'Last Month';
+      case 'custom': return 'Prior Day';
+      default: return 'Prior Period';
+    }
+  }, [salesOption]);
+
+  // Check if a bill falls within a date range
+  const isBillInDateRange = (b: Bill, start: Date, end: Date) => {
     if (b.isDeleted) return false;
-    if (dStr === todayStr && b.isToday) return true;
-    if (dStr === yesterdayStr && b.isYesterday) return true;
-    if (b.dateStr && b.dateStr.startsWith(dStr)) return true;
-    if (b.createdAt && b.createdAt.startsWith(dStr)) return true;
-    return false;
+    if (salesOption === 'today' || salesOption === 'custom') {
+      const targetDStr = salesOption === 'custom' ? customDate : todayStr;
+      if (start.getTime() === dateRanges.today.target.start.getTime() && b.isToday) return true;
+      if (start.getTime() === dateRanges.today.prior.start.getTime() && b.isYesterday) return true;
+      if (b.dateStr && b.dateStr.startsWith(targetDStr)) return true;
+      if (b.createdAt && b.createdAt.startsWith(targetDStr)) return true;
+    }
+    const t = b.isToday ? new Date().getTime() : b.createdAt ? new Date(b.createdAt).getTime() : b.dateStr ? new Date(b.dateStr).getTime() : 0;
+    if (!t) return false;
+    return t >= start.getTime() && t <= end.getTime();
   };
 
   // Bills for Target Date & Prior Date
   const targetBills = useMemo(() => {
-    return effectiveBills.filter((b) => isBillOnDate(b, targetDate));
-  }, [effectiveBills, targetDate]);
+    return effectiveBills.filter((b) => isBillInDateRange(b, activeRange.target.start, activeRange.target.end));
+  }, [effectiveBills, activeRange]);
 
   const priorBills = useMemo(() => {
-    return effectiveBills.filter((b) => isBillOnDate(b, priorDate));
-  }, [effectiveBills, priorDate]);
+    return effectiveBills.filter((b) => isBillInDateRange(b, activeRange.prior.start, activeRange.prior.end));
+  }, [effectiveBills, activeRange]);
 
   // Target Day Analytics Computations
   const targetRevenue = useMemo(() => {
@@ -454,37 +526,85 @@ export function SalesAndBillsView({
         </button>
       </div>
 
-      {/* ================= 2. TWO PRIMARY OPTIONS: TODAY VS CUSTOM (+ RECENTLY DELETED) ================= */}
+      {/* ================= 2. PERIOD CONTROLS (OWNER SLIDER: TODAY/WEEK/MONTH vs STYLIST: TODAY/CUSTOM) ================= */}
       <div
         className={`p-2 rounded-2xl border flex flex-wrap items-center justify-between gap-2 ${
           isDarkMode ? 'bg-[#0F1C36] border-[#2A3858]' : 'bg-slate-100 border-slate-200'
         }`}
       >
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* TODAY OPTION */}
-          <button
-            type="button"
-            onClick={() => setSalesOption('today')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-2 ${
-              salesOption === 'today'
-                ? 'bg-[#D4AF37] text-[#0B1F44]'
-                : isDarkMode
-                ? 'text-[#A7B0C3] hover:text-white hover:bg-white/5'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Today</span>
-          </button>
+          {/* OWNER SLIDER: TODAY, WEEK, MONTH */}
+          {!isStylist ? (
+            <div className={`p-1 rounded-xl flex items-center gap-1 border ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-300'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setSalesOption('today')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  salesOption === 'today'
+                    ? 'bg-[#D4AF37] text-[#0B1F44]'
+                    : isDarkMode
+                    ? 'text-[#A7B0C3] hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Today</span>
+              </button>
 
-          {/* CUSTOM OPTION */}
+              <button
+                type="button"
+                onClick={() => setSalesOption('week')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  salesOption === 'week'
+                    ? 'bg-[#D4AF37] text-[#0B1F44]'
+                    : isDarkMode
+                    ? 'text-[#A7B0C3] hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Week</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSalesOption('month')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  salesOption === 'month'
+                    ? 'bg-[#D4AF37] text-[#0B1F44]'
+                    : isDarkMode
+                    ? 'text-[#A7B0C3] hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Month</span>
+              </button>
+            </div>
+          ) : (
+            /* STYLIST TOGGLE: ONLY TODAY AND CUSTOM */
+            <button
+              type="button"
+              onClick={() => setSalesOption('today')}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-2 ${
+                salesOption === 'today'
+                  ? 'bg-[#D4AF37] text-[#0B1F44]'
+                  : isDarkMode
+                  ? 'text-[#A7B0C3] hover:text-white hover:bg-white/5'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+              }`}
+            >
+              <span>Today</span>
+            </button>
+          )}
+
+          {/* CUSTOM OPTION (FOR BOTH OWNER AND STYLIST) */}
           <button
             type="button"
             onClick={() => {
               setTempDateInput(customDate);
               setShowCustomDateModal(true);
             }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-2 ${
               salesOption === 'custom'
                 ? 'bg-[#D4AF37] text-[#0B1F44]'
                 : isDarkMode
@@ -503,32 +623,34 @@ export function SalesAndBillsView({
           </button>
         </div>
 
-        {/* RECENTLY DELETED (30 DAYS) BUTTON */}
-        <button
-          type="button"
-          onClick={() => setSalesOption(salesOption === 'deleted' ? 'today' : 'deleted')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-            salesOption === 'deleted'
-              ? 'bg-rose-500 text-white'
-              : isDarkMode
-              ? 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
-              : 'text-slate-600 hover:text-rose-600 hover:bg-rose-50'
-          }`}
-          title="Invoices retained for 30 days before permanent deletion"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          <span>Recently Deleted</span>
-          {recentlyDeletedBills.length > 0 && (
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-bold">
-              {recentlyDeletedBills.length}
-            </span>
-          )}
-        </button>
+        {/* RECENTLY DELETED (30 DAYS) BUTTON - FOR OWNER ONLY */}
+        {!isStylist && (
+          <button
+            type="button"
+            onClick={() => setSalesOption(salesOption === 'deleted' ? 'today' : 'deleted')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              salesOption === 'deleted'
+                ? 'bg-rose-500 text-white'
+                : isDarkMode
+                ? 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
+                : 'text-slate-600 hover:text-rose-600 hover:bg-rose-50'
+            }`}
+            title="Invoices retained for 30 days before permanent deletion"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>Recently Deleted</span>
+            {recentlyDeletedBills.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 font-bold">
+                {recentlyDeletedBills.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* ================= 3. ACTIVE ANALYTICS VIEW (TODAY / CUSTOM) ================= */}
+      {/* ================= 3. ACTIVE ANALYTICS VIEW ================= */}
       {salesOption !== 'deleted' ? (
         <div className="space-y-6">
           {/* Active Period Indicator */}
@@ -537,11 +659,7 @@ export function SalesAndBillsView({
               <span className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                 Viewing Analytics for:{' '}
                 <strong className="text-[#D4AF37]">
-                  {targetDate === todayStr
-                    ? `Today (${formatDateReadable(todayStr)})`
-                    : targetDate === yesterdayStr
-                    ? `Yesterday (${formatDateReadable(yesterdayStr)})`
-                    : formatDateReadable(targetDate)}
+                  {periodTitle}
                 </strong>
               </span>
               {salesOption === 'custom' && (
@@ -558,7 +676,7 @@ export function SalesAndBillsView({
               )}
             </div>
             <span className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-              Compared with: {formatDateReadable(priorDate)}
+              Compared with: {priorPeriodTitle}
             </span>
           </div>
 
@@ -602,7 +720,7 @@ export function SalesAndBillsView({
                     <span>({revenueDiff >= 0 ? `+${diffPct}%` : `${diffPct}%`})</span>
                   </div>
                   <span className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    vs {targetDate === todayStr ? 'yesterday' : 'prior day'}
+                    vs {priorPeriodTitle.toLowerCase()}
                   </span>
                 </div>
               </div>
@@ -619,7 +737,7 @@ export function SalesAndBillsView({
                 </div>
                 <div>
                   <span className={`text-[10px] font-bold block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    Previous Day Sales
+                    {priorPeriodTitle} Sales
                   </span>
                   <strong className={`text-base font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                     ₹{priorRevenue.toLocaleString('en-IN')}
@@ -640,24 +758,24 @@ export function SalesAndBillsView({
                     Comparative Sales Bar Chart
                   </h3>
                   <p className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                    Side-by-side revenue comparison: Last Day vs Selected Day
+                    Volume comparison between {priorPeriodTitle.toLowerCase()} and {periodTitle.toLowerCase()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 text-[11px]">
                   <span className="flex items-center gap-1 text-slate-400">
                     <span className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
-                    <span>Prior Day</span>
+                    <span>{priorPeriodTitle}</span>
                   </span>
                   <span className="flex items-center gap-1 text-[#D4AF37] font-bold">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#D4AF37]" />
-                    <span>{targetDate === todayStr ? 'Today' : 'Selected Day'}</span>
+                    <span>{salesOption === 'today' ? 'Today' : periodTitle}</span>
                   </span>
                 </div>
               </div>
 
               {/* 2 Comparative Vertical Bars */}
               <div className="grid grid-cols-2 gap-6 items-end pt-8 pb-4 h-48">
-                {/* BAR 1: PRIOR DAY / YESTERDAY */}
+                {/* BAR 1: PRIOR PERIOD */}
                 <div className="flex flex-col items-center h-full justify-end group">
                   <span className={`text-xs font-bold mb-2 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                     ₹{priorRevenue.toLocaleString('en-IN')}
@@ -669,14 +787,14 @@ export function SalesAndBillsView({
                     />
                   </div>
                   <span className={`text-xs font-bold mt-2.5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    {targetDate === todayStr ? 'Yesterday' : formatDateReadable(priorDate)}
+                    {priorPeriodTitle}
                   </span>
                   <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
                     {priorCount} bills
                   </span>
                 </div>
 
-                {/* BAR 2: TARGET DAY / TODAY */}
+                {/* BAR 2: TARGET PERIOD */}
                 <div className="flex flex-col items-center h-full justify-end group">
                   <span className="text-xs font-extrabold text-[#D4AF37] mb-2">
                     ₹{targetRevenue.toLocaleString('en-IN')}
@@ -688,7 +806,7 @@ export function SalesAndBillsView({
                     />
                   </div>
                   <span className="text-xs font-black text-[#D4AF37] mt-2.5">
-                    {targetDate === todayStr ? "Today's Sales" : formatDateReadable(targetDate)}
+                    {salesOption === 'today' ? "Today" : periodTitle}
                   </span>
                   <span className={`text-[10px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
                     {targetCount} bills
@@ -711,7 +829,7 @@ export function SalesAndBillsView({
                   Collected Via Channels
                 </h3>
                 <p className={`text-[11px] ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                  Payment modes reconciled for {formatDateReadable(targetDate)}
+                  Payment modes reconciled for {periodTitle}
                 </p>
               </div>
 
@@ -816,7 +934,7 @@ export function SalesAndBillsView({
             <div className="flex items-center justify-between pb-3 border-b border-white/5">
               <div>
                 <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {targetDate === todayStr ? "Today's Bills" : `Bills for ${formatDateReadable(targetDate)}`}
+                  {salesOption === 'today' ? "Today's Bills" : `${periodTitle} Bills`}
                 </h3>
                 <p className={`text-xs ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
                   Touch any bill below to view full invoice, share, edit, or delete
@@ -830,7 +948,7 @@ export function SalesAndBillsView({
             {targetBills.length === 0 ? (
               <div className="py-12 text-center space-y-3">
                 <p className="text-xs text-[#737D92]">
-                  No bills generated yet for {formatDateReadable(targetDate)}.
+                  No bills generated yet for {periodTitle.toLowerCase()}.
                 </p>
                 <button
                   type="button"

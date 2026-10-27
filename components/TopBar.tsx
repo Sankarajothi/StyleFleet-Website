@@ -43,7 +43,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
       case 'sales': return 'Sales';
       case 'reminders': return t.reminders;
       case 'whatsapp': return t.marketing;
-      case 'accounts': return t.accounts;
+      case 'accounts': return 'Expenses';
+      case 'expenses': return 'Expenses';
+      case 'reports': return 'Reports';
       case 'settings': return t.settings;
       default: return t.dashboard;
     }

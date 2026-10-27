@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
   } = useSalon();
 
   const isStylist = role === 'stylist';
-  const RESTRICTED_FOR_STYLIST = new Set(['accounts', 'staff', 'settings', 'whatsapp']);
+  const RESTRICTED_FOR_STYLIST = new Set(['accounts', 'staff', 'settings', 'whatsapp', 'reports', 'reminders', 'pricelist']);
 
   const t = useTranslationHelper(language);
 
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
       items: [
         {
           id: 'accounts',
-          label: t.accounts,
+          label: 'Expenses',
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -131,6 +131,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
               <circle cx="9" cy="7" r="4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M22 21v-2a4 4 0 00-3-3.87" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          ),
+        },
+        {
+          id: 'reports',
+          label: 'Reports',
+          icon: (
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           ),
         },

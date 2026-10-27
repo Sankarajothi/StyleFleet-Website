@@ -74,6 +74,7 @@ export interface StaffMember {
   status?: 'active' | 'inactive';
   invited?: boolean;
   permissions?: string[];
+  commissionRate?: number;
 }
 
 export interface Appointment {
