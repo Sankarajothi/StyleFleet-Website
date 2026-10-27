@@ -5,6 +5,8 @@ import { getShopPrefixFromShopName, formatInvoiceNumber } from '@/lib/salon-help
 import {
   fetchSalonDataFromDb,
   saveCustomerToDb,
+  updateCustomerInDb,
+  deleteCustomerInDb,
   saveAppointmentToDb,
   updateAppointmentStatusInDb,
   saveBillToDb,
@@ -12,6 +14,8 @@ import {
   updateBillInDb,
   restoreBillInDb,
   saveExpenseToDb,
+  updateExpenseInDb,
+  deleteExpenseInDb,
   saveStaffMemberToDb,
   updateShopProfileInDb,
   generateUuid,
@@ -411,27 +415,38 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleCustomerVip = (id: string) => {
+    let toggledVip = false;
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === id) {
           const newVip = !c.vip;
+          toggledVip = newVip;
           showToast(newVip ? `⭐ ${c.name} marked as VIP / MVP!` : `${c.name} removed from VIP`);
           return { ...c, vip: newVip };
         }
         return c;
       })
     );
+    if (currentShopId) {
+      updateCustomerInDb(currentShopId, id, { vip: toggledVip });
+    }
   };
 
   const updateCustomer = (id: string, updated: Partial<Customer>) => {
     setCustomers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
     );
+    if (currentShopId) {
+      updateCustomerInDb(currentShopId, id, updated);
+    }
     showToast('Client details updated');
   };
 
   const deleteCustomer = (id: string) => {
     setCustomers((prev) => prev.filter((c) => c.id !== id));
+    if (currentShopId) {
+      deleteCustomerInDb(currentShopId, id);
+    }
     showToast('Client permanently deleted from CRM');
   };
 
@@ -802,11 +817,17 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updated } : e))
     );
+    if (currentShopId) {
+      updateExpenseInDb(currentShopId, id, updated);
+    }
     showToast('Expense updated successfully.');
   };
 
   const deleteExpense = (id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
+    if (currentShopId) {
+      deleteExpenseInDb(currentShopId, id);
+    }
     showToast('Expense entry deleted.');
   };
 

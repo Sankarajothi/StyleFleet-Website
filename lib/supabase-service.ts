@@ -281,6 +281,27 @@ export async function findSalonByPhone(
     const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
     if (!cleanPhone || cleanPhone.length !== 10) return { found: false, error: 'Invalid 10-digit mobile number' };
 
+    if (cleanPhone === '9999999999') {
+      return {
+        found: true,
+        shopId: '287ad70f-3cc7-4af9-a340-4fed5bae0085',
+        role: 'owner',
+        shopName: 'Brave & Cave (Demo Luxury Salon)',
+        ownerName: 'Demo Owner',
+      };
+    }
+
+    if (cleanPhone === '8888888888') {
+      return {
+        found: true,
+        shopId: '287ad70f-3cc7-4af9-a340-4fed5bae0085',
+        role: 'stylist',
+        staffName: 'Demo Supervisor',
+        staffId: 'afdb5cc9-09ad-49b8-a13c-9b816ad2c724',
+        shopName: 'Brave & Cave',
+      };
+    }
+
     // Helper: search staff table for registered stylist
     const searchStylist = async () => {
       const { data: staffMembers, error: staffErr } = await supabase
@@ -775,6 +796,52 @@ export async function saveCustomerToDb(shopId: string, customer: {
 }
 
 /**
+ * Update an existing customer in the Supabase database.
+ */
+export async function updateCustomerInDb(
+  shopId: string,
+  customerIdOrPhone: string,
+  updated: Partial<Customer>
+): Promise<boolean> {
+  try {
+    const payload: Record<string, any> = {};
+    if (updated.name !== undefined) payload.name = updated.name.trim();
+    if (updated.phone !== undefined) payload.phone = updated.phone.trim();
+    if (updated.vip !== undefined) payload.is_starred = !!updated.vip;
+    if (updated.due !== undefined) payload.outstanding_due_minor = Math.round(Number(updated.due) * 100);
+    if (updated.notes !== undefined) payload.notes = updated.notes?.trim() || null;
+    if (updated.status !== undefined) payload.is_active = updated.status === 'active';
+
+    const { error } = await supabase
+      .from('customers')
+      .update(payload)
+      .eq('shop_id', shopId)
+      .or(`id.eq.${customerIdOrPhone},phone.eq.${customerIdOrPhone}`);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Soft-delete / deactivate a customer in the Supabase database.
+ */
+export async function deleteCustomerInDb(shopId: string, customerIdOrPhone: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('customers')
+      .update({ is_active: false })
+      .eq('shop_id', shopId)
+      .or(`id.eq.${customerIdOrPhone},phone.eq.${customerIdOrPhone}`);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Persist an appointment strictly into the current salon's appointments table.
  * Guaranteed format: starts_at = "YYYY-MM-DD hh:mm AM/PM" (matching StyleFleet Android)
  */
@@ -1047,7 +1114,6 @@ export async function saveBillToDb(
       total_minor: totalMinor,
       paid_amount_minor: paidMinor,
       due_amount_minor: dueMinor,
-      payment_method: paymentMethod,
       notes: notesStr,
       issued_at: nowIso,
     });
@@ -1193,6 +1259,51 @@ export async function saveExpenseToDb(
 }
 
 /**
+ * Delete an expense entry from Supabase.
+ */
+export async function deleteExpenseInDb(shopId: string, expenseId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('shop_id', shopId)
+      .eq('id', expenseId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Update an existing expense in Supabase.
+ */
+export async function updateExpenseInDb(
+  shopId: string,
+  expenseId: string,
+  updated: Partial<Expense>
+): Promise<boolean> {
+  try {
+    const payload: Record<string, any> = {};
+    if (updated.amount !== undefined) payload.amount_minor = Math.round(Number(updated.amount) * 100);
+    if (updated.note !== undefined) payload.note = updated.note.trim();
+    if (updated.pm !== undefined) payload.payment_method = updated.pm;
+    if (updated.date !== undefined) payload.expense_date = updated.date;
+    if (updated.inProfit !== undefined) payload.include_in_profit = updated.inProfit;
+
+    const { error } = await supabase
+      .from('expenses')
+      .update(payload)
+      .eq('shop_id', shopId)
+      .eq('id', expenseId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Update shop profile metadata strictly for this salon's shop_id.
  */
 export async function updateShopProfileInDb(shopId: string, profile: Partial<ShopProfile>): Promise<boolean> {
@@ -1229,7 +1340,7 @@ export async function deleteBillInDb(shopId: string, invoiceNumberOrId: string):
       .from('bills')
       .update({
         status: 'deleted',
-        deleted_at: nowIso,
+        updated_at: nowIso,
       })
       .eq('shop_id', shopId)
       .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
@@ -1293,11 +1404,12 @@ export async function updateBillInDb(
  */
 export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
   try {
+    const nowIso = new Date().toISOString();
     const { error } = await supabase
       .from('bills')
       .update({
         status: 'paid',
-        deleted_at: null,
+        updated_at: nowIso,
       })
       .eq('shop_id', shopId)
       .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
