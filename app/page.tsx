@@ -396,7 +396,7 @@ export default function HomePage() {
               <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
                 StyleFleet
               </span>
-              <span className="text-[8px] sm:text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
+              <span className="hidden sm:block text-[8px] sm:text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
                 Salon OS
               </span>
             </div>
@@ -438,11 +438,11 @@ export default function HomePage() {
             </nav>
           )}
 
-          {/* Right Action Cluster: Language Switcher + Quick Portal Entry */}
+          {/* Right Action Cluster: Language Switcher (Desktop) + Quick Portal Entry */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            {/* Language Switcher Pill */}
+            {/* Language Switcher Pill (Desktop only in header, placed in hero/footer for mobile) */}
             {view === 'home' && (
-              <div className="flex items-center p-0.5 rounded-full bg-[#07152B]/90 border border-white/10 text-[10px] sm:text-[11px] font-bold">
+              <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[#07152B]/90 border border-white/10 text-[10px] sm:text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setLandingLang('en')}
@@ -507,6 +507,34 @@ export default function HomePage() {
             {/* Subtle Hero Radial Grid Background */}
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
+            {/* Dedicated Mobile Language Toggle (Placed outside top header on mobile) */}
+            <div className="sm:hidden flex items-center justify-center mb-4">
+              <div className="flex items-center p-0.5 rounded-full bg-[#07152B]/95 border border-[#D4AF37]/35 text-xs font-bold shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => setLandingLang('en')}
+                  className={`px-3.5 py-1 rounded-full transition-all ${
+                    landingLang === 'en'
+                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLandingLang('ta')}
+                  className={`px-3.5 py-1 rounded-full transition-all ${
+                    landingLang === 'ta'
+                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
+                      : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                >
+                  தமிழ்
+                </button>
+              </div>
+            </div>
+
             {/* Trust Pill Badge */}
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-[#0B1E3B]/90 border border-[#D4AF37]/40 shadow-xl mb-5 sm:mb-6 backdrop-blur-md animate-fadeIn max-w-full text-center">
               <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
@@ -2022,9 +2050,33 @@ export default function HomePage() {
             <span className="text-white font-semibold text-xs tracking-wide">Salon Management Platform</span>
           </div>
 
-          {/* Clean minimal copyright notice */}
-          <div className="text-center sm:text-right text-[#94A3B8] text-xs font-medium">
-            <span>All rights reserved</span>
+          {/* Language Switcher & Clean minimal copyright notice */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-right">
+            <div className="flex items-center p-0.5 rounded-full bg-[#0B1E3B] border border-white/10 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setLandingLang('en')}
+                className={`px-3 py-1 rounded-full transition-all ${
+                  landingLang === 'en'
+                    ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
+                    : 'text-[#94A3B8] hover:text-white'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLandingLang('ta')}
+                className={`px-3 py-1 rounded-full transition-all ${
+                  landingLang === 'ta'
+                    ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
+                    : 'text-[#94A3B8] hover:text-white'
+                }`}
+              >
+                தமிழ்
+              </button>
+            </div>
+            <span className="text-[#94A3B8] text-xs font-medium">All rights reserved</span>
           </div>
         </div>
       </footer>
