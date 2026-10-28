@@ -23,6 +23,19 @@ import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-
 
 function DashboardContent() {
   const router = useRouter();
+
+  // Authentication guard
+  useEffect(() => {
+    try {
+      const authSessionStr = localStorage.getItem('stylefleet_auth_session');
+      const shopId = localStorage.getItem('stylefleet_shop_id');
+      if (!authSessionStr || !shopId) {
+        router.push('/');
+      }
+    } catch {
+      router.push('/');
+    }
+  }, [router]);
   const {
     role,
     currentScreen,

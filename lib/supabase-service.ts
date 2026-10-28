@@ -1472,3 +1472,84 @@ export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string)
     return false;
   }
 }
+
+/**
+ * Permanently delete a salon and all its associated data from Supabase.
+ */
+export async function deleteSalonAccountInDb(shopId: string): Promise<boolean> {
+  try {
+    if (!shopId) return false;
+
+    // Delete dependent records first to handle foreign key constraints cleanly
+    await supabase.from('bills').delete().eq('shop_id', shopId);
+    await supabase.from('appointments').delete().eq('shop_id', shopId);
+    await supabase.from('customers').delete().eq('shop_id', shopId);
+    await supabase.from('expenses').delete().eq('shop_id', shopId);
+    await supabase.from('services').delete().eq('shop_id', shopId);
+    await supabase.from('service_categories').delete().eq('shop_id', shopId);
+    await supabase.from('staff').delete().eq('shop_id', shopId);
+
+    // Delete the shop entry
+    const { error } = await supabase.from('shops').delete().eq('id', shopId);
+    if (error) {
+      console.error('[Supabase] Error deleting shop account:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Exception deleting shop account:', err);
+    return false;
+  }
+}
+
+/**
+ * Check whether a salon and optionally a specific stylist still exists in Supabase.
+ * Returns { exists: boolean, reason?: string }
+ */
+export async function verifyAccountActiveInDb(
+  shopId: string,
+  role?: string,
+  staffId?: string,
+  staffPhone?: string
+): Promise<{ active: boolean; reason?: string }> {
+  try {
+    if (!shopId) return { active: false, reason: 'No salon ID found.' };
+
+    // 1. Verify shop exists in Supabase
+    const { data: shop, error: shopErr } = await supabase
+      .from('shops')
+      .select('id, name')
+      .eq('id', shopId)
+      .maybeSingle();
+
+    if (shopErr || !shop) {
+      return { active: false, reason: 'This salon account was permanently deleted from the database.' };
+    }
+
+    // 2. If user is a stylist, verify staff member exists and is active
+    if (role === 'stylist') {
+      let query = supabase.from('staff').select('id, is_active, name').eq('shop_id', shopId);
+      if (staffId && isValidUuid(staffId)) {
+        query = query.eq('id', staffId);
+      } else if (staffPhone) {
+        const clean = staffPhone.replace(/\D/g, '').slice(-10);
+        query = query.or(`phone.eq.${clean},phone.eq.+91${clean}`);
+      }
+
+      const { data: staffList, error: staffErr } = await query;
+      if (staffErr || !staffList || staffList.length === 0) {
+        return { active: false, reason: 'Your stylist account was deleted or removed from this salon.' };
+      }
+
+      if (staffList[0].is_active === false) {
+        return { active: false, reason: 'Your stylist account has been deactivated.' };
+      }
+    }
+
+    return { active: true };
+  } catch {
+    // In case of transient network failure, don't trigger false logouts
+    return { active: true };
+  }
+}

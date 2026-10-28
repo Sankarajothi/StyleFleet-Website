@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useSalon } from '@/components/SalonContext';
 import { getShopPrefixFromShopName, formatInvoiceNumber, generateTimeSlotsFromBookingHours } from '@/lib/salon-helpers';
+import { deleteSalonAccountInDb } from '@/lib/supabase-service';
 
 interface SettingsViewProps {
   onOpenSignOutModal: () => void;
@@ -161,18 +162,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
     showToast(`Thank you for rating StyleFleet ${ratingStars} Stars! ⭐`);
   };
 
-  // Handle Permanent Delete
-  const handleConfirmPermanentDelete = () => {
+  // Handle Permanent Delete from Supabase & App
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const handleConfirmPermanentDelete = async () => {
     if (deleteConfirmText.trim() !== 'DELETE') {
       showToast('Please type DELETE in capital letters to confirm.', 'error');
       return;
     }
-    setShowDeleteAccountModal(false);
+    setIsDeletingAccount(true);
+    const activeShopId = shopProfile.id || (typeof window !== 'undefined' ? localStorage.getItem('stylefleet_shop_id') : null);
     try {
-      localStorage.clear();
-    } catch {}
-    showToast('Account data wiped successfully.');
-    window.location.href = '/';
+      if (activeShopId) {
+        await deleteSalonAccountInDb(activeShopId);
+      }
+    } catch (e) {
+      console.error('Error deleting account in cloud:', e);
+    } finally {
+      setShowDeleteAccountModal(false);
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch {}
+      alert('Your StyleFleet salon account has been permanently deleted from Supabase. You are now logged out.');
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -1564,10 +1577,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               <button
                 type="button"
                 onClick={handleConfirmPermanentDelete}
-                disabled={deleteConfirmText.trim() !== 'DELETE'}
-                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black shadow-md transition-all cursor-pointer"
+                disabled={deleteConfirmText.trim() !== 'DELETE' || isDeletingAccount}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                Erase & Delete
+                {isDeletingAccount ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting from DB...</span>
+                  </>
+                ) : (
+                  'Erase & Delete'
+                )}
               </button>
             </div>
           </div>

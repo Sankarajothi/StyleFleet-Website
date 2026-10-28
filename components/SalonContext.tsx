@@ -20,9 +20,11 @@ import {
   updateStaffMemberInDb,
   updateShopProfileInDb,
   generateUuid,
+  verifyAccountActiveInDb,
 } from '@/lib/supabase-service';
 
 export interface ShopProfile {
+  id?: string;
   shopName: string;
   ownerName: string;
   phone: string;
@@ -812,23 +814,70 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setExpenses(JSON.parse(storedExpenses));
       }
 
+      // Helper to immediately log out a user whose account or salon was deleted
+      const forceLogoutUser = (reason: string = 'Your account was deleted from the database. You have been logged out.') => {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {}
+        alert(reason);
+        window.location.href = '/';
+      };
+
       // Check if active salon has a registered shop_id in cloud Supabase
       const savedShopId = localStorage.getItem('stylefleet_shop_id');
+      const authSessionStr = localStorage.getItem('stylefleet_auth_session');
+      let activeSession: any = null;
+      if (authSessionStr) {
+        try {
+          activeSession = JSON.parse(authSessionStr);
+          if (activeSession.role) setRole(activeSession.role);
+          if (activeSession.staffName) setLoggedInStaffName(activeSession.staffName);
+        } catch {}
+      }
+
       if (savedShopId) {
         setCurrentShopId(savedShopId);
         setIsLoadingSalonData(true);
         fetchSalonDataFromDb(savedShopId)
           .then((dbData) => {
-            if (dbData) {
-              setShopProfile(dbData.shop);
-              setCategories(dbData.categories);
-              setServices(dbData.services);
-              setStaff(dbData.staff);
-              setCustomers(dbData.customers);
-              setAppointments(dbData.appointments);
-              setBills(dbData.bills);
-              setExpenses(dbData.expenses);
+            if (!dbData) {
+              // The shop was permanently deleted from Supabase!
+              console.warn('[SalonContext] Shop not found in Supabase. Logging out immediately.');
+              forceLogoutUser('This salon account was permanently deleted from Supabase. You have been logged out.');
+              return;
             }
+
+            // If user is a stylist, verify they are still in the staff list
+            if (activeSession && activeSession.role === 'stylist') {
+              const stylistExists = (dbData.staff || []).some((s) => {
+                if (activeSession.staffId && s.id === activeSession.staffId) return true;
+                if (activeSession.phone && s.phone) {
+                  const cleanS = activeSession.phone.replace(/\D/g, '').slice(-10);
+                  const cleanP = s.phone.replace(/\D/g, '').slice(-10);
+                  if (cleanS === cleanP) return true;
+                }
+                if (activeSession.staffName && s.name && s.name.trim().toLowerCase() === activeSession.staffName.trim().toLowerCase()) {
+                  return true;
+                }
+                return false;
+              });
+
+              if (!stylistExists) {
+                console.warn('[SalonContext] Stylist removed from salon staff in Supabase. Logging out immediately.');
+                forceLogoutUser('Your stylist account was removed from this salon. You have been logged out.');
+                return;
+              }
+            }
+
+            setShopProfile(dbData.shop);
+            setCategories(dbData.categories);
+            setServices(dbData.services);
+            setStaff(dbData.staff);
+            setCustomers(dbData.customers);
+            setAppointments(dbData.appointments);
+            setBills(dbData.bills);
+            setExpenses(dbData.expenses);
           })
           .catch((err) => {
             console.warn('[SalonContext] Could not load cloud state:', err);
@@ -839,22 +888,62 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         setIsLoadingSalonData(false);
       }
-
-      // Restore active auth session (role and staff name)
-      const authSessionStr = localStorage.getItem('stylefleet_auth_session');
-      if (authSessionStr) {
-        try {
-          const session = JSON.parse(authSessionStr);
-          if (session.role) setRole(session.role);
-          if (session.staffName) setLoggedInStaffName(session.staffName);
-        } catch {}
-      }
     } catch (e) {
       console.error('Error hydrating salon state from localStorage:', e);
     } finally {
       setIsHydrated(true);
     }
   }, []);
+
+  // Continuous verification: Immediately log out user if their account or salon was deleted from Supabase
+  useEffect(() => {
+    if (!currentShopId) return;
+
+    const checkActiveSessionInDb = async () => {
+      try {
+        const authSessionStr = localStorage.getItem('stylefleet_auth_session');
+        if (!authSessionStr) return;
+        const session = JSON.parse(authSessionStr);
+
+        const result = await verifyAccountActiveInDb(
+          currentShopId,
+          session.role,
+          session.staffId,
+          session.phone
+        );
+
+        if (!result.active) {
+          console.warn('[SalonContext] Account no longer active in Supabase:', result.reason);
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch {}
+          alert(result.reason || 'Your account was deleted from Supabase. You have been logged out.');
+          window.location.href = '/';
+        }
+      } catch (err) {
+        console.warn('[SalonContext] Session check skipped due to error:', err);
+      }
+    };
+
+    // Run check periodically (every 15 seconds)
+    const intervalId = setInterval(checkActiveSessionInDb, 15000);
+
+    // Run check when window gains focus or tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkActiveSessionInDb();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [currentShopId]);
 
   useEffect(() => {
     if (!isHydrated) return;

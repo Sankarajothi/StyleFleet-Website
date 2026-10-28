@@ -56,7 +56,7 @@ export default function HomePage() {
     'Beard Sculpt',
   ]);
   const [demoActiveChair, setDemoActiveChair] = useState<number>(2);
-  const [landingLang, setLandingLang] = useState<'en' | 'ta'>('en');
+  const landingLang = 'en';
   const [pricingInterval, setPricingInterval] = useState<'annual' | 'monthly'>('annual');
 
   const demoServicesList = [
@@ -439,36 +439,8 @@ export default function HomePage() {
             </nav>
           )}
 
-          {/* Right Action Cluster: Language Switcher (Desktop) + Quick Portal Entry */}
+          {/* Right Action Cluster: Quick Portal Entry */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            {/* Language Switcher Pill (Desktop only in header, placed in hero/footer for mobile) */}
-            {view === 'home' && (
-              <div className="hidden sm:flex items-center p-0.5 rounded-full bg-[#07152B]/90 border border-white/10 text-[10px] sm:text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setLandingLang('en')}
-                  className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full transition-all ${
-                    landingLang === 'en'
-                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
-                      : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLandingLang('ta')}
-                  className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full transition-all ${
-                    landingLang === 'ta'
-                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
-                      : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  தமிழ்
-                </button>
-              </div>
-            )}
-
             {view === 'home' ? (
               <>
                 <button
@@ -508,87 +480,59 @@ export default function HomePage() {
             {/* Subtle Hero Radial Grid Background */}
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
-            {/* Dedicated Mobile Language Toggle (Placed outside top header on mobile) */}
-            <div className="sm:hidden flex items-center justify-center mb-4">
-              <div className="flex items-center p-0.5 rounded-full bg-[#07152B]/95 border border-[#D4AF37]/35 text-xs font-bold shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => setLandingLang('en')}
-                  className={`px-3.5 py-1 rounded-full transition-all ${
-                    landingLang === 'en'
-                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
-                      : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  English
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLandingLang('ta')}
-                  className={`px-3.5 py-1 rounded-full transition-all ${
-                    landingLang === 'ta'
-                      ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
-                      : 'text-[#94A3B8] hover:text-white'
-                  }`}
-                >
-                  தமிழ்
-                </button>
-              </div>
-            </div>
-
-            {/* Trust Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-[#0B1E3B]/90 border border-[#D4AF37]/40 shadow-xl mb-5 sm:mb-6 backdrop-blur-md animate-fadeIn max-w-full text-center">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
-              <span className="text-[10px] sm:text-xs font-bold text-[#E0C068] tracking-wide break-words">
-                {landingLang === 'en'
-                  ? '⭐ Trusted by Luxury Salons & Master Stylists across India'
-                  : '⭐ பிரீமியம் சலூன்கள் & ஸ்டைலிஸ்ட்டுகளின் தேர்வு'}
-              </span>
-            </div>
-
             {/* Main Punchy Editorial Headline (Large & Impactful) */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-5xl mx-auto break-words px-1">
-              {landingLang === 'en' ? (
-                <>
-                  Built for Salons.{' '}
-                  <span className="bg-gradient-to-r from-[#D4AF37] via-[#F7C948] to-[#F5A623] bg-clip-text text-transparent">
-                    Designed for Growth.
-                  </span>
-                </>
-              ) : (
-                <>
-                  சலூன்களுக்காக உருவாக்கப்பட்டது.{' '}
-                  <span className="bg-gradient-to-r from-[#D4AF37] via-[#F7C948] to-[#F5A623] bg-clip-text text-transparent">
-                    வளர்ச்சிக்காக வடிவமைக்கப்பட்டது.
-                  </span>
-                </>
-              )}
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-5xl mx-auto break-words px-1 mt-4 sm:mt-6">
+              Built for Salons.{' '}
+              <span className="bg-gradient-to-r from-[#D4AF37] via-[#F7C948] to-[#F5A623] bg-clip-text text-transparent">
+                Designed for Growth.
+              </span>
             </h1>
 
             {/* Hero Subtitle */}
             <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
-              {landingLang === 'en'
-                ? 'Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.'
-                : 'பழைய லெட்ஜர் கணக்குகளுக்கும் பில்லிங் நெரிசலுக்கும் முற்றுப்புள்ளி வையுங்கள். 15 விநாடி பில்லிங், சேர் மேனேஜ்மென்ட், வாட்ஸ்அப் இன்வாய்ஸ் மற்றும் முழு வருமானக் கணக்குகள் ஒரே பிரீமியம் தளத்தில்.'}
+              Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.
             </p>
 
-            {/* Single Hero CTA: Only Get it on Google Play */}
-            <div className="mt-7 sm:mt-9 flex items-center justify-center w-full px-2">
+            {/* Dual Hero CTA: Available on Google Play & iOS App Store */}
+            <div className="mt-7 sm:mt-9 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full px-2 max-w-xl mx-auto">
+              {/* Google Play Button */}
               <a
                 href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="py-3.5 sm:py-4 px-8 sm:px-10 rounded-2xl bg-gradient-to-r from-[#0B1E3B] via-[#0F284E] to-[#0B1E3B] hover:brightness-110 border-2 border-[#D4AF37] hover:border-[#F7C948] text-white shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3.5 cursor-pointer backdrop-blur-md group"
+                className="w-full sm:w-auto flex-1 py-3.5 sm:py-4 px-6 sm:px-8 rounded-2xl bg-gradient-to-r from-[#0B1E3B] via-[#0F284E] to-[#0B1E3B] hover:brightness-110 border-2 border-[#D4AF37] hover:border-[#F7C948] text-white shadow-2xl shadow-[#D4AF37]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3.5 cursor-pointer backdrop-blur-md group"
               >
                 <svg className="w-7 h-7 sm:w-8 sm:h-8 fill-current text-[#D4AF37] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
                   <path d="M3.609 1.814L13.792 12 3.61 22.186a1.99 1.99 0 0 1-.61-1.428V3.242c0-.555.228-1.057.609-1.428zm11.233 11.238l2.257 2.257-11.455 6.613 9.198-8.87zm0-2.104L5.644 2.078l11.455 6.613-2.257 2.257zm1.488 1.052l3.473 2.005a1.5 1.5 0 0 0 0-2.6l-3.473-2.005 1.109 1.3 1.109 1.3-2.218 0z" />
                 </svg>
                 <div className="text-left leading-tight">
-                  <span className="text-[10px] sm:text-[11px] uppercase tracking-widest block text-slate-300 font-bold">
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest block text-slate-300 font-bold">
                     GET IT ON
                   </span>
-                  <span className="text-base sm:text-xl font-black text-white tracking-tight">
+                  <span className="text-sm sm:text-lg font-black text-white tracking-tight">
                     Google Play
+                  </span>
+                </div>
+              </a>
+
+              {/* iOS App Store Button */}
+              <a
+                href="#ios-download"
+                onClick={(e) => {
+                  e.preventDefault();
+                  showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
+                }}
+                className="w-full sm:w-auto flex-1 py-3.5 sm:py-4 px-6 sm:px-8 rounded-2xl bg-gradient-to-r from-[#0B1E3B] via-[#0F284E] to-[#0B1E3B] hover:brightness-110 border-2 border-[#D4AF37]/80 hover:border-[#F7C948] text-white shadow-2xl shadow-[#D4AF37]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3.5 cursor-pointer backdrop-blur-md group"
+              >
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 fill-current text-[#D4AF37] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.77 1.06-1.84.94-2.91-.91.04-2.02.61-2.67 1.38-.58.68-1.09 1.77-.95 2.82 1.02.08 2.05-.52 2.68-1.29z"/>
+                </svg>
+                <div className="text-left leading-tight">
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest block text-slate-300 font-bold">
+                    DOWNLOAD ON THE
+                  </span>
+                  <span className="text-sm sm:text-lg font-black text-white tracking-tight">
+                    App Store
                   </span>
                 </div>
               </a>
@@ -2057,33 +2001,9 @@ export default function HomePage() {
             <span className="text-white font-semibold text-xs tracking-wide">Salon Management Platform</span>
           </div>
 
-          {/* Language Switcher & Clean minimal copyright notice */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-right">
-            <div className="flex items-center p-0.5 rounded-full bg-[#0B1E3B] border border-white/10 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setLandingLang('en')}
-                className={`px-3 py-1 rounded-full transition-all ${
-                  landingLang === 'en'
-                    ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
-                    : 'text-[#94A3B8] hover:text-white'
-                }`}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                onClick={() => setLandingLang('ta')}
-                className={`px-3 py-1 rounded-full transition-all ${
-                  landingLang === 'ta'
-                    ? 'bg-[#D4AF37] text-[#07152B] shadow-sm font-black'
-                    : 'text-[#94A3B8] hover:text-white'
-                }`}
-              >
-                தமிழ்
-              </button>
-            </div>
-            <span className="text-[#94A3B8] text-xs font-medium">All rights reserved</span>
+          {/* Clean minimal copyright notice */}
+          <div className="text-center sm:text-right text-[#94A3B8] text-xs font-medium">
+            <span>All rights reserved</span>
           </div>
         </div>
       </footer>
