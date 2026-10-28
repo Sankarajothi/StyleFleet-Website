@@ -249,8 +249,8 @@ export function InvoiceTemplate({
             {/* Column 1: Billed To */}
             <div>
               <span
-                className="text-[11px] font-bold uppercase tracking-wider block"
-                style={{ color: '#C5A059' }}
+                className="text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#000000' }}
               >
                 BILLED TO
               </span>
@@ -262,8 +262,8 @@ export function InvoiceTemplate({
             {/* Column 2: Mobile */}
             <div>
               <span
-                className="text-[11px] font-bold uppercase tracking-wider block"
-                style={{ color: '#C5A059' }}
+                className="text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#000000' }}
               >
                 MOBILE
               </span>
@@ -275,8 +275,8 @@ export function InvoiceTemplate({
             {/* Column 3: Appointment Date & Stylist */}
             <div className="sm:text-right">
               <span
-                className="text-[11px] font-bold uppercase tracking-wider block"
-                style={{ color: '#C5A059' }}
+                className="text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#000000' }}
               >
                 APPOINTMENT DATE
               </span>
@@ -358,8 +358,8 @@ export function InvoiceTemplate({
             {/* Left: Payment Status */}
             <div className="space-y-2">
               <span
-                className="text-[11px] font-bold uppercase tracking-wider block"
-                style={{ color: '#C5A059' }}
+                className="text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#000000' }}
               >
                 PAYMENT
               </span>

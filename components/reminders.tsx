@@ -190,14 +190,14 @@ export const RemindersView: React.FC = () => {
         {/* Rule 1 Badge */}
         <div
           className={`p-4 rounded-2xl border transition-all ${
-            isDarkMode ? 'bg-[#121B33] border-sky-500/30' : 'bg-white border-sky-500/30 shadow-xs'
+            isDarkMode ? 'bg-[#121B33] border-indigo-500/40' : 'bg-white border-indigo-500/40 shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-sky-400">
+            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               Rule 1: 3 Hours Before
             </span>
-            <span className="w-2 h-2 rounded-full bg-sky-400" />
+            <span className="w-2 h-2 rounded-full bg-indigo-500" />
           </div>
           <strong className={`text-xl block mt-1 font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             {upcomingAppointments.length} Appointments Today
@@ -261,8 +261,8 @@ export const RemindersView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-sky-400" />
-              <h3 className="text-sm font-black text-sky-400 uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                 1. Appointment Reminders (3 Hours Before)
               </h3>
             </div>
@@ -270,14 +270,14 @@ export const RemindersView: React.FC = () => {
               Mandatory reminder dispatched 3 hours before client appointment to minimize no-shows
             </p>
           </div>
-          <span className="text-[11px] font-extrabold text-sky-400 bg-sky-400/10 px-3 py-1 rounded-xl border border-sky-400/20 self-start sm:self-auto">
+          <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-300 bg-indigo-500/15 px-3 py-1 rounded-xl border border-indigo-500/30 self-start sm:self-auto">
             {upcomingAppointments.length} Active Today
           </span>
         </div>
 
         {upcomingAppointments.length === 0 ? (
           <div className="py-8 text-center space-y-2">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -298,7 +298,7 @@ export const RemindersView: React.FC = () => {
                   key={appt.id}
                   className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
                     isDarkMode
-                      ? 'bg-[#0B1F44] border-white/5 hover:border-sky-500/30'
+                      ? 'bg-[#0B1F44] border-white/5 hover:border-indigo-500/40'
                       : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                   }`}
                 >
@@ -310,14 +310,14 @@ export const RemindersView: React.FC = () => {
                       <span className="text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20">
                         +91 {appt.phone}
                       </span>
-                      <span className="text-[10px] font-bold text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded-lg border border-sky-400/20">
+                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-500/15 px-2 py-0.5 rounded-lg border border-indigo-500/30">
                         {appt.startsAt}
                       </span>
                     </div>
                     <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                       Service: <strong className={isDarkMode ? 'text-white' : 'text-slate-800'}>{appt.service}</strong> · Stylist: <strong className={isDarkMode ? 'text-white' : 'text-slate-800'}>{appt.staff}</strong>
                     </p>
-                    <span className="text-[10px] font-semibold text-sky-300 flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-300 flex items-center gap-1">
                       <span>•</span> 3-hour pre-service window active
                     </span>
                   </div>
@@ -485,7 +485,7 @@ export const RemindersView: React.FC = () => {
             <strong className={`text-lg font-black block mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               {todayBills.length}
             </strong>
-            <span className="text-[10px] text-sky-400 font-semibold">Invoices Generated</span>
+            <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Invoices Generated</span>
           </div>
 
           <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-[#0B172E] border-white/5' : 'bg-white border-slate-200'}`}>

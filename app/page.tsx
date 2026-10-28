@@ -512,13 +512,13 @@ export default function HomePage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
               <span className="text-[10px] sm:text-xs font-bold text-[#E0C068] tracking-wide break-words">
                 {landingLang === 'en'
-                  ? '⭐ Trusted by 500+ Luxury Salons & Master Stylists across India'
-                  : '⭐ இந்தியாவின் 500+ பிரீமியம் சலூன்கள் & ஸ்டைலிஸ்ட்டுகளின் தேர்வு'}
+                  ? '⭐ Trusted by Luxury Salons & Master Stylists across India'
+                  : '⭐ பிரீமியம் சலூன்கள் & ஸ்டைலிஸ்ட்டுகளின் தேர்வு'}
               </span>
             </div>
 
-            {/* Main Punchy Editorial Headline */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-5xl mx-auto break-words px-1">
+            {/* Main Punchy Editorial Headline (Slightly Reduced Size) */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] max-w-4xl mx-auto break-words px-1">
               {landingLang === 'en' ? (
                 <>
                   Built for Salons.{' '}
@@ -537,22 +537,23 @@ export default function HomePage() {
             </h1>
 
             {/* Hero Subtitle */}
-            <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
+            <p className="mt-4 sm:mt-5 text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
               {landingLang === 'en'
                 ? 'Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.'
                 : 'பழைய லெட்ஜர் கணக்குகளுக்கும் பில்லிங் நெரிசலுக்கும் முற்றுப்புள்ளி வையுங்கள். 15 விநாடி பில்லிங், சேர் மேனேஜ்மென்ட், வாட்ஸ்அப் இன்வாய்ஸ் மற்றும் முழு வருமானக் கணக்குகள் ஒரே பிரீமியம் தளத்தில்.'}
             </p>
 
-            {/* CTAs */}
-            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto px-2">
+            {/* CTAs with Google Play Button */}
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto px-2 flex-wrap">
               <button
                 onClick={() => openLogin('owner')}
-                className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-9 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-sm sm:text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-8 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-sm sm:text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[#07152B] shrink-0" />
                 <span>{landingLang === 'en' ? 'Get Started as Owner' : 'உரிமையாளராகத் தொடங்கு'}</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
+
               <button
                 onClick={() => openLogin('stylist')}
                 className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-8 rounded-full bg-[#0B1E3B]/90 hover:bg-[#0D2448] border border-white/15 hover:border-[#D4AF37]/50 text-white text-sm sm:text-base font-semibold shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-md"
@@ -560,6 +561,21 @@ export default function HomePage() {
                 <Scissors className="w-4 h-4 text-[#D4AF37] shrink-0" />
                 <span>{landingLang === 'en' ? 'Stylist Workspace' : 'ஸ்டைலிஸ்ட் தளம்'}</span>
               </button>
+
+              <a
+                href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto py-2.5 sm:py-3 px-5 sm:px-6 rounded-full bg-black/75 hover:bg-black/95 border border-white/20 hover:border-[#D4AF37]/60 text-white shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer backdrop-blur-md group"
+              >
+                <svg className="w-5 h-5 fill-current text-[#D4AF37] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
+                  <path d="M3.609 1.814L13.792 12 3.61 22.186a1.99 1.99 0 0 1-.61-1.428V3.242c0-.555.228-1.057.609-1.428zm11.233 11.238l2.257 2.257-11.455 6.613 9.198-8.87zm0-2.104L5.644 2.078l11.455 6.613-2.257 2.257zm1.488 1.052l3.473 2.005a1.5 1.5 0 0 0 0-2.6l-3.473-2.005 1.109 1.3 1.109 1.3-2.218 0z" />
+                </svg>
+                <div className="text-left leading-tight">
+                  <span className="text-[9px] uppercase tracking-wider block text-slate-400 font-semibold">Get it on</span>
+                  <span className="text-xs sm:text-sm font-black text-white">Google Play</span>
+                </div>
+              </a>
             </div>
 
             {/* Micro Feature Trust Badges */}

@@ -19,6 +19,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
     language,
     setLanguage,
     staff,
+    bills,
     showToast,
     setCurrentScreen,
   } = useSalon();
@@ -71,6 +72,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
 
   // Delete Account Confirmation
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // Shop Billing Progress (100 Free Bills)
+  const billsFinished = (bills || []).filter((b) => !b.isDeleted).length;
+  const billsUsagePct = Math.min((billsFinished / 100) * 100, 100);
 
   // Open Edit Profile
   const handleOpenEditProfile = () => {
@@ -341,6 +346,73 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                   Manage Team →
                 </button>
               </div>
+            </div>
+
+            {/* SHOP BILLS USAGE PROGRESS BAR (FREE STARTER PLAN - 100 BILLS) */}
+            <div className={`mt-5 p-4 sm:p-5 rounded-2xl border ${
+              isDarkMode ? 'bg-[#0B172E] border-white/5' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
+                    <h4 className={`text-xs sm:text-sm font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Shop Billing Usage (Free Starter Plan)
+                    </h4>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                      billsFinished >= 100
+                        ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      {billsFinished >= 100 ? 'Limit Finished' : `${100 - billsFinished} Bills Remaining`}
+                    </span>
+                  </div>
+                  <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                    {billsFinished} of 100 free bills finished. Upgrade for unlimited billing & WhatsApp invoices.
+                  </p>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-black font-mono text-[#D4AF37]">
+                    {billsFinished} / 100 Bills
+                  </span>
+                  <span className="text-[11px] block text-slate-400">
+                    {Math.round(billsUsagePct)}% Completed
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar Track */}
+              <div className="w-full h-3 rounded-full bg-slate-800/50 overflow-hidden p-0.5 border border-white/5">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    billsFinished >= 100
+                      ? 'bg-rose-500'
+                      : billsUsagePct > 75
+                      ? 'bg-amber-500'
+                      : 'bg-gradient-to-r from-[#D4AF37] to-emerald-400'
+                  }`}
+                  style={{ width: `${Math.min(billsUsagePct, 100)}%` }}
+                />
+              </div>
+
+              {/* Upgrade Trigger if approaching or finished */}
+              {billsFinished >= 80 && (
+                <div className="mt-3 flex items-center justify-between pt-2.5 border-t border-white/5">
+                  <span className="text-xs text-amber-400 font-semibold">
+                    {billsFinished >= 100
+                      ? 'Free version finished. Upgrade to subscribe for unlimited bills.'
+                      : 'You are close to your 100 free bills limit. Upgrade now to avoid interruption.'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('billing')}
+                    className="px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    Upgrade Plan →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

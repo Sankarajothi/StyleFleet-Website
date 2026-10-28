@@ -44,6 +44,11 @@ export interface ShopProfile {
   longitude?: number;
   gpsAddress?: string;
   createdAt?: string;
+  subscription?: {
+    plan?: string;
+    status?: 'active' | 'expired' | 'trial';
+    validUntil?: string;
+  };
 }
 
 export interface ServiceItem {
@@ -185,6 +190,8 @@ interface SalonContextType {
   appointments: Appointment[];
   addAppointment: (appt: Omit<Appointment, 'id'>) => void;
   updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
+  updateAppointment: (id: string, updates: Partial<Appointment>) => void;
+  deleteAppointment: (id: string) => void;
   markArrivedAndBill: (appt: Appointment) => void;
 
   bills: Bill[];
@@ -642,6 +649,18 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`Appointment marked as ${status}.`);
   };
 
+  const updateAppointment = (id: string, updates: Partial<Appointment>) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
+    );
+    showToast('Appointment updated successfully!', 'success');
+  };
+
+  const deleteAppointment = (id: string) => {
+    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    showToast('Appointment deleted.', 'success');
+  };
+
   const [bills, setBills] = useState<Bill[]>([]);
 
   useEffect(() => {
@@ -978,6 +997,8 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         appointments,
         addAppointment,
         updateAppointmentStatus,
+        updateAppointment,
+        deleteAppointment,
         markArrivedAndBill,
         bills,
         createBill,

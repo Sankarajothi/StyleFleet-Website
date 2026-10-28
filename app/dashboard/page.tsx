@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SalonProvider, useSalon, Appointment, Bill, ServiceItem } from '@/components/SalonContext';
 import { TopBar } from '@/components/TopBar';
@@ -117,6 +117,22 @@ function DashboardContent() {
   const [dashboardConfirmationBill, setDashboardConfirmationBill] = useState<Bill | null>(null);
   const [dashboardReminderStatus, setDashboardReminderStatus] = useState<'Not Sent' | 'Sent' | 'Pending'>('Sent');
   const [dashboardConfirmationStatus, setDashboardConfirmationStatus] = useState<'Pending' | 'Confirmed'>('Confirmed');
+
+  // Milestone: Review our App (10 customers + 10 bills)
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+
+  useEffect(() => {
+    try {
+      const alreadyReviewed = localStorage.getItem('stylefleet_app_reviewed');
+      const dismissed = sessionStorage.getItem('stylefleet_review_dismissed');
+      const nonDeletedBills = (bills || []).filter((b) => !b.isDeleted);
+      if (!alreadyReviewed && !dismissed && (customers || []).length >= 10 && nonDeletedBills.length >= 10) {
+        setShowReviewPrompt(true);
+      }
+    } catch {}
+  }, [customers, bills]);
 
   // New Booking Modal Form state
   const [bookingType, setBookingType] = useState<'appointment' | 'queue'>('appointment');
@@ -1282,6 +1298,121 @@ function DashboardContent() {
                 </svg>
                 <span>Done</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REVIEW OUR APP (10 CUSTOMERS & 10 BILLS) ================= */}
+      {showReviewPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-6 sm:p-7 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl relative animate-scaleUp text-center ${
+              isDarkMode ? 'bg-[#1A2746] border-[#D4AF37]/40 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* Celebration Icon */}
+            <div className="w-16 h-16 rounded-3xl bg-[#D4AF37]/20 border-2 border-[#D4AF37] text-[#D4AF37] flex items-center justify-center mx-auto shadow-lg shadow-[#D4AF37]/20">
+              <svg className="w-8 h-8 fill-[#D4AF37]" viewBox="0 0 24 24">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
+            </div>
+
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] block">
+                Salon Milestone Achieved
+              </span>
+              <h3 className={`text-xl font-black mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                Enjoying StyleFleet? Review Our App
+              </h3>
+              <p className={`text-xs mt-1.5 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                You have reached <strong>10+ Customers</strong> & <strong>10+ Bills</strong>! Your rating and feedback help us continuously elevate the luxury salon experience.
+              </p>
+            </div>
+
+            {/* Star Rating Select */}
+            <div className="flex justify-center gap-2 py-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewStars(star)}
+                  className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                >
+                  <svg
+                    className={`w-7 h-7 ${star <= reviewStars ? 'text-[#D4AF37] fill-[#D4AF37]' : 'text-slate-500 fill-none stroke-current'}`}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.5"
+                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    />
+                  </svg>
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              rows={2}
+              placeholder="Tell us what you love or what we can improve..."
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              className={`w-full p-3 rounded-2xl border text-xs outline-none transition-all resize-none ${
+                isDarkMode
+                  ? 'bg-[#121B33] border-[#2A3858] text-white placeholder:text-slate-500'
+                  : 'bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400'
+              }`}
+            />
+
+            {/* Actions */}
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.setItem('stylefleet_app_reviewed', 'true');
+                  } catch {}
+                  setShowReviewPrompt(false);
+                  window.open('https://play.google.com/store/apps/details?id=com.stylefleet.app', '_blank');
+                  showToast('Thank you for rating StyleFleet on Google Play! ⭐⭐⭐⭐⭐', 'success');
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] font-black text-xs shadow-lg shadow-[#D4AF37]/25 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M3.609 1.814L13.792 12 3.61 22.186a1.99 1.99 0 0 1-.61-1.428V3.242c0-.555.228-1.057.609-1.428zm11.233 11.238l2.257 2.257-11.455 6.613 9.198-8.87zm0-2.104L5.644 2.078l11.455 6.613-2.257 2.257zm1.488 1.052l3.473 2.005a1.5 1.5 0 0 0 0-2.6l-3.473-2.005 1.109 1.3 1.109 1.3-2.218 0z" />
+                </svg>
+                <span>Review on Google Play ⭐</span>
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem('stylefleet_review_dismissed', 'true');
+                    } catch {}
+                    setShowReviewPrompt(false);
+                  }}
+                  className="flex-1 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-semibold cursor-pointer text-slate-400 hover:text-white"
+                >
+                  Maybe Later
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('stylefleet_app_reviewed', 'true');
+                    } catch {}
+                    setShowReviewPrompt(false);
+                    showToast(`Thank you for rating StyleFleet ${reviewStars} Stars! ⭐`, 'success');
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold cursor-pointer"
+                >
+                  Submit Feedback
+                </button>
+              </div>
             </div>
           </div>
         </div>

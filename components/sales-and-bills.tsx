@@ -31,6 +31,7 @@ export function SalesAndBillsView({
     expenses,
     staff,
     services,
+    customers,
     deleteBill,
     editBill,
     restoreBill,
@@ -151,6 +152,9 @@ export function SalesAndBillsView({
   const [newBillDate, setNewBillDate] = useState<string>(todayStr);
   const [serviceSearchQuery, setServiceSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState<boolean>(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState<string>('');
+  const [showPlanLimitModal, setShowPlanLimitModal] = useState<boolean>(false);
 
   React.useEffect(() => {
     if (initialOpenNewBill) {
@@ -214,7 +218,26 @@ export function SalesAndBillsView({
     });
   }, [services, selectedCategory, serviceSearchQuery]);
 
+  const filteredCustomers = useMemo(() => {
+    if (!customers || customers.length === 0) return [];
+    const query = billCustName.trim().toLowerCase();
+    if (!query) return customers.slice(0, 15);
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        (c.phone && c.phone.includes(query))
+    ).slice(0, 15);
+  }, [customers, billCustName]);
+
   const handleCompleteBill = () => {
+    // 100 Free Bills Limit Check for unsubscribed salons
+    const nonDeletedBillsCount = bills.filter((b) => !b.isDeleted).length;
+    const isSubscribed = Boolean((shopProfile as any)?.subscription?.status === 'active');
+    if (!isSubscribed && nonDeletedBillsCount >= 100) {
+      setShowPlanLimitModal(true);
+      return;
+    }
+
     if (billCartItems.length === 0) {
       showToast('Please add at least one service to the bill.', 'error');
       return;
@@ -2130,30 +2153,101 @@ export function SalesAndBillsView({
                     isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
                     <span className="text-xs font-extrabold text-[#D4AF37]">
                       1. Client Details
                     </span>
-                    <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                      Leave empty for Walk-in Client
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomerDropdown((prev) => !prev)}
+                        className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Select Existing Client ({customers.length})</span>
+                      </button>
+                      <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        Walk-in if empty
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <div>
+                    {/* Client Name with Autocomplete */}
+                    <div className="relative">
                       <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                         Client Name
                       </label>
                       <input
                         type="text"
-                        placeholder="Client name"
+                        placeholder="Search existing or enter name..."
                         value={billCustName}
-                        onChange={(e) => setBillCustName(e.target.value)}
+                        onFocus={() => {
+                          if (customers.length > 0) setShowCustomerDropdown(true);
+                        }}
+                        onChange={(e) => {
+                          setBillCustName(e.target.value);
+                          setShowCustomerDropdown(true);
+                        }}
                         className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
                           isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
                         }`}
                       />
+
+                      {/* Floating Customer Suggestions Dropdown */}
+                      {showCustomerDropdown && (
+                        <div
+                          className={`absolute left-0 right-0 top-full mt-1.5 max-h-52 overflow-y-auto rounded-2xl border shadow-2xl p-1 z-50 animate-fadeIn ${
+                            isDarkMode ? 'bg-[#162340] border-[#2A3858]' : 'bg-white border-slate-300'
+                          }`}
+                        >
+                          <div className="p-1.5 flex items-center justify-between border-b border-white/10 text-[10px] font-extrabold text-[#D4AF37]">
+                            <span>Existing Customers ({filteredCustomers.length})</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowCustomerDropdown(false)}
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-slate-400 hover:text-white"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-slate-400">
+                              No existing clients matching &ldquo;{billCustName}&rdquo;.
+                            </div>
+                          ) : (
+                            filteredCustomers.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setBillCustName(c.name);
+                                  setBillCustPhone(c.phone);
+                                  setShowCustomerDropdown(false);
+                                  showToast(`Selected existing client ${c.name}!`, 'success');
+                                }}
+                                className={`w-full p-2 text-left rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                  isDarkMode ? 'hover:bg-[#1f315a] text-white' : 'hover:bg-slate-100 text-slate-900'
+                                }`}
+                              >
+                                <div>
+                                  <strong className="block font-bold">{c.name}</strong>
+                                  <span className="text-[10px] text-slate-400 font-mono">+91 {c.phone}</span>
+                                </div>
+                                {c.vip && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+                                    VIP
+                                  </span>
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
+
                     <div>
                       <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                         WhatsApp Mobile
@@ -2496,6 +2590,102 @@ export function SalesAndBillsView({
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: 100 FREE BILLS LIMIT REACHED ================= */}
+      {showPlanLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-6 sm:p-7 rounded-3xl border max-w-lg w-full space-y-5 shadow-2xl transition-all animate-scaleUp ${
+              isDarkMode
+                ? 'bg-[#1A2746] border-[#2A3858] text-white'
+                : 'bg-white border-slate-200 text-[#1F2937]'
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center font-black shrink-0">
+                <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className={`text-base sm:text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Free Plan Limit Reached (100 / 100 Bills)
+                </h3>
+                <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                  You have completed your 100 free bills on StyleFleet Starter
+                </p>
+              </div>
+            </div>
+
+            <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              To continue creating bills without limits, sending official WhatsApp invoices, and unlocking detailed financial analytics, please subscribe to an active StyleFleet plan.
+            </p>
+
+            {/* Plans Showcase */}
+            <div className="space-y-2 text-xs">
+              <div className={`p-3 rounded-2xl border flex items-center justify-between ${
+                isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div>
+                  <strong className="block font-bold">3 Months Pro</strong>
+                  <span className="text-[11px] text-slate-400">₹2,999 + 18% GST (₹3,538.82)</span>
+                </div>
+                <span className="text-xs font-black text-[#D4AF37]">₹2,999</span>
+              </div>
+
+              <div className={`p-3 rounded-2xl border flex items-center justify-between relative overflow-hidden ${
+                isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/40 ring-1 ring-[#D4AF37]/30' : 'bg-amber-50/50 border-[#D4AF37]/60'
+              }`}>
+                <div className="absolute top-0 right-0 bg-[#D4AF37] text-[#0B1F44] text-[9px] font-black px-2 py-0.5 rounded-bl-lg">
+                  POPULAR
+                </div>
+                <div>
+                  <strong className="block font-bold">6 Months Pro (Offer Price)</strong>
+                  <span className="text-[11px] text-slate-400">₹5,499 (Original ₹5,999)</span>
+                </div>
+                <span className="text-xs font-black text-[#D4AF37]">₹5,499</span>
+              </div>
+
+              <div className={`p-3 rounded-2xl border flex items-center justify-between ${
+                isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div>
+                  <strong className="block font-bold">12 Months Pro (Best Value)</strong>
+                  <span className="text-[11px] text-slate-400">₹9,999 (Original ₹11,999)</span>
+                </div>
+                <span className="text-xs font-black text-[#D4AF37]">₹9,999</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPlanLimitModal(false)}
+                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                  isDarkMode
+                    ? 'border-[#2A3858] text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPlanLimitModal(false);
+                  setCurrentScreen('settings');
+                  showToast('Navigate to Settings → Subscription to upgrade!');
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black shadow-md active:scale-98 transition-all cursor-pointer"
+              >
+                Upgrade Subscription →
+              </button>
             </div>
           </div>
         </div>
