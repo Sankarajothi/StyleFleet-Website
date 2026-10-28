@@ -493,23 +493,27 @@ export default function HomePage() {
               Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.
             </p>
 
-            {/* Dual Hero CTA: Available on Google Play & iOS App Store */}
-            <div className="mt-7 sm:mt-9 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full px-2 max-w-xl mx-auto">
+            {/* Dual Hero CTA: In one single row across mobile & desktop with real brand logos */}
+            <div className="mt-7 sm:mt-9 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
               {/* Google Play Button */}
               <a
                 href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto flex-1 py-3.5 sm:py-4 px-6 sm:px-8 rounded-2xl bg-gradient-to-r from-[#0B1E3B] via-[#0F284E] to-[#0B1E3B] hover:brightness-110 border-2 border-[#D4AF37] hover:border-[#F7C948] text-white shadow-2xl shadow-[#D4AF37]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3.5 cursor-pointer backdrop-blur-md group"
+                className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
               >
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 fill-current text-[#D4AF37] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
-                  <path d="M3.609 1.814L13.792 12 3.61 22.186a1.99 1.99 0 0 1-.61-1.428V3.242c0-.555.228-1.057.609-1.428zm11.233 11.238l2.257 2.257-11.455 6.613 9.198-8.87zm0-2.104L5.644 2.078l11.455 6.613-2.257 2.257zm1.488 1.052l3.473 2.005a1.5 1.5 0 0 0 0-2.6l-3.473-2.005 1.109 1.3 1.109 1.3-2.218 0z" />
+                {/* Real Authentic Google Play 4-Color Logo */}
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 512 512">
+                  <path fill="#4285F4" d="M48.2 24.3C44.7 28 42.7 33.7 42.7 41.3v429.4c0 7.6 2 13.3 5.5 17l2.1 1.9L274.4 265.5v-5.2L50.3 22.4l-2.1 1.9z" />
+                  <path fill="#FBBC04" d="M349 340.2l-74.6-74.7v-5.2l74.6-74.7 1.8 1 88.2 50.1c25.2 14.3 25.2 37.8 0 52.2l-88.2 50.1-1.8 1.2z" />
+                  <path fill="#EA4335" d="M350.8 339l-76.4-76.4L50.3 486.7c8.3 8.8 22.1 9.9 37.4 1.2L350.8 339z" />
+                  <path fill="#34A853" d="M350.8 173L87.7 24.1C72.4 15.4 58.6 16.5 50.3 25.3l224.1 224.1 76.4-76.4z" />
                 </svg>
-                <div className="text-left leading-tight">
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest block text-slate-300 font-bold">
+                <div className="text-left leading-tight shrink min-w-0">
+                  <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
                     GET IT ON
                   </span>
-                  <span className="text-sm sm:text-lg font-black text-white tracking-tight">
+                  <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
                     Google Play
                   </span>
                 </div>
@@ -522,16 +526,17 @@ export default function HomePage() {
                   e.preventDefault();
                   showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
                 }}
-                className="w-full sm:w-auto flex-1 py-3.5 sm:py-4 px-6 sm:px-8 rounded-2xl bg-gradient-to-r from-[#0B1E3B] via-[#0F284E] to-[#0B1E3B] hover:brightness-110 border-2 border-[#D4AF37]/80 hover:border-[#F7C948] text-white shadow-2xl shadow-[#D4AF37]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-3.5 cursor-pointer backdrop-blur-md group"
+                className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
               >
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 fill-current text-[#D4AF37] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.77 1.06-1.84.94-2.91-.91.04-2.02.61-2.67 1.38-.58.68-1.09 1.77-.95 2.82 1.02.08 2.05-.52 2.68-1.29z"/>
+                {/* Real Authentic Apple Logo */}
+                <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 fill-white group-hover:scale-105 transition-transform" viewBox="0 0 170 170">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-5.77-8.7-10.42-18.79-13.97-30.27-3.55-11.48-5.33-22.42-5.33-32.83 0-14.36 3.55-26.33 10.66-35.91 7.11-9.58 16.14-14.43 27.09-14.56 5.34 0 11.27 1.48 17.79 4.43 6.52 2.96 10.74 4.49 12.67 4.49 1.74 0 6.06-1.57 12.96-4.71 6.9-3.14 12.96-4.58 18.18-4.33 13.94.65 24.96 5.86 33.05 15.64-12.19 7.4-18.17 17.51-17.95 30.34.22 10.02 4.13 18.49 11.75 25.43 7.62 6.94 16.75 10.97 27.42 12.09-2.18 6.53-4.91 13.28-8.2 20.25zM119.22 31.84c0-7.72 2.76-14.89 8.28-21.52 5.53-6.63 12.41-10.66 20.65-12.09.22 1.09.33 2.18.33 3.26 0 7.61-2.85 14.86-8.54 21.74-5.69 6.87-12.71 10.87-21.06 12-0.22-1.09-.33-2.18-.33-3.39z" />
                 </svg>
-                <div className="text-left leading-tight">
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest block text-slate-300 font-bold">
+                <div className="text-left leading-tight shrink min-w-0">
+                  <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
                     DOWNLOAD ON THE
                   </span>
-                  <span className="text-sm sm:text-lg font-black text-white tracking-tight">
+                  <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
                     App Store
                   </span>
                 </div>
@@ -1372,27 +1377,27 @@ export default function HomePage() {
             </div>
 
             {/* Official Subscription Cards (3 Months, 6 Months, 12 Months) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10 text-left">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 text-left max-w-7xl mx-auto items-stretch">
               
               {/* TIER 1: 3 Months Plan */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
+              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
                       <h3 className="text-2xl font-extrabold text-white">3 Months</h3>
                       <span className="text-xs text-slate-400 block mt-0.5">Quarterly Salon Foundation</span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold shrink-0">
                       Starter
                     </span>
                   </div>
 
-                  <div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-4xl sm:text-5xl font-black text-white">₹2,999</span>
-                      <span className="text-xs font-semibold text-slate-400">(Excl. GST)</span>
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">₹2,999</span>
+                      <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
                     </div>
-                    <span className="text-[11px] text-[#D4AF37] font-semibold block mt-1">
+                    <span className="text-[11px] text-[#D4AF37] font-semibold block">
                       Equivalent to ₹999 / month
                     </span>
                   </div>
@@ -1402,19 +1407,19 @@ export default function HomePage() {
                     <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                       Tax & Total Breakdown:
                     </span>
-                    <div className="flex justify-between text-slate-300 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
                       <span>Base Plan Price:</span>
                       <strong className="text-white">₹2,999.00</strong>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>CGST (9%):</span>
                       <span>₹269.91</span>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>SGST (9%):</span>
                       <span>₹269.91</span>
                     </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
                       <span className="text-white">Total Amount:</span>
                       <strong className="text-base font-extrabold text-white">₹3,538.82</strong>
                     </div>
@@ -1454,30 +1459,39 @@ export default function HomePage() {
               </div>
 
               {/* TIER 2: 6 Months Plan */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
+              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
                 <div className="absolute -top-3.5 right-6 bg-blue-500 text-white text-[10px] uppercase font-black px-3 py-1 rounded-full shadow-md">
                   Save ₹500 Offer
                 </div>
 
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
                       <h3 className="text-2xl font-extrabold text-white">6 Months</h3>
                       <span className="text-xs text-slate-400 block mt-0.5">Half-Year Salon Growth</span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] text-blue-300 font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] text-blue-300 font-bold shrink-0">
                       Special Offer
                     </span>
                   </div>
 
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-slate-500 line-through">₹5,999</span>
-                      <span className="text-4xl sm:text-5xl font-black text-white">₹5,499</span>
-                      <span className="text-xs font-semibold text-slate-400">(Excl. GST)</span>
+                  <div className="space-y-1.5">
+                    {/* Strike-through Base Price & Tag */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹5,999</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Save ₹500
+                      </span>
                     </div>
-                    <span className="text-[11px] text-emerald-400 font-semibold block mt-1">
-                      Offer Price: Save ₹500 instantly (~₹916 / mo)
+
+                    {/* Offer Price & GST Tag */}
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">₹5,499</span>
+                      <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
+                    </div>
+
+                    <span className="text-[11px] text-emerald-400 font-semibold block">
+                      Offer Price • Save ₹500 instantly (~₹916 / mo)
                     </span>
                   </div>
 
@@ -1486,19 +1500,19 @@ export default function HomePage() {
                     <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                       Tax & Total Breakdown:
                     </span>
-                    <div className="flex justify-between text-slate-300 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
                       <span>Offer Plan Price:</span>
                       <strong className="text-white">₹5,499.00</strong>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>CGST (9%):</span>
                       <span>₹494.91</span>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>SGST (9%):</span>
                       <span>₹494.91</span>
                     </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
                       <span className="text-white">Total Amount:</span>
                       <strong className="text-base font-extrabold text-white">₹6,488.82</strong>
                     </div>
@@ -1538,30 +1552,39 @@ export default function HomePage() {
               </div>
 
               {/* TIER 3: 12 Months Plan (Most Popular with Gold Gradient & Halo) */}
-              <div className="rounded-3xl p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#F5A623] text-[#07152B] text-[10px] uppercase font-black px-4 py-1 rounded-full shadow-lg">
+              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#F5A623] text-[#07152B] text-[10px] uppercase font-black px-4 py-1 rounded-full shadow-lg whitespace-nowrap">
                   ⭐ Most Popular • Save ₹2,000 Offer
                 </div>
 
                 <div className="space-y-5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
                       <h3 className="text-2xl font-extrabold text-white">12 Months</h3>
                       <span className="text-xs text-[#E0C068] block mt-0.5 font-bold">Annual Complete Salon OS</span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[11px] text-[#E0C068] font-black">
+                    <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[11px] text-[#E0C068] font-black shrink-0">
                       Best Value
                     </span>
                   </div>
 
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-slate-500 line-through">₹11,999</span>
-                      <span className="text-4xl sm:text-5xl font-black text-[#D4AF37]">₹9,999</span>
-                      <span className="text-xs font-semibold text-slate-300">(Excl. GST)</span>
+                  <div className="space-y-1.5">
+                    {/* Strike-through Base Price & Tag */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹11,999</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#D4AF37]/25 text-[#E0C068] border border-[#D4AF37]/40">
+                        Save ₹2,000
+                      </span>
                     </div>
-                    <span className="text-[11px] text-emerald-400 font-semibold block mt-1">
-                      Offer Price: Save ₹2,000 (~₹833 / month)
+
+                    {/* Offer Price & GST Tag */}
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] tracking-tight">₹9,999</span>
+                      <span className="text-xs font-semibold text-slate-300 shrink-0 whitespace-nowrap">(Excl. GST)</span>
+                    </div>
+
+                    <span className="text-[11px] text-emerald-400 font-semibold block">
+                      Offer Price • Best Value (~₹833 / month)
                     </span>
                   </div>
 
@@ -1570,19 +1593,19 @@ export default function HomePage() {
                     <span className="text-[10px] uppercase font-bold text-[#D4AF37] block tracking-wider">
                       Tax & Total Breakdown:
                     </span>
-                    <div className="flex justify-between text-slate-300 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
                       <span>Offer Plan Price:</span>
                       <strong className="text-white">₹9,999.00</strong>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>CGST (9%):</span>
                       <span>₹899.91</span>
                     </div>
-                    <div className="flex justify-between text-slate-400 text-[11px]">
+                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
                       <span>SGST (9%):</span>
                       <span>₹899.91</span>
                     </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
                       <span className="text-[#D4AF37]">Total Amount:</span>
                       <strong className="text-base font-extrabold text-[#D4AF37]">₹11,798.82</strong>
                     </div>
