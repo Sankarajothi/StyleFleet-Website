@@ -927,13 +927,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className={`p-6 rounded-3xl border max-w-lg w-full space-y-4 shadow-2xl animate-scaleUp max-h-[90vh] flex flex-col ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
             {/* Modal Header & Visibility Area */}
-            <div className="flex items-start justify-between border-b border-[#2A3858] pb-3 shrink-0">
+            <div className={`flex items-start justify-between border-b pb-3 shrink-0 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
                 <div
                   className={`w-12 h-12 rounded-2xl border text-sm font-black flex items-center justify-center shrink-0 ${
                     historyCust.vip
                       ? 'bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]'
-                      : 'bg-[#1A2746] border-[#2A3858] text-slate-300'
+                      : isDarkMode
+                      ? 'bg-[#1A2746] border-[#2A3858] text-slate-300'
+                      : 'bg-slate-100 border-slate-300 text-slate-700'
                   }`}
                 >
                   {historyCust.name.slice(0, 2).toUpperCase()}
@@ -1481,7 +1483,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       {notesCust && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className={`p-6 rounded-3xl border max-w-sm w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
-            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1549,7 +1551,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       {editingCust && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
-            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center">
                   <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1641,11 +1643,13 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 />
               </div>
 
-              <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+              <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => setEditingCust(null)}
-                  className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'}`}
+                  className={`flex-1 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode ? 'border-[#2A3858] text-slate-300 hover:text-white' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -1664,8 +1668,8 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       {/* ================= MODAL: ADD CLIENT MANUALLY ================= */}
       {showManualModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="p-6 rounded-3xl bg-[#1A2746] border border-[#2A3858] max-w-md w-full space-y-4 shadow-2xl animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+          <div className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'}`}>
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center text-sm">
                   <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1767,11 +1771,13 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 />
               </div>
 
-              <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+              <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowManualModal(false)}
-                  className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold cursor-pointer ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'} hover:bg-slate-800 transition-all`}
+                  className={`flex-1 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode ? 'border-[#2A3858] text-slate-300 hover:text-white' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -1791,7 +1797,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className={`p-6 rounded-3xl border max-w-lg w-full space-y-4 shadow-2xl animate-scaleUp ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1F2937]'}`}>
-            <div className="flex items-center justify-between border-b border-[#2A3858] pb-3">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-sm">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1936,11 +1942,13 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               )}
             </div>
 
-            <div className="flex gap-2.5 pt-3 border-t border-[#2A3858]">
+            <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowImportModal(false)}
-                className={`flex-1 py-2.5 rounded-xl border border-[#2A3858] text-xs font-bold ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-[#374151] hover:text-[#1F2937]'} hover:bg-slate-800 transition-all cursor-pointer`}
+                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isDarkMode ? 'border-[#2A3858] text-slate-300 hover:text-white' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
                 Cancel
               </button>

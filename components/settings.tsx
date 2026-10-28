@@ -142,8 +142,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
   };
 
   const handleVerifyChangePhone = () => {
-    if (otpValue.trim() !== '1234' && otpValue.trim().length !== 4) {
-      showToast('Enter 4-digit verification code (demo: 1234)', 'error');
+    if (otpValue.trim().length < 4) {
+      showToast('Please enter the verification code sent to your phone', 'error');
       return;
     }
     updateShopProfile({ phone: newPhoneNumber.replace(/\D/g, '') });
@@ -1150,14 +1150,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Edit Shop Profile & Branding
               </h3>
               <button
                 type="button"
                 onClick={() => setShowEditProfileModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1252,11 +1257,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-3 border-t border-white/10">
+              <div className={`flex gap-3 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowEditProfileModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border text-xs font-bold"
+                  className={`flex-1 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -1280,14 +1289,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Change Owner Login Number
               </h3>
               <button
                 type="button"
                 onClick={() => setShowChangePhoneModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1325,7 +1339,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                 </button>
               ) : (
                 <div className="space-y-2 pt-2 border-t border-white/10">
-                  <label className="block text-[10px] font-bold text-slate-400">Enter OTP (Demo: 1234)</label>
+                  <label className="block text-[10px] font-bold text-slate-400">Enter Verification Code</label>
                   <input
                     type="text"
                     maxLength={4}
@@ -1356,14 +1370,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 StyleFleet Privacy Policy & Security
               </h3>
               <button
                 type="button"
                 onClick={() => setShowPrivacyPolicyModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1389,7 +1408,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
             <button
               type="button"
               onClick={() => setShowPrivacyPolicyModal(false)}
-              className="w-full py-2.5 rounded-xl bg-[#D4AF37] text-[#0B1F44] text-xs font-black shadow-md"
+              className="w-full py-2.5 rounded-xl bg-[#D4AF37] text-[#0B1F44] text-xs font-black shadow-md cursor-pointer hover:bg-[#C59F2E]"
             >
               Close Privacy Terms
             </button>
@@ -1405,14 +1424,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Frequently Asked Questions (FAQ)
               </h3>
               <button
                 type="button"
                 onClick={() => setShowFaqModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1462,14 +1486,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Review StyleFleet Salon OS
               </h3>
               <button
                 type="button"
                 onClick={() => setShowRateModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1512,17 +1541,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                 />
               </div>
 
-              <div className="flex gap-2.5 pt-2 border-t border-white/10">
+              <div className={`flex gap-2.5 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowRateModal(false)}
-                  className="flex-1 py-2 rounded-xl border text-xs font-bold"
+                  className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] text-xs font-black shadow-md"
+                  className="flex-1 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] text-xs font-black shadow-md cursor-pointer hover:bg-[#C59F2E]"
                 >
                   Submit Review
                 </button>
@@ -1566,11 +1597,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
               />
             </div>
 
-            <div className="flex gap-2.5 pt-2 border-t border-white/10">
+            <div className={`flex gap-2.5 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowDeleteAccountModal(false)}
-                className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-bold"
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
                 Cancel
               </button>

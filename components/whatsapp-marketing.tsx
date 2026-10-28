@@ -612,7 +612,12 @@ export const WhatsAppMarketingView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSendModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

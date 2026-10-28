@@ -768,14 +768,19 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 Edit Stylist Details
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingStylist(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -824,7 +829,11 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                 <button
                   type="button"
                   onClick={() => setEditingStylist(null)}
-                  className="flex-1 py-2.5 rounded-2xl border border-white/10 text-xs font-bold cursor-pointer"
+                  className={`flex-1 py-2.5 rounded-2xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -848,14 +857,19 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 Update Rating for {ratingStylist.name}
               </h3>
               <button
                 type="button"
                 onClick={() => setRatingStylist(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -896,7 +910,11 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               <button
                 type="button"
                 onClick={() => setRatingStylist(null)}
-                className="flex-1 py-2 rounded-xl border border-white/10 text-xs font-bold cursor-pointer"
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
                 Cancel
               </button>
@@ -921,7 +939,7 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
             }`}
           >
             {/* Header */}
-            <div className="flex items-start justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-start justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div>
                 <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                   Stylist Permissions
@@ -933,7 +951,12 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               <button
                 type="button"
                 onClick={() => setPermissionsStylist(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5 shrink-0 ml-2"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer shrink-0 ml-2 transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1236,7 +1259,12 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                 <button
                   type="button"
                   onClick={() => setShowReportPreviewModal(false)}
-                  className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                  className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                  }`}
+                  aria-label="Close"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

@@ -1164,7 +1164,12 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
               <button
                 type="button"
                 onClick={() => setEditingAppt(null)}
-                className="w-8 h-8 rounded-xl bg-slate-800/60 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer"
+                className={`w-8 h-8 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 bg-slate-800/60 hover:bg-slate-700 text-slate-300 hover:text-white'
+                    : 'border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black shadow-xs'
+                }`}
+                aria-label="Close"
               >
                 ✕
               </button>

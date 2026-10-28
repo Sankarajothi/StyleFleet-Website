@@ -1453,10 +1453,10 @@ export async function updateStaffMemberInDb(
  */
 export async function saveExpenseToDb(
   shopId: string,
-  expense: Omit<Expense, 'id' | 'date'> & { date?: string }
+  expense: Omit<Expense, 'id' | 'date'> & { id?: string; date?: string }
 ): Promise<string | null> {
   try {
-    const expId = generateUuid();
+    const expId = isValidUuid(expense.id) ? expense.id! : generateUuid();
 
     // Look up category_id if available
     let catId: string | null = null;
@@ -1574,15 +1574,21 @@ export async function updateShopProfileInDb(shopId: string, profile: Partial<Sho
 export async function deleteBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
   try {
     const nowIso = new Date().toISOString();
-    const { error } = await supabase
+    let query = supabase
       .from('bills')
       .update({
         status: 'deleted',
         updated_at: nowIso,
       })
-      .eq('shop_id', shopId)
-      .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
+      .eq('shop_id', shopId);
 
+    if (isValidUuid(invoiceNumberOrId)) {
+      query = query.or(`id.eq.${invoiceNumberOrId},invoice_number.eq.${invoiceNumberOrId}`);
+    } else {
+      query = query.eq('invoice_number', invoiceNumberOrId);
+    }
+
+    const { error } = await query;
     return !error;
   } catch {
     return false;
@@ -1625,12 +1631,14 @@ export async function updateBillInDb(
       updatePayload.notes = updated.notes;
     }
 
-    const { error } = await supabase
-      .from('bills')
-      .update(updatePayload)
-      .eq('shop_id', shopId)
-      .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
+    let query = supabase.from('bills').update(updatePayload).eq('shop_id', shopId);
+    if (isValidUuid(invoiceNumberOrId)) {
+      query = query.or(`id.eq.${invoiceNumberOrId},invoice_number.eq.${invoiceNumberOrId}`);
+    } else {
+      query = query.eq('invoice_number', invoiceNumberOrId);
+    }
 
+    const { error } = await query;
     return !error;
   } catch {
     return false;
@@ -1643,15 +1651,21 @@ export async function updateBillInDb(
 export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
   try {
     const nowIso = new Date().toISOString();
-    const { error } = await supabase
+    let query = supabase
       .from('bills')
       .update({
         status: 'paid',
         updated_at: nowIso,
       })
-      .eq('shop_id', shopId)
-      .or(`invoice_number.eq.${invoiceNumberOrId},id.eq.${invoiceNumberOrId}`);
+      .eq('shop_id', shopId);
 
+    if (isValidUuid(invoiceNumberOrId)) {
+      query = query.or(`id.eq.${invoiceNumberOrId},invoice_number.eq.${invoiceNumberOrId}`);
+    } else {
+      query = query.eq('invoice_number', invoiceNumberOrId);
+    }
+
+    const { error } = await query;
     return !error;
   } catch {
     return false;
@@ -1736,5 +1750,251 @@ export async function verifyAccountActiveInDb(
   } catch {
     // In case of transient network failure, don't trigger false logouts
     return { active: true };
+  }
+}
+
+/**
+ * Persist a service into Supabase services table.
+ */
+export async function saveServiceToDb(
+  shopId: string,
+  service: { id?: string; cat?: string; name: string; price: number; dur?: number; active?: boolean }
+): Promise<string | null> {
+  try {
+    const srvId = isValidUuid(service.id) ? service.id! : generateUuid();
+
+    // Look up category_id if provided
+    let categoryId: string | null = null;
+    if (service.cat) {
+      const { data: catRows } = await supabase
+        .from('service_categories')
+        .select('id')
+        .eq('shop_id', shopId)
+        .ilike('name', service.cat.trim())
+        .limit(1);
+
+      if (catRows && catRows.length > 0) {
+        categoryId = catRows[0].id;
+      } else {
+        // Auto-create category in DB if doesn't exist
+        const newCatId = generateUuid();
+        await supabase.from('service_categories').insert({
+          id: newCatId,
+          shop_id: shopId,
+          name: service.cat.trim(),
+          is_active: true,
+        });
+        categoryId = newCatId;
+      }
+    }
+
+    const { error } = await supabase.from('services').insert({
+      id: srvId,
+      shop_id: shopId,
+      category_id: categoryId,
+      name: service.name.trim(),
+      price_minor: Math.round(Number(service.price) * 100),
+      duration_minutes: Number(service.dur) || 30,
+      is_active: service.active !== false,
+    });
+
+    if (error) {
+      console.warn('[Supabase] Service insert warning:', error.message);
+      return null;
+    }
+    return srvId;
+  } catch (err) {
+    console.error('[Supabase] Exception in saveServiceToDb:', err);
+    return null;
+  }
+}
+
+/**
+ * Update an existing service in Supabase.
+ */
+export async function updateServiceInDb(
+  shopId: string,
+  serviceId: string,
+  updated: Partial<ServiceItem>
+): Promise<boolean> {
+  try {
+    const payload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (updated.name !== undefined) payload.name = updated.name.trim();
+    if (updated.price !== undefined) payload.price_minor = Math.round(Number(updated.price) * 100);
+    if (updated.dur !== undefined) payload.duration_minutes = Number(updated.dur);
+    if (updated.active !== undefined) payload.is_active = updated.active;
+
+    if (updated.cat) {
+      const { data: catRows } = await supabase
+        .from('service_categories')
+        .select('id')
+        .eq('shop_id', shopId)
+        .ilike('name', updated.cat.trim())
+        .limit(1);
+      if (catRows && catRows.length > 0) {
+        payload.category_id = catRows[0].id;
+      }
+    }
+
+    const { error } = await supabase
+      .from('services')
+      .update(payload)
+      .eq('shop_id', shopId)
+      .eq('id', serviceId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete a service from Supabase.
+ */
+export async function deleteServiceInDb(shopId: string, serviceId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('shop_id', shopId)
+      .eq('id', serviceId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Toggle service active status in Supabase.
+ */
+export async function toggleServiceActiveInDb(shopId: string, serviceId: string, active: boolean): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('services')
+      .update({ is_active: active, updated_at: new Date().toISOString() })
+      .eq('shop_id', shopId)
+      .eq('id', serviceId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Save a new category to Supabase.
+ */
+export async function saveCategoryToDb(shopId: string, name: string): Promise<string | null> {
+  try {
+    const catId = generateUuid();
+    const { error } = await supabase.from('service_categories').insert({
+      id: catId,
+      shop_id: shopId,
+      name: name.trim(),
+      is_active: true,
+    });
+    if (error) return null;
+    return catId;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Delete a category from Supabase.
+ */
+export async function deleteCategoryInDb(shopId: string, name: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('service_categories')
+      .delete()
+      .eq('shop_id', shopId)
+      .ilike('name', name.trim());
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Update an existing appointment in Supabase.
+ */
+export async function updateAppointmentInDb(
+  shopId: string,
+  appointmentId: string,
+  updates: Partial<Appointment>
+): Promise<boolean> {
+  try {
+    const payload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.status !== undefined) {
+      payload.status = updates.status;
+    }
+
+    if (updates.date !== undefined || updates.startsAt !== undefined) {
+      // Formatted starts_at
+      const d = updates.date || new Date().toISOString().split('T')[0];
+      const t = updates.startsAt || '10:00 AM';
+      payload.starts_at = `${d} ${t}`;
+    }
+
+    if (updates.cust !== undefined || updates.phone !== undefined || updates.service !== undefined || updates.staff !== undefined || updates.amount !== undefined) {
+      payload.notes = JSON.stringify({
+        cust: updates.cust,
+        phone: updates.phone,
+        service: updates.service,
+        staff_name: updates.staff,
+        amount: updates.amount,
+      });
+    }
+
+    const { error } = await supabase
+      .from('appointments')
+      .update(payload)
+      .eq('shop_id', shopId)
+      .eq('id', appointmentId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete an appointment in Supabase (or mark cancelled).
+ */
+export async function deleteAppointmentInDb(shopId: string, appointmentId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('shop_id', shopId)
+      .eq('id', appointmentId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete / deactivate a staff member in Supabase.
+ */
+export async function deleteStaffInDb(shopId: string, staffId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('shop_id', shopId)
+      .eq('id', staffId);
+
+    return !error;
+  } catch {
+    return false;
   }
 }

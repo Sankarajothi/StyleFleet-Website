@@ -708,7 +708,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
             }`}
           >
             {/* Top Close Button */}
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 {editingExpenseId ? 'Edit Expense Entry' : 'Add New Operational Expense'}
               </h3>

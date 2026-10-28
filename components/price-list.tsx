@@ -20,52 +20,7 @@ export interface DiscountOffer {
   notes?: string;
 }
 
-const DEFAULT_OFFERS: DiscountOffer[] = [
-  {
-    id: 'off-1',
-    code: 'FESTIVE25',
-    title: 'Festive Hair Spa & Glow',
-    type: 'percentage',
-    value: 25,
-    minBill: 1000,
-    validUntil: '2026-11-15',
-    active: true,
-    notes: 'Valid on hair spa and deep conditioning services',
-  },
-  {
-    id: 'off-2',
-    code: 'WELCOME150',
-    title: 'First-Time Client Welcome',
-    type: 'flat',
-    value: 150,
-    minBill: 500,
-    validUntil: '2026-12-31',
-    active: true,
-    notes: 'Applicable for all newly registered salon guests',
-  },
-  {
-    id: 'off-3',
-    code: 'COMBO300',
-    title: 'Grooming Master Combo',
-    type: 'flat',
-    value: 300,
-    minBill: 1200,
-    validUntil: '2026-11-30',
-    active: true,
-    notes: 'Haircut + Beard Styling + Charcoal D-Tan',
-  },
-  {
-    id: 'off-4',
-    code: 'VIPGLOW',
-    title: 'VIP Exclusive Keratin Ritual',
-    type: 'percentage',
-    value: 30,
-    minBill: 2500,
-    validUntil: '2026-12-15',
-    active: false,
-    notes: 'Special privilege discount for salon VIP members',
-  },
-];
+const DEFAULT_OFFERS: DiscountOffer[] = [];
 
 export const PriceListView: React.FC<PriceListViewProps> = ({
   onOpenAddCategory,
@@ -102,7 +57,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const [editDur, setEditDur] = useState<number>(30);
   const [editCat, setEditCat] = useState('');
 
-  // Discount Offers state
+  // Discount Offers state (Strict real database records / persistent salon state)
   const [offers, setOffers] = useState<DiscountOffer[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -110,7 +65,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
         if (saved) return JSON.parse(saved);
       } catch {}
     }
-    return DEFAULT_OFFERS;
+    return [];
   });
 
   useEffect(() => {
@@ -846,14 +801,19 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 Edit Service Details
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingService(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -944,7 +904,11 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setEditingService(null)}
-                  className="flex-1 py-2.5 rounded-2xl border border-white/10 text-xs font-bold cursor-pointer"
+                  className={`flex-1 py-2.5 rounded-2xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -968,14 +932,19 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 Create Discount Offer
               </h3>
               <button
                 type="button"
                 onClick={() => setShowCreateOfferModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1116,7 +1085,11 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowCreateOfferModal(false)}
-                  className="flex-1 py-2.5 rounded-2xl border border-white/10 text-xs font-bold cursor-pointer"
+                  className={`flex-1 py-2.5 rounded-2xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>

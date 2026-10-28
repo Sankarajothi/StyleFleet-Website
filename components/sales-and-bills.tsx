@@ -1517,7 +1517,7 @@ export function SalesAndBillsView({
             }`}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
@@ -1536,7 +1536,12 @@ export function SalesAndBillsView({
               <button
                 type="button"
                 onClick={() => setShowCustomDateModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold hover:bg-white/5 cursor-pointer"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200 shadow-xs'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1545,7 +1550,7 @@ export function SalesAndBillsView({
             </div>
 
             {/* Mode Switcher: Single Date vs Date Range */}
-            <div className="grid grid-cols-2 p-1 rounded-2xl bg-black/20 border border-white/10">
+            <div className={`grid grid-cols-2 p-1 rounded-2xl border ${isDarkMode ? 'bg-black/20 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setTempFilterMode('single')}
@@ -1656,7 +1661,11 @@ export function SalesAndBillsView({
                       setTempStartDate(s < regDateStr ? regDateStr : s);
                       setTempEndDate(todayStr);
                     }}
-                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                    className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer text-center ${
+                      isDarkMode
+                        ? 'border-white/10 text-slate-300 hover:border-[#D4AF37] hover:text-[#D4AF37]'
+                        : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-[#D4AF37] hover:text-[#B8863B]'
+                    }`}
                   >
                     Last 7 Days
                   </button>
@@ -1669,7 +1678,11 @@ export function SalesAndBillsView({
                       setTempStartDate(s < regDateStr ? regDateStr : s);
                       setTempEndDate(todayStr);
                     }}
-                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                    className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer text-center ${
+                      isDarkMode
+                        ? 'border-white/10 text-slate-300 hover:border-[#D4AF37] hover:text-[#D4AF37]'
+                        : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-[#D4AF37] hover:text-[#B8863B]'
+                    }`}
                   >
                     Last 14 Days
                   </button>
@@ -1682,7 +1695,11 @@ export function SalesAndBillsView({
                       setTempStartDate(s < regDateStr ? regDateStr : s);
                       setTempEndDate(todayStr);
                     }}
-                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                    className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold transition-colors cursor-pointer text-center ${
+                      isDarkMode
+                        ? 'border-white/10 text-slate-300 hover:border-[#D4AF37] hover:text-[#D4AF37]'
+                        : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-[#D4AF37] hover:text-[#B8863B]'
+                    }`}
                   >
                     Last 30 Days
                   </button>
@@ -1691,7 +1708,7 @@ export function SalesAndBillsView({
                 {/* Two Columns: From Date & To Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-[#A7B0C3]">
+                    <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
                       From Date:
                     </label>
                     <input
@@ -1707,7 +1724,7 @@ export function SalesAndBillsView({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-[#A7B0C3]">
+                    <label className={`block text-[11px] font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
                       To Date:
                     </label>
                     <input
@@ -1733,7 +1750,7 @@ export function SalesAndBillsView({
             )}
 
             {/* Modal Actions */}
-            <div className="flex gap-2 pt-2 border-t border-white/10">
+            <div className={`flex gap-2 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => {
@@ -1761,7 +1778,11 @@ export function SalesAndBillsView({
               <button
                 type="button"
                 onClick={() => setShowCustomDateModal(false)}
-                className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer hover:bg-white/5"
+                className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
                 Cancel
               </button>
@@ -1807,7 +1828,7 @@ export function SalesAndBillsView({
             }`}
           >
             {/* Header: Bill Sent & Customer Details */}
-            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+            <div className={`flex items-center gap-3 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
                 <svg className="w-6 h-6 fill-emerald-400" viewBox="0 0 24 24">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
@@ -1829,7 +1850,12 @@ export function SalesAndBillsView({
               <button
                 type="button"
                 onClick={() => setConfirmationBill(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs text-slate-400 hover:text-white cursor-pointer"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 ✕
               </button>
@@ -1976,14 +2002,19 @@ export function SalesAndBillsView({
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Edit Bill #{editingBill.id}
               </h3>
               <button
                 type="button"
                 onClick={() => setEditingBill(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -2092,7 +2123,11 @@ export function SalesAndBillsView({
                 <button
                   type="button"
                   onClick={() => setEditingBill(null)}
-                  className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer"
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -2111,7 +2146,7 @@ export function SalesAndBillsView({
             }`}
           >
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between shrink-0">
+            <div className={`p-4 sm:p-5 border-b flex items-center justify-between shrink-0 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2141,7 +2176,12 @@ export function SalesAndBillsView({
                 <button
                   type="button"
                   onClick={() => setShowNewBillModal(false)}
-                  className="w-8 h-8 rounded-xl border border-white/10 flex items-center justify-center text-[#A7B0C3] hover:text-white cursor-pointer transition-colors"
+                  className={`w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+                      : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200 shadow-xs'
+                  }`}
+                  aria-label="Close"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -2210,12 +2250,14 @@ export function SalesAndBillsView({
                             isDarkMode ? 'bg-[#162340] border-[#2A3858]' : 'bg-white border-slate-300'
                           }`}
                         >
-                          <div className="p-1.5 flex items-center justify-between border-b border-white/10 text-[10px] font-extrabold text-[#D4AF37]">
+                          <div className={`p-1.5 flex items-center justify-between border-b text-[10px] font-extrabold text-[#D4AF37] ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                             <span>Existing Customers ({filteredCustomers.length})</span>
                             <button
                               type="button"
                               onClick={() => setShowCustomerDropdown(false)}
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-slate-400 hover:text-white"
+                              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                                isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-black hover:bg-slate-100'
+                              }`}
                             >
                               ✕
                             </button>
@@ -2550,9 +2592,9 @@ export function SalesAndBillsView({
                 </div>
 
                 {/* Financial Summary & Checkout Button */}
-                <div className="space-y-3 pt-2 border-t border-white/10">
+                <div className={`space-y-3 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                   <div className="space-y-1 text-xs">
-                    <div className="flex justify-between text-slate-400">
+                    <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                       <span>Subtotal:</span>
                       <span>₹{cartSubtotal}</span>
                     </div>
@@ -2563,7 +2605,7 @@ export function SalesAndBillsView({
                       </div>
                     )}
                     {taxAmount > 0 && (
-                      <div className="flex justify-between text-slate-400">
+                      <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                         <span>GST ({gstRate}%):</span>
                         <span>₹{taxAmount}</span>
                       </div>
@@ -2574,7 +2616,7 @@ export function SalesAndBillsView({
                         <span>+₹{safeTip}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm font-black pt-1 border-t border-white/5">
+                    <div className={`flex justify-between text-sm font-black pt-1 border-t ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>
                       <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Net Payable:</span>
                       <span className="text-[#D4AF37] text-base">₹{cartTotal}</span>
                     </div>

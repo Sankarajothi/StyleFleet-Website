@@ -9,6 +9,8 @@ import {
   deleteCustomerInDb,
   saveAppointmentToDb,
   updateAppointmentStatusInDb,
+  updateAppointmentInDb,
+  deleteAppointmentInDb,
   saveBillToDb,
   deleteBillInDb,
   updateBillInDb,
@@ -18,8 +20,16 @@ import {
   deleteExpenseInDb,
   saveStaffMemberToDb,
   updateStaffMemberInDb,
+  deleteStaffInDb,
+  saveServiceToDb,
+  updateServiceInDb,
+  deleteServiceInDb,
+  toggleServiceActiveInDb,
+  saveCategoryToDb,
+  deleteCategoryInDb,
   updateShopProfileInDb,
   generateUuid,
+  isValidUuid,
   bulkSaveCustomersToDb,
   verifyAccountActiveInDb,
 } from '@/lib/supabase-service';
@@ -337,50 +347,59 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addCategory = (cat: string) => {
     if (!cat || categories.includes(cat)) return;
     setCategories((prev) => [...prev, cat]);
+    if (currentShopId) {
+      saveCategoryToDb(currentShopId, cat);
+    }
     showToast(`Category "${cat}" added!`);
   };
 
-  const [services, setServices] = useState<ServiceItem[]>([
-    { id: 's1', cat: 'Hair', name: 'Classic Haircut', price: 350, dur: 30, active: true },
-    { id: 's2', cat: 'Hair', name: 'Fade / Creative Haircut', price: 450, dur: 40, active: true },
-    { id: 's3', cat: 'Hair', name: 'Keratin Hair Spa', price: 1800, dur: 60, active: true },
-    { id: 's4', cat: 'Hair', name: 'Head Massage (20m)', price: 300, dur: 20, active: true },
-    { id: 's5', cat: 'Beard', name: 'Beard Trim & Shape', price: 200, dur: 20, active: true },
-    { id: 's6', cat: 'Beard', name: 'Beard Spa & Conditioning', price: 400, dur: 30, active: true },
-    { id: 's7', cat: 'Beard', name: 'Royal Hot Towel Shave', price: 300, dur: 25, active: true },
-    { id: 's8', cat: 'Colour', name: 'Hair Color Root Touch-up', price: 800, dur: 45, active: true },
-    { id: 's9', cat: 'Colour', name: 'Global Hair Colouring', price: 2200, dur: 90, active: true },
-    { id: 's10', cat: 'Care', name: 'D-Tan Facial Cleanse', price: 750, dur: 40, active: true },
-    { id: 's11', cat: 'Care', name: 'Hydra Deep Facial', price: 2200, dur: 60, active: true },
-    { id: 's12', cat: 'Care', name: 'Charcoal Detox Face Pack', price: 450, dur: 25, active: true },
-    { id: 's13', cat: 'Packages', name: 'Full Grooming Combo', price: 1200, dur: 75, active: true },
-  ]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
 
   const addService = (newService: Omit<ServiceItem, 'id' | 'active'>) => {
+    const srvId = generateUuid();
     const s: ServiceItem = {
       ...newService,
-      id: `s-${Date.now()}`,
+      id: srvId,
       active: true,
     };
     setServices((prev) => [s, ...prev]);
+    if (currentShopId) {
+      saveServiceToDb(currentShopId, s);
+    }
     showToast(`Service "${s.name}" added to price list.`);
   };
 
   const toggleServiceActive = (id: string) => {
+    let nextActive = false;
     setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s))
+      prev.map((s) => {
+        if (s.id === id) {
+          nextActive = !s.active;
+          return { ...s, active: nextActive };
+        }
+        return s;
+      })
     );
+    if (currentShopId) {
+      toggleServiceActiveInDb(currentShopId, id, nextActive);
+    }
   };
 
   const updateService = (id: string, updated: Partial<ServiceItem>) => {
     setServices((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...updated } : s))
     );
+    if (currentShopId) {
+      updateServiceInDb(currentShopId, id, updated);
+    }
     showToast('Service updated successfully.');
   };
 
   const deleteService = (id: string) => {
     setServices((prev) => prev.filter((s) => s.id !== id));
+    if (currentShopId) {
+      deleteServiceInDb(currentShopId, id);
+    }
     showToast('Service removed from menu.');
   };
 
@@ -629,6 +648,9 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteStaff = (id: string) => {
     setStaff((prev) => prev.filter((s) => s.id !== id));
+    if (currentShopId) {
+      deleteStaffInDb(currentShopId, id);
+    }
     showToast('Stylist removed.');
   };
 
@@ -705,11 +727,17 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
     );
+    if (currentShopId) {
+      updateAppointmentInDb(currentShopId, id, updates);
+    }
     showToast('Appointment updated successfully!', 'success');
   };
 
   const deleteAppointment = (id: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== id));
+    if (currentShopId) {
+      deleteAppointmentInDb(currentShopId, id);
+    }
     showToast('Appointment deleted.', 'success');
   };
 
@@ -1004,10 +1032,11 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addExpense = (newExp: Omit<Expense, 'id' | 'date'> & { id?: string; date?: string }) => {
     const today = new Date().toISOString().split('T')[0];
+    const expId = isValidUuid(newExp.id) ? newExp.id! : generateUuid();
     const exp: Expense = {
-      id: newExp.id || `exp-${Date.now()}`,
+      id: expId,
       cat: newExp.cat,
-      amount: newExp.amount,
+      amount: Number(newExp.amount) || 0,
       note: newExp.note,
       pm: newExp.pm,
       staff: newExp.staff,
@@ -1043,7 +1072,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [billCartItems, setBillCartItems] = useState<BillItem[]>([]);
   const [billCustName, setBillCustName] = useState('');
   const [billCustPhone, setBillCustPhone] = useState('');
-  const [billStaffSelect, setBillStaffSelect] = useState('Karthik');
+  const [billStaffSelect, setBillStaffSelect] = useState(() => (staff.length > 0 ? staff[0].name : ''));
   const [billDiscount, setBillDiscount] = useState(0);
   const [billPaymentMode, setBillPaymentMode] = useState<Bill['mode']>('UPI');
   const [partialPaidAmount, setPartialPaidAmount] = useState(0);
@@ -1054,7 +1083,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (existing) {
         return prev.map((i) => (i.name === name ? { ...i, qty: i.qty + 1 } : i));
       }
-      return [...prev, { name, price, qty: 1, staff: itemStaff || billStaffSelect }];
+      return [...prev, { name, price, qty: 1, staff: itemStaff || billStaffSelect || (staff.length > 0 ? staff[0].name : 'Stylist') }];
     });
     showToast(`Added "${name}" to bill`);
   };
@@ -1087,8 +1116,8 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateAppointmentStatus(appt.id, 'Done');
     setBillCustName(appt.cust);
     setBillCustPhone(appt.phone);
-    setBillStaffSelect(appt.staff || 'Karthik');
-    setBillCartItems([{ name: appt.service, price: appt.amount, qty: 1, staff: appt.staff }]);
+    setBillStaffSelect(appt.staff || (staff.length > 0 ? staff[0].name : 'Stylist'));
+    setBillCartItems([{ name: appt.service, price: appt.amount, qty: 1, staff: appt.staff || (staff.length > 0 ? staff[0].name : 'Stylist') }]);
     setCurrentScreen('billing');
     showToast(`Prefilled bill for ${appt.cust}!`);
   };
