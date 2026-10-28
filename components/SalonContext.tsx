@@ -20,6 +20,7 @@ import {
   updateStaffMemberInDb,
   updateShopProfileInDb,
   generateUuid,
+  bulkSaveCustomersToDb,
   verifyAccountActiveInDb,
 } from '@/lib/supabase-service';
 
@@ -180,7 +181,7 @@ interface SalonContextType {
   deleteCustomer: (id: string) => void;
   markCustomerInactive: (id: string) => void;
   reactivateCustomer: (id: string) => void;
-  importCustomers: (custs: Array<{ name: string; phone: string; vip?: boolean; due?: number; notes?: string; lastVisit?: string }>) => void;
+  importCustomers: (custs: Array<{ name: string; phone: string; vip?: boolean; due?: number; notes?: string; lastVisit?: string }>) => Promise<number>;
 
   staff: StaffMember[];
   addStaff: (member: { name: string; phone: string; role?: string }) => void;
@@ -409,10 +410,12 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     lastVisit?: string;
     status?: 'active' | 'inactive';
   }) => {
+    const custId = generateUuid();
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const newCust: Customer = {
-      id: `c-${Date.now()}`,
-      name,
-      phone,
+      id: custId,
+      name: name.trim(),
+      phone: cleanPhone || phone.trim(),
       vip,
       visits: 1,
       spend: 0,
@@ -422,8 +425,12 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: status || 'active',
     };
     setCustomers((prev) => [newCust, ...prev]);
-    if (currentShopId) {
-      saveCustomerToDb(currentShopId, newCust);
+    const effectiveShopId =
+      currentShopId ||
+      shopProfile?.id ||
+      (typeof window !== 'undefined' ? localStorage.getItem('stylefleet_shop_id') : null);
+    if (effectiveShopId) {
+      saveCustomerToDb(effectiveShopId, newCust);
     }
     showToast(`Client "${name}" added to CRM!`);
     return newCust;
@@ -479,23 +486,60 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('Client reactivated to Active CRM!');
   };
 
-  const importCustomers = (
+  const importCustomers = async (
     newClients: Array<{ name: string; phone: string; vip?: boolean; due?: number; notes?: string; lastVisit?: string }>
-  ) => {
-    const added: Customer[] = newClients.map((nc, idx) => ({
-      id: `c-${Date.now()}-${idx}`,
-      name: nc.name,
-      phone: nc.phone,
-      vip: !!nc.vip,
-      visits: 1,
-      spend: 0,
-      due: Number(nc.due) || 0,
-      notes: nc.notes || '',
-      lastVisit: nc.lastVisit || 'Today',
-      status: 'active' as const,
-    }));
-    setCustomers((prev) => [...added, ...prev]);
-    showToast(`Successfully imported ${added.length} contacts!`);
+  ): Promise<number> => {
+    const effectiveShopId =
+      currentShopId ||
+      shopProfile?.id ||
+      (typeof window !== 'undefined' ? localStorage.getItem('stylefleet_shop_id') : null);
+
+    const formattedList: Customer[] = newClients.map((nc) => {
+      const cleanPhone = (nc.phone || '').replace(/\D/g, '').slice(-10);
+      return {
+        id: generateUuid(),
+        name: (nc.name || 'Client').trim(),
+        phone: cleanPhone,
+        vip: !!nc.vip,
+        visits: 1,
+        spend: 0,
+        due: Number(nc.due) || 0,
+        notes: nc.notes || 'Imported from phone contacts',
+        lastVisit: nc.lastVisit || 'Today',
+        status: 'active' as const,
+      };
+    }).filter((c) => c.phone && c.phone.length >= 7);
+
+    if (formattedList.length === 0) {
+      showToast('No valid contacts to import', 'error');
+      return 0;
+    }
+
+    // Deduplicate against state by phone
+    setCustomers((prev) => {
+      const existingPhones = new Set(prev.map((c) => c.phone.replace(/\D/g, '').slice(-10)));
+      const novel = formattedList.filter((c) => !existingPhones.has(c.phone));
+      return [...novel, ...prev];
+    });
+
+    if (effectiveShopId) {
+      try {
+        const res = await bulkSaveCustomersToDb(effectiveShopId, formattedList);
+        if (res.success) {
+          showToast(`Stored ${res.insertedCount} new clients in Supabase database!`);
+          return res.insertedCount;
+        } else {
+          showToast(`Contacts saved locally (Supabase: ${res.error || 'notice'})`, 'error');
+        }
+      } catch (err: any) {
+        console.error('[SalonContext] bulkSaveCustomersToDb error:', err);
+        showToast('Contacts saved locally, cloud sync pending', 'error');
+      }
+    } else {
+      showToast(`Imported ${formattedList.length} contacts locally!`);
+    }
+
+    return formattedList.length;
   };
 
   const [staff, setStaff] = useState<StaffMember[]>(DEFAULT_STAFF);

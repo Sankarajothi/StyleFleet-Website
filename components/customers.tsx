@@ -82,19 +82,46 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   const handlePickDeviceContacts = async () => {
     if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
       try {
-        const props = ['name', 'tel'];
+        let props = ['name', 'tel'];
+        if ('getProperties' in (navigator as any).contacts) {
+          try {
+            const supported = await (navigator as any).contacts.getProperties();
+            props = props.filter((p: string) => supported.includes(p));
+          } catch {}
+        }
+        if (props.length === 0) props = ['name', 'tel'];
+
         const contacts = await (navigator as any).contacts.select(props, { multiple: true });
         if (contacts && contacts.length > 0) {
-          const formatted = contacts.map((c: any) => ({
-            name: Array.isArray(c.name) ? c.name[0] : (c.name || 'Contact'),
-            phone: Array.isArray(c.tel) ? c.tel[0].replace(/\D/g, '').slice(-10) : (c.tel || '').replace(/\D/g, '').slice(-10),
-            notes: 'Imported from phone contacts',
-          })).filter((c: any) => c.phone && c.phone.length >= 10);
+          const formatted = contacts.map((c: any) => {
+            let name = 'Client';
+            if (Array.isArray(c.name) && c.name.length > 0) {
+              name = c.name[0] || 'Client';
+            } else if (typeof c.name === 'string' && c.name.trim()) {
+              name = c.name.trim();
+            }
+
+            let rawTel = '';
+            if (Array.isArray(c.tel) && c.tel.length > 0) {
+              rawTel = c.tel[0] || '';
+            } else if (typeof c.tel === 'string') {
+              rawTel = c.tel;
+            }
+            const cleanPhone = rawTel.replace(/\D/g, '').slice(-10);
+
+            return {
+              name: name.trim(),
+              phone: cleanPhone.length >= 7 ? cleanPhone : rawTel.replace(/\D/g, ''),
+              notes: 'Imported from phone contacts',
+            };
+          }).filter((c: any) => c.phone && c.phone.length >= 7);
+
           setDeviceContacts(formatted);
           setSelectedContacts(formatted.map((c: any) => c.phone));
-          showToast(`Loaded ${formatted.length} contacts from device.`);
+          showToast(`Loaded ${formatted.length} contact(s) from device.`);
         }
-      } catch {
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
         showToast('Contact selection cancelled or permission denied.', 'error');
       }
     } else {
@@ -168,34 +195,72 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   // Handle trigger phone contacts API or modal fallback
   const handleTriggerImportContacts = async () => {
     setShowAddChoiceModal(false);
+
+    // Native Contacts Picker on mobile devices (Android Chrome, Edge, Samsung Internet)
     if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
       try {
-        const props = ['name', 'tel'];
-        const opts = { multiple: true };
-        const deviceContacts = await (navigator as any).contacts.select(props, opts);
+        let props = ['name', 'tel'];
+        if ('getProperties' in (navigator as any).contacts) {
+          try {
+            const supported = await (navigator as any).contacts.getProperties();
+            props = props.filter((p: string) => supported.includes(p));
+          } catch (e) {
+            console.warn('ContactsManager getProperties failed:', e);
+          }
+        }
+        if (props.length === 0) props = ['name', 'tel'];
+
+        // { multiple: true } allows selecting a single contact OR multiple contacts
+        const deviceContacts = await (navigator as any).contacts.select(props, { multiple: true });
+
         if (deviceContacts && deviceContacts.length > 0) {
           const newClients = deviceContacts.map((c: any) => {
-            const name = (Array.isArray(c.name) ? c.name[0] : c.name) || 'Imported Contact';
-            const rawTel = (Array.isArray(c.tel) ? c.tel[0] : c.tel) || '';
-            const phone = rawTel.replace(/\D/g, '').slice(-10);
+            let name = 'Client';
+            if (Array.isArray(c.name) && c.name.length > 0) {
+              name = c.name[0] || 'Client';
+            } else if (typeof c.name === 'string' && c.name.trim()) {
+              name = c.name.trim();
+            }
+
+            let rawTel = '';
+            if (Array.isArray(c.tel) && c.tel.length > 0) {
+              rawTel = c.tel[0] || '';
+            } else if (typeof c.tel === 'string') {
+              rawTel = c.tel;
+            }
+
+            const cleanPhone = rawTel.replace(/\D/g, '').slice(-10);
+
             return {
-              name,
-              phone: phone.length >= 7 ? phone : (rawTel.replace(/\D/g, '') || '9876543210'),
+              name: name.trim(),
+              phone: cleanPhone.length >= 7 ? cleanPhone : rawTel.replace(/\D/g, ''),
               vip: false,
               due: 0,
               notes: 'Imported from phone contacts',
               lastVisit: 'New Client',
             };
-          });
-          importCustomers(newClients);
-          showToast(`Imported ${newClients.length} contacts from your phone!`);
+          }).filter((c: any) => c.phone && c.phone.length >= 7);
+
+          if (newClients.length > 0) {
+            showToast(`Saving ${newClients.length} contact(s) to Supabase database...`);
+            await importCustomers(newClients);
+            return;
+          } else {
+            showToast('Selected contact had no valid mobile number.', 'error');
+            return;
+          }
+        }
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          // User backed out or cancelled the picker
           return;
         }
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
+        console.warn('Native contact picker error, opening import modal:', err);
       }
     }
-    // Desktop or unsupported/denied browser fallback
+
+    // Fallback for browsers without Contact Picker API (desktop or iOS Safari)
     setShowImportModal(true);
   };
 
@@ -275,7 +340,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   };
 
   // Handle Contacts Import
-  const handleImportContacts = () => {
+  const handleImportContacts = async () => {
     if (selectedContacts.length === 0) {
       showToast('Please select at least one contact to import', 'error');
       return;
@@ -292,7 +357,8 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
         lastVisit: 'New Client',
       }));
 
-    importCustomers(toImport);
+    showToast(`Saving ${toImport.length} contact(s) to Supabase database...`);
+    await importCustomers(toImport);
     setSelectedContacts([]);
     setDeviceContacts([]);
     setShowImportModal(false);
@@ -532,96 +598,98 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
           </button>
         </div>
 
-        {/* Add Client Trigger Button (Ultra-Luxury Premium) */}
-        <div className="relative">
-          {isStylist ? (
-            <button
-              type="button"
-              onClick={() => setShowManualModal(true)}
-              className="px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
-            >
-              <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              <span className="tracking-wide text-[11px] font-black">Add Client</span>
-            </button>
-          ) : (
-            <>
+        {/* Action Buttons: Import Contacts + Add Client */}
+        <div className="flex items-center gap-2 relative">
+          <button
+            type="button"
+            onClick={handleTriggerImportContacts}
+            className={`px-3 sm:px-4 py-2.5 rounded-2xl border font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              isDarkMode
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+            }`}
+            title="Import from phone contacts directly into Supabase"
+          >
+            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">Import Contacts</span>
+            <span className="sm:hidden">Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
+            className="relative group px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
+          >
+            <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            <span className="tracking-wide text-[11px] font-black">Add Client</span>
+            <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Add Choice Dropdown Popover */}
+          {showAddChoiceModal && (
+            <div className={`absolute right-0 top-full mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-40 space-y-1 animate-fadeIn ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'
+            }`}>
               <button
                 type="button"
-                onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
-                className="relative group px-4 sm:px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 border border-[#D4AF37] shrink-0 cursor-pointer"
+                onClick={() => {
+                  setShowAddChoiceModal(false);
+                  setShowManualModal(true);
+                }}
+                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
               >
-                <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                <span className="tracking-wide text-[11px] font-black">Add Client</span>
-                <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+                <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <strong className={`text-xs font-bold block group-hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                    Add Client Manually
+                  </strong>
+                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                    Full name, mobile, initial due & notes
+                  </span>
+                </div>
               </button>
 
-              {/* Add Choice Dropdown Popover (Owner only) */}
-              {showAddChoiceModal && (
-                <div className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-40 space-y-1 animate-fadeIn ${
-                  isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-[#FFFFFF] border-[#E2E8F0] shadow-slate-200'
-                }`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddChoiceModal(false);
-                      setShowManualModal(true);
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <strong className={`text-xs font-bold block group-hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                        Add Client Manually
-                      </strong>
-                      <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-                        Full name, mobile, initial due & notes
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleTriggerImportContacts}
-                    className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                        Import from Contacts
-                      </strong>
-                      <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-                        Device address book or contacts selector
-                      </span>
-                    </div>
-                  </button>
-
-                  <div className={`pt-1 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddChoiceModal(false)}
-                      className="w-full py-1 text-center text-[10px] font-semibold text-[#737D92] hover:text-slate-300 cursor-pointer"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
+              <button
+                type="button"
+                onClick={handleTriggerImportContacts}
+                className="w-full px-3 py-2.5 rounded-xl hover:bg-slate-800/70 text-left flex items-center gap-3 transition-colors group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
                 </div>
-              )}
-            </>
+                <div>
+                  <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                    Import from Contacts
+                  </strong>
+                  <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                    Device contacts app (single or multiple)
+                  </span>
+                </div>
+              </button>
+
+              <div className={`pt-1 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddChoiceModal(false)}
+                  className="w-full py-1 text-center text-[10px] font-semibold text-[#737D92] hover:text-slate-300 cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -1801,7 +1869,9 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                       className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         isSelected
                           ? 'bg-[#D4AF37]/10 border-[#D4AF37]/50'
-                          : 'bg-[#121B33] border-[#2A3858] hover:border-[#2A3858]'
+                          : isDarkMode
+                          ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/30'
+                          : 'bg-[#F8FAFC] border-[#E2E8F0] hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center gap-3">

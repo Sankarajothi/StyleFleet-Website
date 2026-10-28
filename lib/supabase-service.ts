@@ -762,6 +762,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
  * Persist a customer strictly into the current salon's customers table.
  */
 export async function saveCustomerToDb(shopId: string, customer: {
+  id?: string;
   name: string;
   phone: string;
   vip?: boolean;
@@ -769,14 +770,39 @@ export async function saveCustomerToDb(shopId: string, customer: {
   notes?: string;
 }): Promise<string | null> {
   try {
-    const custId = generateUuid();
+    const custId = isValidUuid(customer.id) ? customer.id! : generateUuid();
+    const cleanPhone = (customer.phone || '').replace(/\D/g, '').slice(-10);
+
+    // If customer with same phone already exists in this salon, update details
+    if (cleanPhone) {
+      const { data: existing } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('shop_id', shopId)
+        .eq('phone', cleanPhone)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        await supabase
+          .from('customers')
+          .update({
+            name: (customer.name || 'Client').trim(),
+            is_starred: !!customer.vip,
+            notes: customer.notes?.trim() || null,
+            is_active: true,
+          })
+          .eq('id', existing[0].id);
+        return existing[0].id;
+      }
+    }
+
     const { data, error } = await supabase
       .from('customers')
       .insert({
         id: custId,
         shop_id: shopId,
-        name: customer.name.trim(),
-        phone: customer.phone.trim(),
+        name: (customer.name || 'Client').trim(),
+        phone: cleanPhone || customer.phone.trim(),
         is_starred: !!customer.vip,
         outstanding_due_minor: Math.round((customer.due || 0) * 100),
         notes: customer.notes?.trim() || null,
@@ -792,6 +818,128 @@ export async function saveCustomerToDb(shopId: string, customer: {
     return data?.id || custId;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Bulk persist imported contacts into the active salon's Supabase customers table.
+ * Deduplicates by phone number for the active salon.
+ */
+export async function bulkSaveCustomersToDb(
+  shopId: string,
+  customersList: Array<{
+    id?: string;
+    name: string;
+    phone: string;
+    vip?: boolean;
+    due?: number;
+    notes?: string;
+  }>
+): Promise<{ success: boolean; insertedCount: number; updatedCount: number; error?: string }> {
+  try {
+    if (!shopId || !customersList || customersList.length === 0) {
+      return { success: false, insertedCount: 0, updatedCount: 0, error: 'Shop ID or customers list is missing' };
+    }
+
+    // 1. Fetch existing phone numbers for this salon to prevent duplicate records
+    const { data: existingRows, error: fetchErr } = await supabase
+      .from('customers')
+      .select('id, phone')
+      .eq('shop_id', shopId);
+
+    if (fetchErr) {
+      console.warn('[Supabase] Note on fetching existing customers:', fetchErr.message);
+    }
+
+    const existingMap = new Map<string, string>();
+    (existingRows || []).forEach((row: any) => {
+      if (row.phone) {
+        const clean = row.phone.replace(/\D/g, '').slice(-10);
+        if (clean) existingMap.set(clean, row.id);
+      }
+    });
+
+    const newRowsToInsert: any[] = [];
+    const seenPhonesInBatch = new Set<string>();
+    let updatedCount = 0;
+
+    for (const c of customersList) {
+      const cleanPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length < 7) continue;
+
+      if (existingMap.has(cleanPhone)) {
+        // Customer already exists in this salon - update active status and notes
+        const existingId = existingMap.get(cleanPhone)!;
+        try {
+          await supabase
+            .from('customers')
+            .update({
+              name: (c.name || 'Client').trim(),
+              is_active: true,
+              notes: c.notes?.trim() || 'Imported from phone contacts',
+            })
+            .eq('id', existingId);
+          updatedCount++;
+        } catch {}
+        continue;
+      }
+
+      if (seenPhonesInBatch.has(cleanPhone)) {
+        continue;
+      }
+      seenPhonesInBatch.add(cleanPhone);
+
+      const custUuid = isValidUuid(c.id) ? c.id! : generateUuid();
+      newRowsToInsert.push({
+        id: custUuid,
+        shop_id: shopId,
+        name: (c.name || 'Client').trim(),
+        phone: cleanPhone,
+        is_starred: !!c.vip,
+        outstanding_due_minor: Math.round((Number(c.due) || 0) * 100),
+        notes: (c.notes || 'Imported from phone contacts').trim(),
+        is_active: true,
+      });
+    }
+
+    let insertedCount = 0;
+    if (newRowsToInsert.length > 0) {
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < newRowsToInsert.length; i += BATCH_SIZE) {
+        const batch = newRowsToInsert.slice(i, i + BATCH_SIZE);
+        const { error: insertErr } = await supabase
+          .from('customers')
+          .insert(batch);
+
+        if (insertErr) {
+          console.error('[Supabase] Bulk insert batch encountered error, falling back to item-by-item insert:', insertErr);
+          for (const item of batch) {
+            try {
+              const { error: singleErr } = await supabase.from('customers').insert(item);
+              if (!singleErr) insertedCount++;
+            } catch (e) {
+              console.warn('[Supabase] Single customer insert fallback error:', e);
+            }
+          }
+        } else {
+          insertedCount += batch.length;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      insertedCount,
+      updatedCount,
+    };
+  } catch (err: any) {
+    console.error('[Supabase] Exception in bulkSaveCustomersToDb:', err);
+    return {
+      success: false,
+      insertedCount: 0,
+      updatedCount: 0,
+      error: err?.message || 'Database error',
+    };
   }
 }
 
@@ -812,12 +960,15 @@ export async function updateCustomerInDb(
     if (updated.notes !== undefined) payload.notes = updated.notes?.trim() || null;
     if (updated.status !== undefined) payload.is_active = updated.status === 'active';
 
-    const { error } = await supabase
-      .from('customers')
-      .update(payload)
-      .eq('shop_id', shopId)
-      .or(`id.eq.${customerIdOrPhone},phone.eq.${customerIdOrPhone}`);
+    let query = supabase.from('customers').update(payload).eq('shop_id', shopId);
+    if (isValidUuid(customerIdOrPhone)) {
+      query = query.eq('id', customerIdOrPhone);
+    } else {
+      const cleanPhone = customerIdOrPhone.replace(/\D/g, '').slice(-10);
+      query = query.eq('phone', cleanPhone || customerIdOrPhone);
+    }
 
+    const { error } = await query;
     return !error;
   } catch {
     return false;
@@ -829,12 +980,15 @@ export async function updateCustomerInDb(
  */
 export async function deleteCustomerInDb(shopId: string, customerIdOrPhone: string): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from('customers')
-      .update({ is_active: false })
-      .eq('shop_id', shopId)
-      .or(`id.eq.${customerIdOrPhone},phone.eq.${customerIdOrPhone}`);
+    let query = supabase.from('customers').update({ is_active: false }).eq('shop_id', shopId);
+    if (isValidUuid(customerIdOrPhone)) {
+      query = query.eq('id', customerIdOrPhone);
+    } else {
+      const cleanPhone = customerIdOrPhone.replace(/\D/g, '').slice(-10);
+      query = query.eq('phone', cleanPhone || customerIdOrPhone);
+    }
 
+    const { error } = await query;
     return !error;
   } catch {
     return false;
