@@ -9,6 +9,8 @@ interface InvoiceTemplateProps {
   shopProfile: ShopProfile;
   onClose?: () => void;
   onShareWhatsApp?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function InvoiceTemplate({
@@ -16,6 +18,8 @@ export function InvoiceTemplate({
   shopProfile,
   onClose,
   onShareWhatsApp,
+  onEdit,
+  onDelete,
 }: InvoiceTemplateProps) {
   const { role, hasPermission } = useSalon();
   const canShareBills = role === 'owner' || hasPermission('share_bills');
@@ -119,28 +123,30 @@ export function InvoiceTemplate({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {canShareBills && (
+          {onEdit && (
             <button
               type="button"
-              onClick={handleDefaultWhatsAppShare}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+              title="Edit Bill"
+              onClick={onEdit}
+              className="w-7 h-7 rounded-xl bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#D4AF37]/50 text-[#D4AF37] flex items-center justify-center transition-all cursor-pointer shadow-xs"
             >
-              <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
-                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+              <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              <span>WhatsApp</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="px-3.5 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5B224] text-[#0A1329] text-xs font-black flex items-center gap-1.5 shadow-md shadow-[#D4AF37]/20 transition-all cursor-pointer"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            <span>Print / PDF</span>
-          </button>
+          {onDelete && (
+            <button
+              type="button"
+              title="Delete Bill (30 Days)"
+              onClick={onDelete}
+              className="w-7 h-7 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+            >
+              <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
           {onClose && (
             <button
               type="button"
@@ -208,8 +214,8 @@ export function InvoiceTemplate({
             {/* Invoice Tag Right */}
             <div className="sm:text-right space-y-1">
               <h2
-                className="text-2xl sm:text-3xl font-black text-white tracking-widest uppercase"
-                style={{ color: '#FFFFFF', letterSpacing: '3px' }}
+                className="text-2xl sm:text-3xl font-black tracking-widest uppercase"
+                style={{ color: '#C5A059', letterSpacing: '3px' }}
               >
                 INVOICE
               </h2>
@@ -237,32 +243,48 @@ export function InvoiceTemplate({
           style={{ backgroundColor: '#C5A059' }}
         />
 
-        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION) */}
+        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION - 3 COLUMNS) */}
         <div className="px-6 sm:px-8 py-5 border-b border-slate-200 bg-white">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Column 1: Billed To */}
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
+              <span
+                className="text-[11px] font-bold uppercase tracking-wider block"
+                style={{ color: '#C5A059' }}
+              >
                 BILLED TO
               </span>
               <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
                 {bill.cust || 'Walk-in Client'}
               </p>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">
-                {bill.phone ? (bill.phone.startsWith('+91') ? bill.phone : `+91 ${bill.phone}`) : '–'}
+            </div>
+
+            {/* Column 2: Mobile */}
+            <div>
+              <span
+                className="text-[11px] font-bold uppercase tracking-wider block"
+                style={{ color: '#C5A059' }}
+              >
+                MOBILE
+              </span>
+              <p className="text-sm sm:text-base font-bold font-mono text-slate-900 mt-0.5">
+                {bill.phone ? (bill.phone.startsWith('+91') ? bill.phone : `+91 ${bill.phone}`) : '+91 XXXXX XXXXX'}
               </p>
             </div>
 
-            {/* Column 2: Appointment Details */}
+            {/* Column 3: Appointment Date & Stylist */}
             <div className="sm:text-right">
-              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
-                APPOINTMENT DETAILS
+              <span
+                className="text-[11px] font-bold uppercase tracking-wider block"
+                style={{ color: '#C5A059' }}
+              >
+                APPOINTMENT DATE
               </span>
-              <p className="text-sm sm:text-base font-semibold text-slate-900 mt-0.5">
-                Stylist: <span className="font-bold">{bill.staff || 'Stylist'}</span>
+              <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
+                {invoiceDateStr}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                {invoiceDateStr}
+                Stylist: <span className="font-semibold text-slate-800">{bill.staff || 'Stylist'}</span>
               </p>
             </div>
           </div>
@@ -335,8 +357,11 @@ export function InvoiceTemplate({
           <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
             {/* Left: Payment Status */}
             <div className="space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider block text-slate-500">
-                PAYMENT STATUS
+              <span
+                className="text-[11px] font-bold uppercase tracking-wider block"
+                style={{ color: '#C5A059' }}
+              >
+                PAYMENT
               </span>
               <div className="flex items-center gap-2">
                 <span
@@ -440,8 +465,9 @@ export function InvoiceTemplate({
         {/* 6. THANK YOU BOX */}
         <div className="px-6 sm:px-8 pb-4">
           <div
-            className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 text-center"
+            className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 text-center flex items-center justify-center gap-2"
           >
+            <span className="text-base select-none" role="img" aria-label="scissors">✂️</span>
             <p className="text-xs sm:text-sm text-slate-700">
               Thank you for visiting <strong className="text-slate-900">{shopProfile.shopName || 'StyleFleet Salon'}</strong>. We look forward to serving you again!
             </p>
@@ -451,7 +477,7 @@ export function InvoiceTemplate({
         {/* 7. BOTTOM ATTRIBUTION */}
         <div className="py-4 text-center border-t border-slate-100 bg-white">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            POWERED BY STYLEFLEET
+            POWERED BY STYLEFLEET · {shopProfile.shopName || 'SALON'}
           </p>
         </div>
 

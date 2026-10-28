@@ -1058,6 +1058,11 @@ function DashboardContent() {
                 setShowInvoiceModal(false);
                 setIsWhatsAppShared(false);
               }}
+              onDelete={() => {
+                deleteBill(activeInvoice.id);
+                setShowInvoiceModal(false);
+                showToast(`Bill #${activeInvoice.id} moved to deleted bills (30-day retention).`);
+              }}
               onShareWhatsApp={() => {
                 setIsWhatsAppShared(true);
                 const msgText = buildOfficialWhatsAppBillMessage({

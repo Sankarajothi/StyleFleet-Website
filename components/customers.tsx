@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useSalon, Customer, Bill } from '@/components/SalonContext';
+import { InvoiceTemplate } from '@/components/invoice-template';
+import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
 
 interface CustomersProps {
   onOpenAddClientModal?: () => void;
@@ -49,6 +51,9 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   const [editVip, setEditVip] = useState(false);
   const [editDue, setEditDue] = useState<number>(0);
   const [editNotes, setEditNotes] = useState('');
+
+  // Invoice Preview Modal
+  const [viewingBillInvoice, setViewingBillInvoice] = useState<Bill | null>(null);
 
   // Customer Visit History Modal (opened when touching client)
   const [historyCust, setHistoryCust] = useState<Customer | null>(null);
@@ -1231,7 +1236,16 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
 
                           <div className="flex justify-between items-center text-[11px] pt-1.5 border-t border-[#2A3858]/60">
                             <span className="text-[#A7B0C3]">Stylist: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{lastBill.staff}</strong></span>
-                            {lastBill.notes && <span className="italic text-slate-400 text-[10px] truncate max-w-[160px]">{lastBill.notes}</span>}
+                            <div className="flex items-center gap-2">
+                              {lastBill.notes && <span className="italic text-slate-400 text-[10px] truncate max-w-[120px]">{lastBill.notes}</span>}
+                              <button
+                                type="button"
+                                onClick={() => setViewingBillInvoice(lastBill)}
+                                className="text-[10px] font-bold text-[#D4AF37] hover:underline cursor-pointer"
+                              >
+                                View Invoice →
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -1292,7 +1306,16 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
 
                             <div className="flex justify-between items-center text-xs pt-1 border-t border-[#2A3858]/60">
                               <span className="text-[11px] text-[#A7B0C3]">Stylist: <strong className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>{bill.staff}</strong></span>
-                              <span className="font-extrabold text-[#D4AF37]">₹{bill.total}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-[#D4AF37]">₹{bill.total}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingBillInvoice(bill)}
+                                  className="text-[10px] font-bold text-[#D4AF37] hover:underline cursor-pointer"
+                                >
+                                  View Invoice →
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))
@@ -1826,6 +1849,34 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 Import {selectedContacts.length} Selected
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: OFFICIAL LUXURY INVOICE ================= */}
+      {viewingBillInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
+          <div className="relative w-full max-w-3xl my-auto">
+            <InvoiceTemplate
+              bill={viewingBillInvoice}
+              shopProfile={shopProfile}
+              onClose={() => setViewingBillInvoice(null)}
+              onShareWhatsApp={() => {
+                const msg = buildOfficialWhatsAppBillMessage({
+                  shopName: shopProfile.shopName || 'StyleFleet Salon',
+                  shopPhone: shopProfile.phone || '',
+                  upiId: shopProfile.upiId || '',
+                  customerName: viewingBillInvoice.cust || 'Client',
+                  invoiceNumber: viewingBillInvoice.id,
+                  billId: viewingBillInvoice.id,
+                  totalAmount: viewingBillInvoice.total,
+                  paidAmount: viewingBillInvoice.paidAmount,
+                  dueAmount: viewingBillInvoice.dueAmount,
+                  paymentMethod: viewingBillInvoice.mode || 'UPI',
+                });
+                openWhatsAppBill(viewingBillInvoice.phone, msg);
+              }}
+            />
           </div>
         </div>
       )}
