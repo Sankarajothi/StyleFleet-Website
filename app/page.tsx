@@ -378,25 +378,25 @@ export default function HomePage() {
       </div>
 
       {/* ================= FLOATING LUXURY PILL NAVBAR ================= */}
-      <header className="sticky top-4 z-50 px-3 sm:px-6 w-full max-w-[1400px] mx-auto transition-all">
-        <div className="floating-pill-nav rounded-full px-4 sm:px-8 py-3 flex items-center justify-between shadow-2xl">
+      <header className="sticky top-2 sm:top-4 z-50 px-2 sm:px-6 w-full max-w-[1400px] mx-auto transition-all">
+        <div className="floating-pill-nav rounded-full px-3 sm:px-8 py-2 sm:py-3 flex items-center justify-between shadow-2xl gap-2">
           {/* Brand Logo & Title */}
-          <button onClick={returnHome} className="flex items-center gap-3 group text-left">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
+          <button onClick={returnHome} className="flex items-center gap-2 sm:gap-3 group text-left shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
               <img
                 src="/assets/stylefleet-logo.png"
                 alt="StyleFleet Logo"
                 width={40}
                 height={40}
-                className="w-10 h-10 object-cover"
+                className="w-full h-full object-cover"
                 style={{ maxWidth: '40px', maxHeight: '40px' }}
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight">
+              <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
                 StyleFleet
               </span>
-              <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
+              <span className="text-[8px] sm:text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
                 Salon OS
               </span>
             </div>
@@ -439,14 +439,14 @@ export default function HomePage() {
           )}
 
           {/* Right Action Cluster: Language Switcher + Quick Portal Entry */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Language Switcher Pill */}
             {view === 'home' && (
-              <div className="flex items-center p-0.5 rounded-full bg-[#07152B]/90 border border-white/10 text-[11px] font-bold">
+              <div className="flex items-center p-0.5 rounded-full bg-[#07152B]/90 border border-white/10 text-[10px] sm:text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setLandingLang('en')}
-                  className={`px-3 py-1 rounded-full transition-all ${
+                  className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full transition-all ${
                     landingLang === 'en'
                       ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
                       : 'text-[#94A3B8] hover:text-white'
@@ -457,7 +457,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setLandingLang('ta')}
-                  className={`px-3 py-1 rounded-full transition-all ${
+                  className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full transition-all ${
                     landingLang === 'ta'
                       ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
                       : 'text-[#94A3B8] hover:text-white'
@@ -472,26 +472,26 @@ export default function HomePage() {
               <>
                 <button
                   onClick={() => openLogin('stylist')}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all cursor-pointer"
                 >
                   <Scissors className="w-3.5 h-3.5 text-[#D4AF37]" />
                   <span>{landingLang === 'en' ? 'Stylist Portal' : 'ஸ்டைலிஸ்ட்'}</span>
                 </button>
                 <button
                   onClick={() => openLogin('owner')}
-                  className="px-5 sm:px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap"
                 >
-                  <Crown className="w-3.5 h-3.5 text-[#07152B]" />
+                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#07152B] shrink-0" />
                   <span>{landingLang === 'en' ? 'Get Started' : 'தொடங்கு'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 hidden xs:inline" />
                 </button>
               </>
             ) : (
               <button
                 onClick={returnHome}
-                className="text-xs sm:text-sm py-1.5 px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white flex items-center gap-2 transition-all font-semibold"
+                className="text-xs sm:text-sm py-1.5 px-3 sm:px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white flex items-center gap-1.5 transition-all font-semibold whitespace-nowrap"
               >
-                <span>← Back to Home</span>
+                <span>← Back</span>
               </button>
             )}
           </div>
@@ -503,22 +503,22 @@ export default function HomePage() {
         <main className="flex-1 relative z-10">
           
           {/* ================= SECTION 1: HERO (RealBroks Inspired Full-Width) ================= */}
-          <section className="relative pt-8 pb-16 sm:pt-14 sm:pb-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto text-center overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center items-center">
+          <section className="relative pt-6 pb-14 sm:pt-14 sm:pb-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto text-center overflow-hidden min-h-[calc(100vh-80px)] flex flex-col justify-center items-center">
             {/* Subtle Hero Radial Grid Background */}
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
             {/* Trust Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0B1E3B]/90 border border-[#D4AF37]/40 shadow-xl mb-6 backdrop-blur-md animate-fadeIn">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
-              <span className="text-[11px] sm:text-xs font-bold text-[#E0C068] tracking-wide">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-[#0B1E3B]/90 border border-[#D4AF37]/40 shadow-xl mb-5 sm:mb-6 backdrop-blur-md animate-fadeIn max-w-full text-center">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold text-[#E0C068] tracking-wide break-words">
                 {landingLang === 'en'
                   ? '⭐ Trusted by 500+ Luxury Salons & Master Stylists across India'
-                  : '⭐ இந்தியாவின் 500+ பிரீமியம் சலூன்கள் & ஸ்டைலிஸ்ட்டுகளின் நம்பகமான தேர்வு'}
+                  : '⭐ இந்தியாவின் 500+ பிரீமியம் சலூன்கள் & ஸ்டைலிஸ்ட்டுகளின் தேர்வு'}
               </span>
             </div>
 
             {/* Main Punchy Editorial Headline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.06] max-w-5xl mx-auto">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-5xl mx-auto break-words px-1">
               {landingLang === 'en' ? (
                 <>
                   Built for Salons.{' '}
@@ -537,43 +537,43 @@ export default function HomePage() {
             </h1>
 
             {/* Hero Subtitle */}
-            <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal">
+            <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
               {landingLang === 'en'
                 ? 'Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.'
                 : 'பழைய லெட்ஜர் கணக்குகளுக்கும் பில்லிங் நெரிசலுக்கும் முற்றுப்புள்ளி வையுங்கள். 15 விநாடி பில்லிங், சேர் மேனேஜ்மென்ட், வாட்ஸ்அப் இன்வாய்ஸ் மற்றும் முழு வருமானக் கணக்குகள் ஒரே பிரீமியம் தளத்தில்.'}
             </p>
 
             {/* CTAs */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto px-2">
               <button
                 onClick={() => openLogin('owner')}
-                className="py-4 px-9 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-9 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-sm sm:text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Crown className="w-5 h-5 text-[#07152B]" />
+                <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[#07152B] shrink-0" />
                 <span>{landingLang === 'en' ? 'Get Started as Owner' : 'உரிமையாளராகத் தொடங்கு'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
               <button
                 onClick={() => openLogin('stylist')}
-                className="py-4 px-8 rounded-full bg-[#0B1E3B]/90 hover:bg-[#0D2448] border border-white/15 hover:border-[#D4AF37]/50 text-white text-base font-semibold shadow-xl active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer backdrop-blur-md"
+                className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-8 rounded-full bg-[#0B1E3B]/90 hover:bg-[#0D2448] border border-white/15 hover:border-[#D4AF37]/50 text-white text-sm sm:text-base font-semibold shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-md"
               >
-                <Scissors className="w-4 h-4 text-[#D4AF37]" />
+                <Scissors className="w-4 h-4 text-[#D4AF37] shrink-0" />
                 <span>{landingLang === 'en' ? 'Stylist Workspace' : 'ஸ்டைலிஸ்ட் தளம்'}</span>
               </button>
             </div>
 
             {/* Micro Feature Trust Badges */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm text-slate-400 font-semibold">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>{landingLang === 'en' ? 'Zero Hardware Lock-in' : 'எந்த மொபைல் அல்லது டேப்பிலும் இயங்கும்'}</span>
+            <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-400 font-semibold px-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{landingLang === 'en' ? 'Zero Hardware Lock-in' : 'எந்த சாதனத்திலும் இயங்கும்'}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{landingLang === 'en' ? 'Direct WhatsApp Billing' : 'வாட்ஸ்அப் டிஜிட்டல் பில்கள்'}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{landingLang === 'en' ? 'Instant 60s Setup' : '60 வினாடி உடனடி தொடக்கம்'}</span>
               </div>
             </div>
@@ -602,9 +602,9 @@ export default function HomePage() {
                 </div>
 
                 {/* Hero Showcase Interior: Split Billing Simulator */}
-                <div className="p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
+                <div className="p-4 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 text-left">
                   {/* Left Column: Interactive Service Selector */}
-                  <div className="lg:col-span-7 space-y-6">
+                  <div className="lg:col-span-7 space-y-5 sm:space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#D4AF37]">
@@ -616,7 +616,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Services Chips */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                       {demoServicesList.map((service) => {
                         const isSelected = demoSelectedServices.includes(service.id);
                         return (
@@ -624,15 +624,15 @@ export default function HomePage() {
                             key={service.id}
                             type="button"
                             onClick={() => toggleDemoService(service.id)}
-                            className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                            className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between ${
                               isSelected
                                 ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-md shadow-[#D4AF37]/10'
                                 : 'bg-[#0B1E3B]/70 border-white/10 hover:border-white/20'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
                               <div
-                                className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
                                   isSelected ? 'bg-[#D4AF37] text-[#07152B]' : 'bg-white/10 text-slate-400'
                                 }`}
                               >
@@ -652,8 +652,8 @@ export default function HomePage() {
                     </div>
 
                     {/* Stylist & Payment Mode Selector Preview */}
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div className="p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-1 sm:pt-2">
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                           Assigned Stylist
                         </span>
@@ -664,7 +664,7 @@ export default function HomePage() {
                           <span className="text-xs font-bold text-white">Anand (Master)</span>
                         </div>
                       </div>
-                      <div className="p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                           Payment Mode
                         </span>
@@ -679,16 +679,16 @@ export default function HomePage() {
                   </div>
 
                   {/* Right Column: Live Luxury Invoice Preview */}
-                  <div className="lg:col-span-5 bg-[#0B1E3B]/90 border border-white/10 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                  <div className="lg:col-span-5 bg-[#0B1E3B]/90 border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col justify-between shadow-xl">
                     <div>
-                      <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
-                        <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-between pb-3 sm:pb-3.5 border-b border-white/10">
+                        <div className="flex items-center gap-2 sm:gap-2.5">
                           <img
                             src="/assets/stylefleet-logo.png"
                             alt="StyleFleet"
                             width={24}
                             height={24}
-                            className="w-6 h-6 object-contain"
+                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
                           />
                           <span className="text-xs sm:text-sm font-extrabold text-white">Luxe Salon • Digital Bill</span>
                         </div>
@@ -698,7 +698,7 @@ export default function HomePage() {
                       </div>
 
                       {/* Line Items */}
-                      <div className="py-4 space-y-2.5">
+                      <div className="py-3 sm:py-4 space-y-2 sm:space-y-2.5">
                         {demoSelectedServices.map((id) => {
                           const item = demoServicesList.find((s) => s.id === id);
                           if (!item) return null;
@@ -712,7 +712,7 @@ export default function HomePage() {
                       </div>
 
                       {/* Calculations */}
-                      <div className="pt-3.5 border-t border-white/10 space-y-1.5 text-xs">
+                      <div className="pt-3 sm:pt-3.5 border-t border-white/10 space-y-1.5 text-xs">
                         <div className="flex justify-between text-slate-400 text-[11px] sm:text-xs">
                           <span>Subtotal ({demoSelectedServices.length} items)</span>
                           <span>₹{demoTotal}</span>
@@ -729,7 +729,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-6 space-y-2">
+                    <div className="pt-5 sm:pt-6 space-y-2">
                       <button
                         type="button"
                         onClick={() => openLogin('owner')}
@@ -1672,20 +1672,20 @@ export default function HomePage() {
                     ? 'Join over 500+ modern salons and master stylists operating with high visual elegance, zero hardware lock-in, and instant mobile setup.'
                     : '500-க்கும் மேற்பட்ட சலூன்களுடன் இணைந்து உங்கள் சேவையை மேலும் பிரீமியமாக மாற்றுங்கள். தொடங்குவதற்கு 60 விநாடிகள் மட்டுமே.'}
                 </p>
-                <div className="pt-4 flex flex-wrap justify-center gap-4">
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
                   <button
                     onClick={() => openLogin('owner')}
-                    className="py-4 px-9 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:brightness-110 text-[#07152B] text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-9 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:brightness-110 text-[#07152B] text-sm sm:text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <Crown className="w-5 h-5 text-[#07152B]" />
+                    <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[#07152B] shrink-0" />
                     <span>{landingLang === 'en' ? 'Get Started as Owner' : 'உரிமையாளராகத் தொடங்கு'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                   </button>
                   <button
                     onClick={() => openLogin('stylist')}
-                    className="bg-[#07152B] hover:bg-[#0D2348] border border-white/15 hover:border-[#D4AF37]/50 text-white py-4 px-8 text-base font-semibold rounded-full transition-all flex items-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto bg-[#07152B] hover:bg-[#0D2348] border border-white/15 hover:border-[#D4AF37]/50 text-white py-3.5 sm:py-4 px-6 sm:px-8 text-sm sm:text-base font-semibold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <Scissors className="w-4 h-4 text-[#D4AF37]" />
+                    <Scissors className="w-4 h-4 text-[#D4AF37] shrink-0" />
                     <span>{landingLang === 'en' ? 'Stylist Workspace' : 'ஸ்டைலிஸ்ட் தளம்'}</span>
                   </button>
                 </div>
