@@ -364,8 +364,8 @@ export function OwnerRegistrationView({
               />
             </div>
             <div>
-              <span className="text-sm font-extrabold tracking-wider block leading-none">
-                STYLEFLEET
+              <span className="text-sm font-extrabold tracking-wide block leading-none">
+                StyleFleet
               </span>
               <span className="text-[10px] text-[#D4AF37] font-bold">
                 Salon Owner Registration

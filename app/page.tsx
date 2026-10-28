@@ -374,8 +374,8 @@ export default function HomePage() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-extrabold tracking-[0.2em] text-white">
-                STYLEFLEET
+              <span className="text-base font-extrabold tracking-wide text-white">
+                StyleFleet
               </span>
               <span className="text-[10px] uppercase tracking-wider text-[#D4AF37] font-bold">
                 Salon Management
