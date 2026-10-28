@@ -124,6 +124,12 @@ export function SalesAndBillsView({
   // Normal Invoice Modal (shown when touching any bill)
   const [selectedInvoiceBill, setSelectedInvoiceBill] = useState<Bill | null>(null);
   const [invoiceMenuOpen, setInvoiceMenuOpen] = useState<boolean>(false);
+  const [shareActionSheetOpen, setShareActionSheetOpen] = useState<boolean>(false);
+
+  // WhatsApp Bill Sent & Revenue Confirmation Modal State
+  const [confirmationBill, setConfirmationBill] = useState<Bill | null>(null);
+  const [selectedReminderStatus, setSelectedReminderStatus] = useState<'Not Sent' | 'Sent' | 'Pending'>('Sent');
+  const [selectedConfirmationStatus, setSelectedConfirmationStatus] = useState<'Pending' | 'Confirmed'>('Confirmed');
 
   // Edit Bill Modal State
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
@@ -401,13 +407,17 @@ export function SalesAndBillsView({
     return effectiveBills.filter((b) => isBillInDateRange(b, activeRange.prior.start, activeRange.prior.end));
   }, [effectiveBills, activeRange]);
 
-  // Target Day Analytics Computations
+  // Target Day Analytics Computations (Only Confirmed bills enter into revenue metrics)
   const targetRevenue = useMemo(() => {
-    return targetBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+    return targetBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
   }, [targetBills]);
 
   const priorRevenue = useMemo(() => {
-    return priorBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+    return priorBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
   }, [priorBills]);
 
   const targetCount = targetBills.length;
@@ -428,12 +438,14 @@ export function SalesAndBillsView({
     let cash = 0;
     let card = 0;
 
-    targetBills.forEach((b) => {
-      const amt = b.paidAmount || b.total || 0;
-      if (b.mode === 'Cash') cash += amt;
-      else if (b.mode === 'Card') card += amt;
-      else upi += amt; // UPI or default
-    });
+    targetBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .forEach((b) => {
+        const amt = b.paidAmount || b.total || 0;
+        if (b.mode === 'Cash') cash += amt;
+        else if (b.mode === 'Card') card += amt;
+        else upi += amt; // UPI or default
+      });
 
     const total = upi + cash + card || 1;
     const upiShare = Math.round((upi / total) * 100);
@@ -446,15 +458,17 @@ export function SalesAndBillsView({
   // Top Services for Target Date
   const topServices = useMemo(() => {
     const map: Record<string, { name: string; qty: number; revenue: number }> = {};
-    targetBills.forEach((b) => {
-      (b.items || []).forEach((it) => {
-        if (!map[it.name]) {
-          map[it.name] = { name: it.name, qty: 0, revenue: 0 };
-        }
-        map[it.name].qty += it.qty || 1;
-        map[it.name].revenue += (it.price || 0) * (it.qty || 1);
+    targetBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .forEach((b) => {
+        (b.items || []).forEach((it) => {
+          if (!map[it.name]) {
+            map[it.name] = { name: it.name, qty: 0, revenue: 0 };
+          }
+          map[it.name].qty += it.qty || 1;
+          map[it.name].revenue += (it.price || 0) * (it.qty || 1);
+        });
       });
-    });
 
     return Object.values(map)
       .sort((a, b) => b.revenue - a.revenue)
@@ -509,8 +523,8 @@ export function SalesAndBillsView({
           const date = b.createdAt ? new Date(b.createdAt) : b.dateStr ? new Date(b.dateStr) : null;
           return date && date.getDay() === d.dayIdx;
         });
-        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
         return {
           key: d.key,
           label: d.label,
@@ -542,8 +556,8 @@ export function SalesAndBillsView({
           const h = getBillHour(b, idx);
           return h >= s.minH && h < s.maxH;
         });
-        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
         return {
           key: s.key,
           label: s.label,
@@ -579,8 +593,8 @@ export function SalesAndBillsView({
           const bh = getBillHour(b, idx);
           return item.h === 21 ? bh >= 21 : bh === item.h;
         });
-        const targetRev = matchTarget.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
         return {
           key: item.key,
           label: item.label,
@@ -681,7 +695,48 @@ export function SalesAndBillsView({
       upiId: shopProfile.upiId,
     });
     openWhatsAppBill(bill.phone, msg);
-    showToast(`Shared invoice #${bill.id} via WhatsApp!`);
+    showToast(`Opening WhatsApp for #${bill.id}...`);
+
+    // Close invoice box & open WhatsApp confirmation popup
+    setSelectedInvoiceBill(null);
+    setShareActionSheetOpen(false);
+    setSelectedReminderStatus(bill.reminderStatus || 'Sent');
+    setSelectedConfirmationStatus(bill.confirmationStatus || 'Confirmed');
+    setConfirmationBill(bill);
+  };
+
+  // WhatsApp Confirmation Modal: Done Action
+  const handleDoneConfirmation = () => {
+    if (!confirmationBill) return;
+    editBill(confirmationBill.id, {
+      reminderStatus: selectedReminderStatus,
+      confirmationStatus: selectedConfirmationStatus,
+    });
+    if (selectedConfirmationStatus === 'Confirmed') {
+      showToast(`Bill #${confirmationBill.id} confirmed & recorded into revenue!`, 'success');
+    } else {
+      showToast(`Bill #${confirmationBill.id} saved as Pending.`);
+    }
+    setConfirmationBill(null);
+  };
+
+  // WhatsApp Confirmation Modal: Next Bill Action
+  const handleNextBillConfirmation = () => {
+    if (!confirmationBill) return;
+    editBill(confirmationBill.id, {
+      reminderStatus: selectedReminderStatus,
+      confirmationStatus: selectedConfirmationStatus,
+    });
+    setConfirmationBill(null);
+    // Reset and open new bill modal
+    clearCart();
+    setBillCustName('');
+    setBillCustPhone('');
+    setBillTip(0);
+    setBillDiscount(0);
+    setNewBillDate(todayStr);
+    setShowNewBillModal(true);
+    showToast('Ready for Next Bill!', 'success');
   };
 
   return (
@@ -1716,23 +1771,21 @@ export function SalesAndBillsView({
                 </p>
               </div>
 
-              {/* Header Action Buttons: Share, Three-Dot Menu, Close */}
+              {/* Header Action Buttons: Premium Edit, Delete 3-Dot Menu, Close */}
               <div className="flex items-center gap-1.5 shrink-0">
-                {/* SHARE BUTTON (Protected by share_bills permission) */}
-                {canShareBills && (
-                  <button
-                    type="button"
-                    title="Share invoice via WhatsApp"
-                    onClick={() => handleShareInvoice(selectedInvoiceBill)}
-                    className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
-                  >
-                    <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
-                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-                    </svg>
-                  </button>
-                )}
+                {/* PREMIUM EDIT BILL BUTTON */}
+                <button
+                  type="button"
+                  title="Edit Bill"
+                  onClick={() => handleOpenEdit(selectedInvoiceBill)}
+                  className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center transition-transform active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
 
-                {/* THREE-DOT MENU BUTTON (EDIT & DELETE) */}
+                {/* THREE-DOT MENU BUTTON (DELETE BILL) */}
                 <div className="relative">
                   <button
                     type="button"
@@ -1761,7 +1814,10 @@ export function SalesAndBillsView({
                     >
                       <button
                         type="button"
-                        onClick={() => handleOpenEdit(selectedInvoiceBill)}
+                        onClick={() => {
+                          setInvoiceMenuOpen(false);
+                          handleOpenEdit(selectedInvoiceBill);
+                        }}
                         className={`w-full px-2.5 py-2 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${
                           isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-slate-700 hover:bg-slate-100 hover:text-[#B8863B]'
                         }`}
@@ -1774,7 +1830,10 @@ export function SalesAndBillsView({
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteBill(selectedInvoiceBill)}
+                        onClick={() => {
+                          setInvoiceMenuOpen(false);
+                          handleDeleteBill(selectedInvoiceBill);
+                        }}
                         className="w-full px-2.5 py-2 rounded-lg hover:bg-rose-500/15 text-left text-xs font-semibold text-rose-400 flex items-center gap-2 transition-colors cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -1792,6 +1851,7 @@ export function SalesAndBillsView({
                   onClick={() => {
                     setSelectedInvoiceBill(null);
                     setInvoiceMenuOpen(false);
+                    setShareActionSheetOpen(false);
                   }}
                   className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
@@ -1906,40 +1966,263 @@ export function SalesAndBillsView({
               </div>
             </div>
 
-            {/* INVOICE FOOTER ACTIONS */}
-            <div className="flex gap-2.5 pt-3 border-t border-white/10 shrink-0">
-              {canShareBills && (
-                <button
-                  type="button"
-                  onClick={() => handleShareInvoice(selectedInvoiceBill)}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
-                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-                  </svg>
-                  <span>Share Bill</span>
-                </button>
-              )}
+            {/* INVOICE FOOTER ACTIONS: Share & Close by default; When Share is clicked, shows WhatsApp, Print, Close */}
+            <div className="pt-3 border-t border-white/10 shrink-0">
+              {shareActionSheetOpen ? (
+                /* THREE OPTIONS: WhatsApp, Print, Close */
+                <div className="space-y-2.5 animate-fadeIn">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-[#A7B0C3]">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />
+                      Choose Action:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShareActionSheetOpen(false)}
+                      className="text-[10px] text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Option 1: WhatsApp */}
+                    <button
+                      type="button"
+                      disabled={!canShareBills}
+                      onClick={() => {
+                        setShareActionSheetOpen(false);
+                        handleShareInvoice(selectedInvoiceBill);
+                      }}
+                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
+                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                      </svg>
+                      <span>WhatsApp</span>
+                    </button>
 
+                    {/* Option 2: Print */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.print();
+                      }}
+                      className="py-2.5 px-3 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      <span>Print</span>
+                    </button>
+
+                    {/* Option 3: Close */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShareActionSheetOpen(false);
+                        setSelectedInvoiceBill(null);
+                        setInvoiceMenuOpen(false);
+                      }}
+                      className="py-2.5 px-3 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-semibold cursor-pointer flex items-center justify-center"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* DEFAULT TWO BUTTONS: Share, Close */
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShareActionSheetOpen(true)}
+                    className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md transition-transform active:scale-95"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span>Share</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedInvoiceBill(null);
+                      setInvoiceMenuOpen(false);
+                      setShareActionSheetOpen(false);
+                    }}
+                    className="px-6 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer hover:bg-white/5"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= 8. WHATSAPP BILL SENT & REVENUE CONFIRMATION MODAL ================= */}
+      {confirmationBill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            {/* Header: Bill Sent & Customer Details */}
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 fill-emerald-400" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Bill Sent
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold border border-emerald-500/30">
+                    Delivered
+                  </span>
+                </div>
+                <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                  Invoice #{confirmationBill.id} · ₹{confirmationBill.total} delivered to {confirmationBill.cust}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => handleOpenEdit(selectedInvoiceBill)}
-                className={`px-4 py-2.5 rounded-xl border font-bold text-xs cursor-pointer transition-colors ${
-                  isDarkMode ? 'border-[#2A3858] text-[#D4AF37] hover:bg-white/5' : 'border-slate-300 text-slate-800 hover:bg-slate-100'
+                onClick={() => setConfirmationBill(null)}
+                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs text-slate-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Reminder Set Status Options (Not Sent | Sent | Pending) */}
+            <div className="space-y-1.5">
+              <label className={`block text-[11px] font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Reminder Set Status
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['Not Sent', 'Sent', 'Pending'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setSelectedReminderStatus(st)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border ${
+                      selectedReminderStatus === st
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {selectedReminderStatus === st && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <span>{st}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Confirmation Status Options (Pending | Confirmed) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className={`block text-[11px] font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Confirmation Status
+                </label>
+                <span className="text-[10px] text-[#D4AF37] font-semibold">
+                  {selectedConfirmationStatus === 'Confirmed' ? '✓ Added into Revenue' : '⏳ Revenue Pending'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(['Pending', 'Confirmed'] as const).map((cs) => (
+                  <button
+                    key={cs}
+                    type="button"
+                    onClick={() => setSelectedConfirmationStatus(cs)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                      selectedConfirmationStatus === cs
+                        ? cs === 'Confirmed'
+                          ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37] shadow-md font-black'
+                          : 'bg-amber-600 text-white border-amber-500 shadow-md font-black'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {selectedConfirmationStatus === cs && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <span>{cs}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Luxury WhatsApp Message Preview */}
+            <div className="space-y-1.5 pt-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                WhatsApp Preview
+              </span>
+              <div
+                className={`p-3.5 rounded-2xl border relative overflow-hidden ${
+                  isDarkMode ? 'bg-[#0E1B33] border-[#2A3858]' : 'bg-[#EBF7F0] border-emerald-200'
                 }`}
               >
-                Edit
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-emerald-500/15 text-xs">
+                  <span className="font-extrabold text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    {shopProfile.shopName || "Priya's Salon"}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Just now</span>
+                </div>
+                <div className={`space-y-1 text-xs leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  <p className="font-extrabold">Thanks, {confirmationBill.cust || 'Joe'}!</p>
+                  <p className="text-slate-400 flex items-center gap-1.5 text-[11px]">
+                    <span>📎</span> Invoice Attached · #{confirmationBill.id}
+                  </p>
+                  <p className="font-semibold text-emerald-400">
+                    Paid by {confirmationBill.mode || 'Cash'} · ₹{confirmationBill.paidAmount || confirmationBill.total}
+                  </p>
+                  <p className="text-[#D4AF37] font-bold text-[11px] pt-0.5">
+                    ✨ See you in 4 weeks!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions: Next Bill and Done */}
+            <div className="flex gap-2.5 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={handleNextBillConfirmation}
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isDarkMode
+                    ? 'bg-[#121B33] border-[#2A3858] text-white hover:bg-[#1C2B4C]'
+                    : 'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Next Bill</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedInvoiceBill(null);
-                  setInvoiceMenuOpen(false);
-                }}
-                className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer"
+                onClick={handleDoneConfirmation}
+                className="flex-1 py-3 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs transition-transform active:scale-95 cursor-pointer shadow-md flex items-center justify-center gap-1.5"
               >
-                Close
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Done</span>
               </button>
             </div>
           </div>

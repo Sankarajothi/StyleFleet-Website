@@ -125,6 +125,8 @@ export interface Bill {
   tax?: number;
   tip?: number;
   deletedAt?: string;
+  reminderStatus?: 'Not Sent' | 'Sent' | 'Pending';
+  confirmationStatus?: 'Pending' | 'Confirmed';
 }
 
 export interface Expense {

@@ -19,6 +19,7 @@ export function InvoiceTemplate({
 }: InvoiceTemplateProps) {
   const { role, hasPermission } = useSalon();
   const canShareBills = role === 'owner' || hasPermission('share_bills');
+  const [shareOptionsOpen, setShareOptionsOpen] = React.useState(false);
 
   // Format invoice date into DD MMM YYYY (e.g. "27 Oct 2026")
   const formatInvoiceDate = (dateVal?: string): string => {
@@ -452,6 +453,67 @@ export function InvoiceTemplate({
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             POWERED BY STYLEFLEET
           </p>
+        </div>
+
+        {/* 8. SCREEN-ONLY BOTTOM TOOLBAR: Share & Close (Reveals WhatsApp, Print, Close when Share clicked) */}
+        <div className="no-print p-4 bg-slate-900 border-t border-slate-800">
+          {shareOptionsOpen ? (
+            <div className="w-full flex items-center justify-between gap-2 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                {canShareBills && (
+                  <button
+                    type="button"
+                    onClick={handleDefaultWhatsAppShare}
+                    className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
+                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                    </svg>
+                    <span>WhatsApp</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="py-2 px-3.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>Print</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareOptionsOpen(false)}
+                className="py-2 px-4 rounded-xl border border-white/20 text-white font-bold text-xs hover:bg-white/10 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <div className="w-full flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShareOptionsOpen(true)}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md transition-transform active:scale-95"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <span>Share</span>
+              </button>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="py-2.5 px-6 rounded-xl border border-white/20 text-white font-bold text-xs hover:bg-white/10 cursor-pointer"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

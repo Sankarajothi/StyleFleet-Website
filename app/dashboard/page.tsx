@@ -113,6 +113,11 @@ function DashboardContent() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingBillData, setEditingBillData] = useState<Bill | null>(null);
 
+  // WhatsApp Bill Sent & Revenue Confirmation Modal State
+  const [dashboardConfirmationBill, setDashboardConfirmationBill] = useState<Bill | null>(null);
+  const [dashboardReminderStatus, setDashboardReminderStatus] = useState<'Not Sent' | 'Sent' | 'Pending'>('Sent');
+  const [dashboardConfirmationStatus, setDashboardConfirmationStatus] = useState<'Pending' | 'Confirmed'>('Confirmed');
+
   // New Booking Modal Form state
   const [bookingType, setBookingType] = useState<'appointment' | 'queue'>('appointment');
   const [bookingCustName, setBookingCustName] = useState('');
@@ -1072,6 +1077,10 @@ function DashboardContent() {
                   },
                 });
                 openWhatsAppBill(activeInvoice.phone, msgText);
+                setShowInvoiceModal(false);
+                setDashboardReminderStatus(activeInvoice.reminderStatus || 'Sent');
+                setDashboardConfirmationStatus(activeInvoice.confirmationStatus || 'Confirmed');
+                setDashboardConfirmationBill(activeInvoice);
                 showToast(
                   activeInvoice.phone
                     ? `Official invoice shared via WhatsApp to +91 ${activeInvoice.phone}!`
@@ -1079,6 +1088,196 @@ function DashboardContent() {
                 );
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: WHATSAPP BILL SENT & REVENUE CONFIRMATION ================= */}
+      {dashboardConfirmationBill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            {/* Header: Bill Sent & Customer Details */}
+            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 fill-emerald-400" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Bill Sent
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold border border-emerald-500/30">
+                    Delivered
+                  </span>
+                </div>
+                <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                  Invoice #{dashboardConfirmationBill.id} · ₹{dashboardConfirmationBill.total} delivered to {dashboardConfirmationBill.cust}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDashboardConfirmationBill(null)}
+                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs text-slate-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Reminder Set Status Options (Not Sent | Sent | Pending) */}
+            <div className="space-y-1.5">
+              <label className={`block text-[11px] font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Reminder Set Status
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['Not Sent', 'Sent', 'Pending'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setDashboardReminderStatus(st)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border ${
+                      dashboardReminderStatus === st
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {dashboardReminderStatus === st && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <span>{st}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Confirmation Status Options (Pending | Confirmed) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className={`block text-[11px] font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Confirmation Status
+                </label>
+                <span className="text-[10px] text-[#D4AF37] font-semibold">
+                  {dashboardConfirmationStatus === 'Confirmed' ? '✓ Added into Revenue' : '⏳ Revenue Pending'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(['Pending', 'Confirmed'] as const).map((cs) => (
+                  <button
+                    key={cs}
+                    type="button"
+                    onClick={() => setDashboardConfirmationStatus(cs)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                      dashboardConfirmationStatus === cs
+                        ? cs === 'Confirmed'
+                          ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37] shadow-md font-black'
+                          : 'bg-amber-600 text-white border-amber-500 shadow-md font-black'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {dashboardConfirmationStatus === cs && (
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    <span>{cs}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Luxury WhatsApp Dispatch Preview */}
+            <div className="space-y-1.5 pt-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                WhatsApp Preview
+              </span>
+              <div
+                className={`p-3.5 rounded-2xl border relative overflow-hidden ${
+                  isDarkMode ? 'bg-[#0E1B33] border-[#2A3858]' : 'bg-[#EBF7F0] border-emerald-200'
+                }`}
+              >
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-emerald-500/15 text-xs">
+                  <span className="font-extrabold text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    {shopProfile.shopName || "Priya's Salon"}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Just now</span>
+                </div>
+                <div className={`space-y-1 text-xs leading-relaxed ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  <p className="font-extrabold">Thanks, {dashboardConfirmationBill.cust || 'Joe'}!</p>
+                  <p className="text-slate-400 flex items-center gap-1.5 text-[11px]">
+                    <span>📎</span> Invoice Attached · #{dashboardConfirmationBill.id}
+                  </p>
+                  <p className="font-semibold text-emerald-400">
+                    Paid by {dashboardConfirmationBill.mode || 'Cash'} · ₹{dashboardConfirmationBill.paidAmount || dashboardConfirmationBill.total}
+                  </p>
+                  <p className="text-[#D4AF37] font-bold text-[11px] pt-0.5">
+                    ✨ See you in 4 weeks!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions: Next Bill and Done */}
+            <div className="flex gap-2.5 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  editBill(dashboardConfirmationBill.id, {
+                    reminderStatus: dashboardReminderStatus,
+                    confirmationStatus: dashboardConfirmationStatus,
+                  });
+                  setDashboardConfirmationBill(null);
+                  clearCart();
+                  setBillCustName('');
+                  setBillCustPhone('');
+                  setCurrentScreen('billing');
+                  showToast('Ready for Next Bill!', 'success');
+                }}
+                className={`flex-1 py-3 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isDarkMode
+                    ? 'bg-[#121B33] border-[#2A3858] text-white hover:bg-[#1C2B4C]'
+                    : 'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Next Bill</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  editBill(dashboardConfirmationBill.id, {
+                    reminderStatus: dashboardReminderStatus,
+                    confirmationStatus: dashboardConfirmationStatus,
+                  });
+                  if (dashboardConfirmationStatus === 'Confirmed') {
+                    showToast(`Bill #${dashboardConfirmationBill.id} confirmed & recorded into revenue!`, 'success');
+                  } else {
+                    showToast(`Bill #${dashboardConfirmationBill.id} saved as Pending.`);
+                  }
+                  setDashboardConfirmationBill(null);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs transition-transform active:scale-95 cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Done</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

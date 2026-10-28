@@ -189,13 +189,17 @@ export function ReportsView() {
     });
   }, [expenses, reportDateRange]);
 
-  // Financial KPIs for Report
+  // Financial KPIs for Report (Only Confirmed bills enter into revenue)
   const totalSalesCollected = useMemo(() => {
-    return reportBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+    return reportBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
   }, [reportBills]);
 
   const grossSalesBilled = useMemo(() => {
-    return reportBills.reduce((acc, b) => acc + (b.total || 0), 0);
+    return reportBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .reduce((acc, b) => acc + (b.total || 0), 0);
   }, [reportBills]);
 
   const outstandingFromCustomers = useMemo(() => {
@@ -541,9 +545,11 @@ export function ReportsView() {
     });
   }, [expenses, selectedYear, selectedMonth]);
 
-  // Monthly Metrics
+  // Monthly Metrics (Only Confirmed bills enter into revenue)
   const monthlySales = useMemo(() => {
-    return selectedMonthBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+    return selectedMonthBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
   }, [selectedMonthBills]);
 
   const monthlyExpenses = useMemo(() => {
@@ -567,10 +573,12 @@ export function ReportsView() {
   // Top Stylist of the Month
   const topStylistOfMonth = useMemo(() => {
     const map: Record<string, number> = {};
-    selectedMonthBills.forEach((b) => {
-      const name = b.staff || 'Staff';
-      map[name] = (map[name] || 0) + (b.paidAmount || b.total || 0);
-    });
+    selectedMonthBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .forEach((b) => {
+        const name = b.staff || 'Staff';
+        map[name] = (map[name] || 0) + (b.paidAmount || b.total || 0);
+      });
     const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? { name: sorted[0][0], revenue: sorted[0][1] } : null;
   }, [selectedMonthBills]);
@@ -578,13 +586,15 @@ export function ReportsView() {
   // Top Service of the Month
   const topServiceOfMonth = useMemo(() => {
     const map: Record<string, { qty: number; revenue: number }> = {};
-    selectedMonthBills.forEach((b) => {
-      (b.items || []).forEach((it) => {
-        if (!map[it.name]) map[it.name] = { qty: 0, revenue: 0 };
-        map[it.name].qty += it.qty || 1;
-        map[it.name].revenue += (it.price || 0) * (it.qty || 1);
+    selectedMonthBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .forEach((b) => {
+        (b.items || []).forEach((it) => {
+          if (!map[it.name]) map[it.name] = { qty: 0, revenue: 0 };
+          map[it.name].qty += it.qty || 1;
+          map[it.name].revenue += (it.price || 0) * (it.qty || 1);
+        });
       });
-    });
     const sorted = Object.entries(map).sort((a, b) => b[1].revenue - a[1].revenue);
     return sorted.length > 0 ? { name: sorted[0][0], qty: sorted[0][1].qty, revenue: sorted[0][1].revenue } : null;
   }, [selectedMonthBills]);
@@ -596,16 +606,18 @@ export function ReportsView() {
       daysMap[i] = { day: i, sales: 0, expenses: 0 };
     }
 
-    selectedMonthBills.forEach((b) => {
-      const t = getBillTime(b);
-      if (t) {
-        const d = new Date(t);
-        const day = d.getDate();
-        if (daysMap[day]) {
-          daysMap[day].sales += b.paidAmount || b.total || 0;
+    selectedMonthBills
+      .filter((b) => b.confirmationStatus !== 'Pending')
+      .forEach((b) => {
+        const t = getBillTime(b);
+        if (t) {
+          const d = new Date(t);
+          const day = d.getDate();
+          if (daysMap[day]) {
+            daysMap[day].sales += b.paidAmount || b.total || 0;
+          }
         }
-      }
-    });
+      });
 
     selectedMonthExpenses.forEach((e) => {
       const t = getExpenseTime(e);
