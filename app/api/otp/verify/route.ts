@@ -17,14 +17,6 @@ export async function POST(request: Request) {
 
     const cleanOtp = String(otp).trim();
 
-    // Demo Session Bypass (Instant validation for automated tests and demo logins)
-    if (cleanOtp === '123456' || sessionId.startsWith('demo-session-')) {
-      return NextResponse.json({
-        success: true,
-        matched: true,
-        message: 'Demo OTP verified successfully',
-      });
-    }
     const url = `https://2factor.in/API/V1/${API_KEY}/SMS/VERIFY/${sessionId}/${cleanOtp}`;
     const res = await fetch(url);
     const data = await res.json();

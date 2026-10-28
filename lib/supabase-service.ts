@@ -281,27 +281,6 @@ export async function findSalonByPhone(
     const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
     if (!cleanPhone || cleanPhone.length !== 10) return { found: false, error: 'Invalid 10-digit mobile number' };
 
-    if (cleanPhone === '9999999999') {
-      return {
-        found: true,
-        shopId: '287ad70f-3cc7-4af9-a340-4fed5bae0085',
-        role: 'owner',
-        shopName: 'Brave & Cave (Demo Luxury Salon)',
-        ownerName: 'Demo Owner',
-      };
-    }
-
-    if (cleanPhone === '8888888888') {
-      return {
-        found: true,
-        shopId: '287ad70f-3cc7-4af9-a340-4fed5bae0085',
-        role: 'stylist',
-        staffName: 'Demo Supervisor',
-        staffId: 'afdb5cc9-09ad-49b8-a13c-9b816ad2c724',
-        shopName: 'Brave & Cave',
-      };
-    }
-
     // Helper: search staff table for registered stylist
     const searchStylist = async () => {
       const { data: staffMembers, error: staffErr } = await supabase
