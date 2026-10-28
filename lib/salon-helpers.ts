@@ -132,8 +132,16 @@ export function buildOfficialWhatsAppBillMessage(params: {
     socialLinks,
   } = params;
 
-  const shortId = (billId || invoiceNumber).replace(/\D/g, '').slice(-4) || '1001';
-  const billPdfUrl = `https://stylefleet.tecstellar.com/b/${invoiceNumber}_${shortId}.pdf`;
+  const cleanInv = encodeURIComponent((invoiceNumber || billId || '').trim());
+  let origin = '';
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    origin = window.location.origin;
+  } else if (process.env.NEXT_PUBLIC_APP_URL) {
+    origin = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  } else {
+    origin = 'https://stylefleet.tecstellar.com';
+  }
+  const billPdfUrl = `${origin}/b/${cleanInv}`;
   const cleanShopPhone = (shopPhone || '').replace(/\D/g, '').slice(-10);
 
   // Social media block

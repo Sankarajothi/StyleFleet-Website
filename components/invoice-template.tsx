@@ -173,17 +173,43 @@ export function InvoiceTemplate({
           WebkitPrintColorAdjust: 'exact',
         }}
       >
+        <style jsx global>{`
+          @media print {
+            @page {
+              margin: 6mm;
+              size: auto;
+            }
+            body {
+              background: #ffffff !important;
+              color: #0F1A36 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            #printable-luxury-invoice {
+              box-shadow: none !important;
+              border: none !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              border-radius: 0 !important;
+            }
+          }
+        `}</style>
+
         {/* 1. HEADER SECTION (NAVY BACKGROUND) */}
         <div
-          className="bg-[#0B132B] text-white p-6 sm:p-8"
-          style={{ backgroundColor: '#0B132B' }}
+          className="bg-[#0F1A36] text-white p-5 sm:p-8"
+          style={{ backgroundColor: '#0F1A36' }}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Salon Info Left */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3.5 sm:gap-4">
               <div
-                className="w-14 h-14 rounded-full border-2 border-[#C5A059] bg-[#0B132B] flex items-center justify-center text-[#C5A059] font-black text-lg shrink-0 shadow-sm"
-                style={{ borderColor: '#C5A059', backgroundColor: '#0B132B' }}
+                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full border-2 border-[#D4A515] bg-[#0F1A36] flex items-center justify-center text-[#D4A515] font-black text-lg shrink-0 shadow-sm"
+                style={{ borderColor: '#D4A515', backgroundColor: '#0F1A36' }}
               >
                 {shopProfile.logoImg ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -197,7 +223,7 @@ export function InvoiceTemplate({
                 )}
               </div>
               <div className="space-y-0.5">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
                   {shopProfile.shopName || 'StyleFleet Salon'}
                 </h1>
                 <p className="text-xs text-slate-300">
@@ -213,10 +239,10 @@ export function InvoiceTemplate({
             </div>
 
             {/* Invoice Tag Right */}
-            <div className="sm:text-right space-y-1">
+            <div className="sm:text-right space-y-0.5">
               <h2
                 className="text-2xl sm:text-3xl font-black tracking-widest uppercase"
-                style={{ color: '#C5A059', letterSpacing: '3px' }}
+                style={{ color: '#D4A515', letterSpacing: '3px' }}
               >
                 INVOICE
               </h2>
@@ -240,18 +266,18 @@ export function InvoiceTemplate({
 
         {/* 2. CHAMPAGNE GOLD ACCENT STRIPE */}
         <div
-          className="h-[3.5px] w-full bg-[#C5A059]"
-          style={{ backgroundColor: '#C5A059' }}
+          className="h-[3.5px] w-full bg-[#D4A515]"
+          style={{ backgroundColor: '#D4A515' }}
         />
 
         {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION - 3 COLUMNS) */}
-        <div className="px-6 sm:px-8 py-5 border-b border-slate-200 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
             {/* Column 1: Billed To */}
             <div>
               <span
-                className="text-[11px] font-black uppercase tracking-wider block"
-                style={{ color: '#000000' }}
+                className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#0F1A36' }}
               >
                 BILLED TO
               </span>
@@ -263,8 +289,8 @@ export function InvoiceTemplate({
             {/* Column 2: Mobile */}
             <div>
               <span
-                className="text-[11px] font-black uppercase tracking-wider block"
-                style={{ color: '#000000' }}
+                className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#0F1A36' }}
               >
                 MOBILE
               </span>
@@ -276,8 +302,8 @@ export function InvoiceTemplate({
             {/* Column 3: Appointment Date & Stylist */}
             <div className="sm:text-right">
               <span
-                className="text-[11px] font-black uppercase tracking-wider block"
-                style={{ color: '#000000' }}
+                className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#0F1A36' }}
               >
                 APPOINTMENT DATE
               </span>
@@ -291,22 +317,22 @@ export function InvoiceTemplate({
           </div>
         </div>
 
-        {/* 4. SERVICES TABLE */}
-        <div className="px-4 sm:px-8 pt-5 overflow-x-auto [scrollbar-width:none]">
-          <div className="min-w-[460px]">
+        {/* 4. SERVICES TABLE (FULLY RESPONSIVE ON MOBILE & DESKTOP) */}
+        <div className="px-4 sm:px-8 pt-4 sm:pt-5">
+          <div className="w-full">
             {/* Table Header Bar */}
             <div
               data-ui="invoice-table-header"
-              className="bg-[#0B132B] text-white rounded-xl px-4 py-3 flex items-center text-xs font-black uppercase"
-              style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
+              className="bg-[#0F1A36] text-white rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 flex items-center text-[10px] sm:text-xs font-black uppercase tracking-wider"
+              style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
             >
               <div className="flex-1">SERVICE</div>
-              <div className="w-28 sm:w-36 text-left">STAFF</div>
+              <div className="hidden sm:block sm:w-36 text-left">STAFF</div>
               <div className="w-12 sm:w-16 text-center">QTY</div>
-              <div className="w-20 sm:w-24 text-right">PRICE</div>
+              <div className="w-16 sm:w-24 text-right">PRICE</div>
               <div
-                className="w-20 sm:w-24 text-right text-[#C5A059]"
-                style={{ color: '#C5A059' }}
+                className="w-18 sm:w-24 text-right text-[#D4A515]"
+                style={{ color: '#D4A515' }}
               >
                 AMOUNT
               </div>
@@ -324,21 +350,22 @@ export function InvoiceTemplate({
                   return (
                     <div
                       key={idx}
-                      className="px-4 py-3.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
+                      className="px-3 sm:px-4 py-3 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
                     >
-                      <div className="flex-1 font-bold text-slate-900 pr-2">
-                        {item.name}
+                      <div className="flex-1 pr-2">
+                        <span className="font-bold text-slate-900 block">{item.name}</span>
+                        <span className="sm:hidden text-[10px] text-slate-500 font-medium">By {itemStaff}</span>
                       </div>
-                      <div className="w-28 sm:w-36 text-left text-slate-600 font-medium">
+                      <div className="hidden sm:block sm:w-36 text-left text-slate-600 font-medium">
                         {itemStaff}
                       </div>
                       <div className="w-12 sm:w-16 text-center font-bold text-slate-800">
                         {itemQty}
                       </div>
-                      <div className="w-20 sm:w-24 text-right text-slate-700 font-mono">
+                      <div className="w-16 sm:w-24 text-right text-slate-700 font-mono text-[11px] sm:text-xs">
                         ₹{itemPrice}
                       </div>
-                      <div className="w-20 sm:w-24 text-right font-black text-slate-900 font-mono">
+                      <div className="w-18 sm:w-24 text-right font-black text-slate-900 font-mono">
                         ₹{itemTotal}
                       </div>
                     </div>
@@ -354,13 +381,13 @@ export function InvoiceTemplate({
         </div>
 
         {/* 5. PAYMENT STATUS & FINANCIAL TOTALS BREAKDOWN */}
-        <div className="px-6 sm:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+        <div className="px-5 sm:px-8 py-5 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-5 sm:gap-6">
             {/* Left: Payment Status */}
             <div className="space-y-2">
               <span
-                className="text-[11px] font-black uppercase tracking-wider block"
-                style={{ color: '#000000' }}
+                className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#0F1A36' }}
               >
                 PAYMENT
               </span>
@@ -426,15 +453,15 @@ export function InvoiceTemplate({
 
               {/* Grand Total Banner */}
               <div
-                className="bg-[#0B132B] text-white rounded-xl px-4 py-3.5 flex items-center justify-between my-2 shadow-sm"
-                style={{ backgroundColor: '#0B132B', color: '#ffffff' }}
+                className="bg-[#0F1A36] text-white rounded-xl px-4 py-3.5 flex items-center justify-between my-2 shadow-sm"
+                style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
               >
                 <span className="text-[11px] font-black tracking-widest uppercase">
                   TOTAL AMOUNT
                 </span>
                 <span
-                  className="text-xl sm:text-2xl font-black font-mono text-[#C5A059]"
-                  style={{ color: '#C5A059' }}
+                  className="text-xl sm:text-2xl font-black font-mono text-[#D4A515]"
+                  style={{ color: '#D4A515' }}
                 >
                   ₹{bill.total}
                 </span>
