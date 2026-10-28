@@ -431,9 +431,13 @@ export default function HomePage() {
                 <li><a href="#reviews">Reviews</a></li>
                 <li><a href="#pricing">Pricing</a></li>
               </ul>
-              <a className="btn gold" href="#pricing">
+              <button
+                type="button"
+                className="btn gold"
+                onClick={() => openLogin('owner')}
+              >
                 Get started
-              </a>
+              </button>
             </div>
           </nav>
 
