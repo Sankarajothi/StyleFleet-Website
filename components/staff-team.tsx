@@ -185,25 +185,33 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
     setRatingStylist(null);
   };
 
-  const DEFAULT_STYLIST_PERMISSIONS = ['customers', 'sales', 'appointments', 'reminders', 'whatsapp'];
+  const DEFAULT_STYLIST_PERMISSIONS = ['customers', 'sales', 'appointments', 'reminders'];
 
   const DAILY_WORK_PERMISSIONS = [
-    { id: 'customers', label: 'Client CRM & Profiles', desc: 'Add & view assigned clients' },
-    { id: 'sales', label: 'Sales & Express Billing', desc: 'Create bills & accept payments' },
-    { id: 'appointments', label: 'Appointments & Queue', desc: 'Book slots & mark in-chair' },
-    { id: 'reminders', label: 'Service Reminders', desc: 'View upcoming due visits' },
-    { id: 'whatsapp', label: 'WhatsApp Marketing', desc: 'Send direct client messages' },
+    { id: 'customers', label: 'Customers', desc: 'Client CRM & profiles' },
+    { id: 'sales', label: 'Sales and Billing', desc: 'Create bills & accept payments' },
+    { id: 'appointments', label: 'Appointments', desc: 'Appointment calendar & chair queue' },
+    { id: 'reminders', label: 'Reminders and WhatsApp', desc: 'Client visit reminders & follow-ups' },
   ];
 
   const MONEY_TEAM_PERMISSIONS = [
-    { id: 'expenses', label: 'Add & View Salon Expenses', desc: 'Shop supplies, tea, rent ledger' },
-    { id: 'reports', label: 'Financial Reports & P&L', desc: 'Net profit, total revenue, tax' },
-    { id: 'team', label: 'Team Management & Roles', desc: 'Add, remove or edit staff' },
-    { id: 'past_expenses', label: 'Past Expense Audits', desc: 'Full historical expense archive' },
-    { id: 'share_bills', label: 'Share & Export Bills / CSV', desc: 'Download financial ledgers' },
+    { id: 'expenses', label: 'Expenses', desc: 'Salon expenses, supplies, tea & petty cash' },
+    { id: 'reports', label: 'Reports', desc: 'Business revenue, profits & financial audits' },
+    { id: 'team', label: 'Team', desc: 'Manage staff members & roles' },
+    { id: 'profile', label: 'Shop Profile', desc: 'Salon details, logo, timings & branding' },
   ];
 
-  const ALL_PERMISSIONS = [...DAILY_WORK_PERMISSIONS, ...MONEY_TEAM_PERMISSIONS];
+  const LIMITS_PERMISSIONS = [
+    { id: 'past_expenses', label: 'Past Expenses', desc: 'Access historical expense ledgers beyond today' },
+    { id: 'full_reports', label: 'Full Reports', desc: 'View store-wide reports beyond own chair stats' },
+    { id: 'share_bills', label: 'Share Bills', desc: 'Share invoices via WhatsApp & export data' },
+  ];
+
+  const ALL_PERMISSIONS = [
+    ...DAILY_WORK_PERMISSIONS,
+    ...MONEY_TEAM_PERMISSIONS,
+    ...LIMITS_PERMISSIONS,
+  ];
 
   // Open Permissions Modal
   const handleOpenPermissions = (st: StaffMember) => {
@@ -912,19 +920,20 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-2 border-b border-white/10">
               <div>
                 <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                   Stylist Permissions
                 </h3>
-                <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                  Configure workspace access for <strong>{permissionsStylist.name}</strong>
+                <p className={`text-xs mt-0.5 leading-relaxed ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                  Choose what <strong>{permissionsStylist.name}</strong> can open in the app. Changes apply when they next open StyleFleet.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setPermissionsStylist(null)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5"
+                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer hover:bg-white/5 shrink-0 ml-2"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -932,22 +941,36 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               </button>
             </div>
 
-            {/* Top Permission Summary & Action Controls */}
+            {/* Beautiful Permission Progress Card */}
             <div
-              className={`p-3.5 rounded-2xl border flex items-center justify-between flex-wrap gap-2.5 ${
+              className={`p-4 rounded-2xl border space-y-3 ${
                 isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <div>
-                <span className={`text-[11px] block uppercase font-bold tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                  Access Scope
-                </span>
-                <span className="text-sm font-black text-[#D4AF37]">
-                  {stylistPerms.length} of {ALL_PERMISSIONS.length} allowed
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className={`text-[10px] block uppercase font-bold tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                    Access Scope
+                  </span>
+                  <span className="text-sm font-black text-[#D4AF37]">
+                    {stylistPerms.length} of {ALL_PERMISSIONS.length} allowed
+                  </span>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-400">
+                  {Math.round((stylistPerms.length / ALL_PERMISSIONS.length) * 100)}%
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              {/* Visual Progress Bar */}
+              <div className="w-full h-2 rounded-full bg-black/25 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300 bg-gradient-to-r from-[#D4AF37] to-emerald-400"
+                  style={{ width: `${Math.round((stylistPerms.length / ALL_PERMISSIONS.length) * 100)}%` }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setStylistPerms(ALL_PERMISSIONS.map((p) => p.id))}
@@ -972,14 +995,16 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
               </div>
             </div>
 
-            {/* Group 1: Daily Work (Default Allowed) */}
+            {/* Division 1: Daily Work (Default Allowed) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  Daily Work (Default Allowed)
+                  Daily Work
                 </span>
-                <span className="text-[11px] text-[#A7B0C3] font-medium">Core operational tasks</span>
+                <span className="text-[10px] text-emerald-400/80 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  Default Allowed
+                </span>
               </div>
 
               <div className="space-y-1.5">
@@ -995,44 +1020,52 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                           setStylistPerms([...stylistPerms, perm.id]);
                         }
                       }}
-                      className={`p-2.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                         isChecked
                           ? isDarkMode
                             ? 'bg-[#121B33] border-[#D4AF37]/50 shadow-sm'
                             : 'bg-[#FFFDF7] border-[#D4AF37]/60 shadow-xs'
                           : isDarkMode
-                          ? 'bg-[#0B172E] border-white/5 opacity-70'
-                          : 'bg-slate-50 border-slate-200 opacity-70'
+                          ? 'bg-[#0B172E] border-white/5 opacity-60'
+                          : 'bg-slate-50 border-slate-200 opacity-60'
                       }`}
                     >
-                      <div className="pr-2">
+                      <div className="pr-3">
                         <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {perm.label}
                         </span>
-                        <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
                           {perm.desc}
                         </span>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // handled by parent div
-                        className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
-                      />
+                      {/* iOS-style toggle switch */}
+                      <div
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors shrink-0 flex items-center ${
+                          isChecked ? 'bg-[#D4AF37]' : 'bg-slate-600/40'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                            isChecked ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Group 2: Money & Team (Default Restricted) */}
+            {/* Division 2: Money, Team, and Settings (Default Off / Sensitive) */}
             <div className="space-y-2 pt-2 border-t border-white/10">
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Money & Team (Default Restricted)
+                  Money, Team, and Settings
                 </span>
-                <span className="text-[11px] text-[#A7B0C3] font-medium">Owner sensitive data</span>
+                <span className="text-[10px] text-amber-400/80 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  Default Off
+                </span>
               </div>
 
               <div className="space-y-1.5">
@@ -1048,36 +1081,104 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                           setStylistPerms([...stylistPerms, perm.id]);
                         }
                       }}
-                      className={`p-2.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                         isChecked
                           ? isDarkMode
                             ? 'bg-[#121B33] border-[#D4AF37]/50 shadow-sm'
                             : 'bg-[#FFFDF7] border-[#D4AF37]/60 shadow-xs'
                           : isDarkMode
-                          ? 'bg-[#0B172E] border-white/5 opacity-70'
-                          : 'bg-slate-50 border-slate-200 opacity-70'
+                          ? 'bg-[#0B172E] border-white/5 opacity-60'
+                          : 'bg-slate-50 border-slate-200 opacity-60'
                       }`}
                     >
-                      <div className="pr-2">
+                      <div className="pr-3">
                         <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {perm.label}
                         </span>
-                        <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
                           {perm.desc}
                         </span>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}} // handled by parent div
-                        className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
-                      />
+                      {/* iOS-style toggle switch */}
+                      <div
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors shrink-0 flex items-center ${
+                          isChecked ? 'bg-[#D4AF37]' : 'bg-slate-600/40'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                            isChecked ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
+            {/* Division 3: Limits (Default Off / Sensitive) */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-400" />
+                  Limits
+                </span>
+                <span className="text-[10px] text-sky-400/80 font-semibold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
+                  Default Off
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {LIMITS_PERMISSIONS.map((perm) => {
+                  const isChecked = stylistPerms.includes(perm.id);
+                  return (
+                    <div
+                      key={perm.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          setStylistPerms(stylistPerms.filter((p) => p !== perm.id));
+                        } else {
+                          setStylistPerms([...stylistPerms, perm.id]);
+                        }
+                      }}
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? isDarkMode
+                            ? 'bg-[#121B33] border-[#D4AF37]/50 shadow-sm'
+                            : 'bg-[#FFFDF7] border-[#D4AF37]/60 shadow-xs'
+                          : isDarkMode
+                          ? 'bg-[#0B172E] border-white/5 opacity-60'
+                          : 'bg-slate-50 border-slate-200 opacity-60'
+                      }`}
+                    >
+                      <div className="pr-3">
+                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {perm.label}
+                        </span>
+                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                          {perm.desc}
+                        </span>
+                      </div>
+                      {/* iOS-style toggle switch */}
+                      <div
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors shrink-0 flex items-center ${
+                          isChecked ? 'bg-[#D4AF37]' : 'bg-slate-600/40'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                            isChecked ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
             <div className={`flex gap-3 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <button
                 type="button"

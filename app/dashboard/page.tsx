@@ -38,6 +38,7 @@ function DashboardContent() {
     addCustomer,
     staff,
     addStaff,
+    hasPermission,
     appointments,
     addAppointment,
     updateAppointmentStatus,
@@ -345,7 +346,32 @@ function DashboardContent() {
 
             {/* ================= 4. CUSTOMERS (CRM) ================= */}
             {currentScreen === 'customers' && (
-              <CustomersView onOpenAddClientModal={() => setShowAddClientModal(true)} />
+              !hasPermission('customers') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Customers CRM</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
+                </div>
+              ) : (
+                <CustomersView onOpenAddClientModal={() => setShowAddClientModal(true)} />
+              )
             )}
 
             {/* ================= 6. PRICE LIST ================= */}
@@ -358,9 +384,28 @@ function DashboardContent() {
 
             {/* ================= 7. STAFF TEAM ================= */}
             {currentScreen === 'staff' && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Staff & Team Management is restricted to Salon Owners.
+              !hasPermission('team') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Team Management</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <StaffTeamView onOpenAddStaff={() => setShowAddStaffModal(true)} />
@@ -368,13 +413,59 @@ function DashboardContent() {
             )}
 
             {/* ================= 8. REMINDERS & AUTOMATION ================= */}
-            {currentScreen === 'reminders' && <RemindersView />}
+            {currentScreen === 'reminders' && (
+              !hasPermission('reminders') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Reminders & WhatsApp</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
+                </div>
+              ) : (
+                <RemindersView />
+              )
+            )}
 
             {/* ================= 9. WHATSAPP MARKETING ================= */}
             {currentScreen === 'whatsapp' && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Bulk Marketing is restricted to Salon Owners.
+              !hasPermission('reminders') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Bulk WhatsApp Marketing is restricted by your salon owner.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <WhatsAppMarketingView />
@@ -383,9 +474,28 @@ function DashboardContent() {
 
             {/* ================= 10. ACCOUNTS & EXPENSES ================= */}
             {(currentScreen === 'accounts' || currentScreen === 'expenses') && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Accounts & Salon Expenses are restricted to Salon Owners.
+              !hasPermission('expenses') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Salon Expenses</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <AccountsView onOpenAddExpense={() => setShowAddExpenseModal(true)} />
@@ -394,20 +504,58 @@ function DashboardContent() {
 
             {/* ================= 11. REPORTS & BUSINESS INTELLIGENCE ================= */}
             {currentScreen === 'reports' && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Financial & Business Reports are restricted to Salon Owners.
+              !hasPermission('reports') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Financial Reports</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <ReportsView />
               )
             )}
 
-            {/* ================= 12. DEEP ANALYTICS 360 (OWNER ONLY) ================= */}
+            {/* ================= 12. DEEP ANALYTICS 360 ================= */}
             {currentScreen === 'analytics' && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Store Intelligence & Deep Analytics are restricted to Salon Owners.
+              !hasPermission('reports') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Deep Analytics 360 is restricted by your salon owner.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <DeepAnalyticsView />
@@ -416,9 +564,28 @@ function DashboardContent() {
 
             {/* ================= 13. SETTINGS & SHOP PROFILE ================= */}
             {currentScreen === 'settings' && (
-              role === 'stylist' ? (
-                <div className="p-8 rounded-2xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3]">
-                  Salon Settings and Profile are restricted to Salon Owners.
+              !hasPermission('profile') ? (
+                <div className={`p-8 rounded-3xl border text-center space-y-3 max-w-lg mx-auto my-12 shadow-xl ${
+                  isDarkMode ? 'bg-[#0F1C36] border-white/10 text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-600'
+                }`}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Access Restricted
+                  </h3>
+                  <p className="text-xs leading-relaxed">
+                    Your salon owner has not enabled access to <strong>Shop Profile & Settings</strong> for your stylist account.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScreen('home')}
+                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Back to Dashboard</span>
+                  </button>
                 </div>
               ) : (
                 <SettingsView onOpenSignOutModal={() => setShowSignOutModal(true)} />

@@ -8,7 +8,10 @@ type ReportTab = 'report' | 'summary';
 type ReportSliderPeriod = 'today' | 'week' | 'month' | 'custom';
 
 export function ReportsView() {
-  const { role, bills, expenses, staff, services, shopProfile, isDarkMode, showToast } = useSalon();
+  const { role, bills, expenses, staff, services, shopProfile, isDarkMode, showToast, hasPermission, loggedInStaffName } = useSalon();
+
+  const hasReportsAccess = role === 'owner' || hasPermission('reports');
+  const hasFullReportsAccess = role === 'owner' || hasPermission('full_reports');
 
   // Tab: 'report' vs 'summary'
   const [activeTab, setActiveTab] = useState<ReportTab>('report');
@@ -39,24 +42,29 @@ export function ReportsView() {
 
   const availableYears = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
 
-  // Restrict Stylist Access
-  if (role === 'stylist') {
+  // Restrict Stylist Access if not granted by Owner
+  if (!hasReportsAccess) {
     return (
       <div className="p-8 rounded-3xl border text-center text-xs bg-[#0F1C36] border-white/10 text-[#A7B0C3] my-6">
         <svg className="w-10 h-10 mx-auto mb-3 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
           <path d="M7 11V7a5 5 0 0110 0v4" />
         </svg>
-        <strong className="text-white text-sm block mb-1">Access Restricted to Salon Owner</strong>
-        <span>Salon financial statements, profit & loss, and audit reports are confidential to owner accounts.</span>
+        <strong className="text-white text-sm block mb-1">Access Restricted by Salon Owner</strong>
+        <span>Financial reports and audits have not been enabled for your stylist account.</span>
       </div>
     );
   }
 
-  // Active Bills (non-deleted)
+  // Active Bills (non-deleted, filtered for chair if stylist lacks full reports)
   const activeBills = useMemo(() => {
-    return bills.filter((b) => !b.isDeleted);
-  }, [bills]);
+    const nonDeleted = bills.filter((b) => !b.isDeleted);
+    if (role === 'stylist' && !hasFullReportsAccess && loggedInStaffName) {
+      const nameLower = loggedInStaffName.trim().toLowerCase();
+      return nonDeleted.filter((b) => (b.staff || '').trim().toLowerCase() === nameLower);
+    }
+    return nonDeleted;
+  }, [bills, role, hasFullReportsAccess, loggedInStaffName]);
 
   // Timestamp parser for a bill
   const getBillTime = (b: Bill): number => {

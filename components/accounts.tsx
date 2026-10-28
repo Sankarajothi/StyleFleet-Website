@@ -11,7 +11,8 @@ interface AccountsViewProps {
 type PeriodFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 export const AccountsView: React.FC<AccountsViewProps> = () => {
-  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast } = useSalon();
+  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast, role, hasPermission } = useSalon();
+  const canViewPastExpenses = role === 'owner' || hasPermission('past_expenses');
 
   // Time filter state
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('today');
@@ -57,7 +58,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    if (selectedPeriod === 'today') {
+    if (!canViewPastExpenses || selectedPeriod === 'today') {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
       return { start, end: today };

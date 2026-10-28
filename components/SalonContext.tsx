@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { getShopPrefixFromShopName, formatInvoiceNumber } from '@/lib/salon-helpers';
 import {
   fetchSalonDataFromDb,
@@ -17,6 +17,7 @@ import {
   updateExpenseInDb,
   deleteExpenseInDb,
   saveStaffMemberToDb,
+  updateStaffMemberInDb,
   updateShopProfileInDb,
   generateUuid,
 } from '@/lib/supabase-service';
@@ -225,6 +226,8 @@ interface SalonContextType {
   setCurrentShopId: (id: string | null) => void;
   loggedInStaffName: string | null;
   setLoggedInStaffName: (name: string | null) => void;
+  hasPermission: (permissionId: string) => boolean;
+  currentStylistPermissions: string[];
 }
 
 const DEFAULT_SHOP_PROFILE: ShopProfile = {
@@ -515,8 +518,52 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
     setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+    if (currentShopId) {
+      updateStaffMemberInDb(currentShopId, id, updated);
+    }
     showToast('Stylist updated successfully.');
   };
+
+  const currentStylistMember = useMemo(() => {
+    if (role !== 'stylist') return null;
+    return (
+      staff.find(
+        (s) =>
+          loggedInStaffName &&
+          s.name.trim().toLowerCase() === loggedInStaffName.trim().toLowerCase()
+      ) || null
+    );
+  }, [role, staff, loggedInStaffName]);
+
+  const currentStylistPermissions = useMemo(() => {
+    if (role !== 'stylist') {
+      return [
+        'customers',
+        'sales',
+        'appointments',
+        'reminders',
+        'expenses',
+        'reports',
+        'team',
+        'profile',
+        'past_expenses',
+        'full_reports',
+        'share_bills',
+      ];
+    }
+    if (currentStylistMember && currentStylistMember.permissions && currentStylistMember.permissions.length > 0) {
+      return currentStylistMember.permissions;
+    }
+    return ['customers', 'sales', 'appointments', 'reminders'];
+  }, [role, currentStylistMember]);
+
+  const hasPermission = useCallback(
+    (permissionId: string): boolean => {
+      if (role !== 'stylist') return true;
+      return currentStylistPermissions.includes(permissionId);
+    },
+    [role, currentStylistPermissions]
+  );
 
   const deleteStaff = (id: string) => {
     setStaff((prev) => prev.filter((s) => s.id !== id));
@@ -965,6 +1012,8 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setCurrentShopId,
         loggedInStaffName,
         setLoggedInStaffName,
+        hasPermission,
+        currentStylistPermissions,
       }}
     >
       <div suppressHydrationWarning className={isDarkMode ? 'dark' : ''}>

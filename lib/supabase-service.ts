@@ -499,18 +499,38 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       .eq('shop_id', shopId)
       .order('created_at', { ascending: true });
 
-    const staff: StaffMember[] = (staffRows || []).map((st) => ({
-      id: st.id,
-      name: st.name,
-      role: st.role || 'Stylist',
-      phone: st.phone,
-      rev: Math.round((st.target_amount_minor || 0) / 100),
-      count: 0,
-      rating: st.rating || '5.0',
-      chair: 'Available',
-      status: st.is_active ? 'active' : 'inactive',
-      invited: st.invitation_status === 'accepted' || st.invitation_status === 'invited',
-    }));
+    const staff: StaffMember[] = (staffRows || []).map((st) => {
+      const perms: string[] = [];
+      if (st.permissions && typeof st.permissions === 'object') {
+        const p = st.permissions as Record<string, any>;
+        if (p.customers) perms.push('customers');
+        if (p.sales) perms.push('sales');
+        if (p.appointments) perms.push('appointments');
+        if (p.reminders) perms.push('reminders');
+        if (p.expenses) perms.push('expenses');
+        if (p.reports) perms.push('reports');
+        if (p.team) perms.push('team');
+        if (p.profile) perms.push('profile');
+        if (p.past_expenses || p.expensesHistory) perms.push('past_expenses');
+        if (p.full_reports || p.reportsHistory) perms.push('full_reports');
+        if (p.share_bills || p.shareBills) perms.push('share_bills');
+      }
+      const effectivePerms = perms.length > 0 ? perms : ['customers', 'sales', 'appointments', 'reminders'];
+
+      return {
+        id: st.id,
+        name: st.name,
+        role: st.role || 'Stylist',
+        phone: st.phone,
+        rev: Math.round((st.target_amount_minor || 0) / 100),
+        count: 0,
+        rating: st.rating || '5.0',
+        chair: 'Available',
+        status: st.is_active ? 'active' : 'inactive',
+        invited: st.invitation_status === 'accepted' || st.invitation_status === 'invited',
+        permissions: effectivePerms,
+      };
+    });
 
     // 5. Fetch appointments with related customers, staff and services
     const { data: apptRows } = await supabase
@@ -1186,6 +1206,59 @@ export async function saveStaffMemberToDb(
     return data?.id || staffId;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Update an existing staff member in Supabase (permissions, role, rating, active status).
+ */
+export async function updateStaffMemberInDb(
+  shopId: string,
+  staffId: string,
+  updated: Partial<StaffMember>
+): Promise<boolean> {
+  try {
+    const payload: Record<string, any> = {};
+    if (updated.name !== undefined) payload.name = updated.name.trim();
+    if (updated.phone !== undefined) payload.phone = (updated.phone || '').replace(/\D/g, '').slice(-10);
+    if (updated.role !== undefined) payload.role = updated.role;
+    if (updated.status !== undefined) payload.is_active = updated.status === 'active';
+    if (updated.rating !== undefined) payload.rating = updated.rating;
+    if (updated.permissions !== undefined) {
+      const permsArray = updated.permissions || [];
+      payload.permissions = {
+        customers: permsArray.includes('customers'),
+        sales: permsArray.includes('sales'),
+        appointments: permsArray.includes('appointments'),
+        reminders: permsArray.includes('reminders'),
+        expenses: permsArray.includes('expenses'),
+        reports: permsArray.includes('reports'),
+        team: permsArray.includes('team'),
+        profile: permsArray.includes('profile'),
+        past_expenses: permsArray.includes('past_expenses'),
+        expensesHistory: permsArray.includes('past_expenses'),
+        full_reports: permsArray.includes('full_reports'),
+        reportsHistory: permsArray.includes('full_reports'),
+        share_bills: permsArray.includes('share_bills'),
+        shareBills: permsArray.includes('share_bills'),
+      };
+    }
+    payload.updated_at = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('staff')
+      .update(payload)
+      .eq('id', staffId)
+      .eq('shop_id', shopId);
+
+    if (error) {
+      console.warn('[Supabase] Staff update error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] Staff update exception:', err);
+    return false;
   }
 }
 

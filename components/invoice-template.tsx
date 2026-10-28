@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Bill, ShopProfile } from '@/components/SalonContext';
+import { useSalon, type Bill, type ShopProfile } from '@/components/SalonContext';
 import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
 
 interface InvoiceTemplateProps {
@@ -17,6 +17,9 @@ export function InvoiceTemplate({
   onClose,
   onShareWhatsApp,
 }: InvoiceTemplateProps) {
+  const { role, hasPermission } = useSalon();
+  const canShareBills = role === 'owner' || hasPermission('share_bills');
+
   // Format invoice date into DD MMM YYYY (e.g. "27 Oct 2026")
   const formatInvoiceDate = (dateVal?: string): string => {
     try {
@@ -115,16 +118,18 @@ export function InvoiceTemplate({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDefaultWhatsAppShare}
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
-          >
-            <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
-              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-            </svg>
-            <span>WhatsApp</span>
-          </button>
+          {canShareBills && (
+            <button
+              type="button"
+              onClick={handleDefaultWhatsAppShare}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+              </svg>
+              <span>WhatsApp</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handlePrint}

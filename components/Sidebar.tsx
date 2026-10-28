@@ -24,10 +24,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
     language,
     appointments,
     bills,
+    hasPermission,
   } = useSalon();
 
   const isStylist = role === 'stylist';
-  const RESTRICTED_FOR_STYLIST = new Set(['accounts', 'staff', 'settings', 'whatsapp', 'reports', 'reminders', 'pricelist', 'analytics']);
+
+  const canAccessScreen = (screenId: string): boolean => {
+    if (!isStylist) return true;
+    switch (screenId) {
+      case 'home':
+        return true;
+      case 'customers':
+        return hasPermission('customers');
+      case 'sales':
+      case 'billing':
+      case 'pricelist':
+        return hasPermission('sales');
+      case 'appointments':
+        return hasPermission('appointments');
+      case 'reminders':
+      case 'whatsapp':
+        return hasPermission('reminders');
+      case 'accounts':
+        return hasPermission('expenses');
+      case 'reports':
+      case 'analytics':
+        return hasPermission('reports');
+      case 'staff':
+        return hasPermission('team');
+      case 'settings':
+        return hasPermission('profile');
+      default:
+        return true;
+    }
+  };
 
   const t = useTranslationHelper(language);
 
@@ -79,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
             </svg>
           ),
         },
-      ],
+      ].filter((item) => canAccessScreen(item.id)),
     },
     {
       group: t.manage,
@@ -162,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
             </svg>
           ),
         },
-      ].filter((item) => !isStylist || !RESTRICTED_FOR_STYLIST.has(item.id)),
+      ].filter((item) => canAccessScreen(item.id)),
     },
   ];
 

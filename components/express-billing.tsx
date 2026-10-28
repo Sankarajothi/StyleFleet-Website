@@ -41,6 +41,7 @@ export function ExpressBillingView({
     showToast,
     isDarkMode,
     role,
+    hasPermission,
     loggedInStaffName,
     shopProfile,
   } = useSalon();
@@ -62,6 +63,7 @@ export function ExpressBillingView({
 
   // Bill Date state (Strictly limited: past dates or today, cannot select future dates)
   const [billDate, setBillDate] = useState<string>(getTodayInputStr());
+  const canShareBills = role === 'owner' || hasPermission('share_bills');
 
   // Cart Calculations (Strict Section 3 Mathematical Invariant)
   const cartSubtotal = billCartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
@@ -509,7 +511,7 @@ export function ExpressBillingView({
               <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              <span>Save & Share Bill</span>
+              <span>{canShareBills ? 'Save & Share Bill' : 'Save Bill'}</span>
             </button>
 
             <button
