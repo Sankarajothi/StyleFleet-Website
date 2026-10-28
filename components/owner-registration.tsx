@@ -63,11 +63,10 @@ export function OwnerRegistrationView({
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsStatusMessage, setGpsStatusMessage] = useState<string>('');
 
-  // STEP 2 STATE: Styling Team Members (Starts empty; clean database onboarding)
+  // STEP 2 STATE: Styling Team Members (Only Name & Phone required)
   const [stylists, setStylists] = useState<Array<{ name: string; phone: string; role: string }>>([]);
   const [newStylistName, setNewStylistName] = useState('');
   const [newStylistPhone, setNewStylistPhone] = useState('');
-  const [newStylistRole, setNewStylistRole] = useState('Senior Stylist');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -95,7 +94,7 @@ export function OwnerRegistrationView({
     }
   };
 
-  // Handle Live GPS Detection
+  // Handle Live GPS Detection with Full Reverse Geocoding (Street, City, PIN code)
   const handleFetchGPS = () => {
     if (!navigator.geolocation) {
       triggerToast('Geolocation is not supported by your browser.');
@@ -103,21 +102,101 @@ export function OwnerRegistrationView({
     }
 
     setIsLocatingGPS(true);
-    setGpsStatusMessage('Connecting to device GPS satellites...');
+    setGpsStatusMessage('Connecting to GPS & fetching address, city and PIN code...');
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const lat = Number(position.coords.latitude.toFixed(6));
         const lng = Number(position.coords.longitude.toFixed(6));
         setGpsCoordinates({ lat, lng });
-        setIsLocatingGPS(false);
-        setGpsStatusMessage(`GPS Location pinned: ${lat}, ${lng}`);
-        triggerToast(`Live GPS pinned: ${lat}, ${lng}`);
 
-        // If address is empty, append coordinates
-        if (!address.trim()) {
-          setAddress(`Salon Location (GPS: ${lat}, ${lng})`);
+        let fetchedStreet = '';
+        let fetchedCity = '';
+        let fetchedPin = '';
+
+        // 1. OpenStreetMap Nominatim for street address, city and postal code
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            fetchedCity =
+              addr.city ||
+              addr.town ||
+              addr.village ||
+              addr.suburb ||
+              addr.state_district ||
+              addr.county ||
+              '';
+            fetchedPin = addr.postcode || '';
+
+            const streetParts = [
+              addr.house_number || addr.building,
+              addr.road || addr.street || addr.pedestrian,
+              addr.suburb || addr.neighbourhood || addr.residential,
+              fetchedCity,
+              addr.state,
+            ].filter(Boolean);
+
+            if (streetParts.length > 0) {
+              fetchedStreet = streetParts.join(', ');
+            } else if (data.display_name) {
+              fetchedStreet = data.display_name;
+            }
+          }
+        } catch (e) {
+          console.warn('Nominatim reverse geocode error:', e);
         }
+
+        // 2. Supplementary / fallback check with BigDataCloud
+        if (!fetchedCity || !fetchedPin || !fetchedStreet) {
+          try {
+            const bdcRes = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+            );
+            if (bdcRes.ok) {
+              const bdcData = await bdcRes.json();
+              if (!fetchedCity) {
+                fetchedCity =
+                  bdcData.city || bdcData.locality || bdcData.principalSubdivision || '';
+              }
+              if (!fetchedPin && bdcData.postcode) {
+                fetchedPin = bdcData.postcode;
+              }
+              if (!fetchedStreet) {
+                const parts = [
+                  bdcData.locality,
+                  bdcData.city,
+                  bdcData.principalSubdivision,
+                ].filter(Boolean);
+                if (parts.length > 0) fetchedStreet = parts.join(', ');
+              }
+            }
+          } catch (e) {
+            console.warn('BigDataCloud reverse geocode error:', e);
+          }
+        }
+
+        // Auto-fill Street Address, City and PIN Code
+        if (fetchedStreet) setAddress(fetchedStreet);
+        if (fetchedCity) setCity(fetchedCity);
+        if (fetchedPin) setPinCode(fetchedPin);
+
+        setIsLocatingGPS(false);
+        const locationSummary = [fetchedStreet, fetchedCity, fetchedPin].filter(Boolean).join(' • ');
+        setGpsStatusMessage(
+          locationSummary
+            ? `Address auto-filled: ${locationSummary}`
+            : `GPS Location pinned: ${lat}, ${lng}`
+        );
+        triggerToast(
+          fetchedCity && fetchedPin
+            ? `Live location auto-filled: ${fetchedCity} (${fetchedPin})`
+            : `Live GPS pinned: ${lat}, ${lng}`
+        );
       },
       (error) => {
         setIsLocatingGPS(false);
@@ -198,7 +277,7 @@ export function OwnerRegistrationView({
       {
         name: newStylistName.trim(),
         phone: cleanNumber,
-        role: newStylistRole || 'Stylist',
+        role: 'Stylist',
       },
     ]);
     setNewStylistName('');
@@ -826,7 +905,7 @@ export function OwnerRegistrationView({
             >
               <span className="text-xs font-bold block">Quick Add Stylist</span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Stylist Name */}
                 <div>
                   <label className="block text-[11px] font-semibold mb-1">Stylist Full Name</label>
@@ -845,7 +924,7 @@ export function OwnerRegistrationView({
 
                 {/* Stylist Phone */}
                 <div>
-                  <label className="block text-[11px] font-semibold mb-1">10-Digit Mobile</label>
+                  <label className="block text-[11px] font-semibold mb-1">10-Digit Mobile Number</label>
                   <input
                     type="tel"
                     maxLength={10}
@@ -861,26 +940,6 @@ export function OwnerRegistrationView({
                         : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
                     }`}
                   />
-                </div>
-
-                {/* Stylist Specialization */}
-                <div>
-                  <label className="block text-[11px] font-semibold mb-1">Role / Specialization</label>
-                  <select
-                    value={newStylistRole}
-                    onChange={(e) => setNewStylistRole(e.target.value)}
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
-                      isDarkMode
-                        ? 'bg-[#0B1E3B] border-white/10 text-white focus:border-[#D4AF37]'
-                        : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                    }`}
-                  >
-                    <option value="Senior Stylist">Senior Stylist</option>
-                    <option value="Hair Specialist">Hair Specialist</option>
-                    <option value="Beard Specialist">Beard Specialist</option>
-                    <option value="Spa Therapist">Spa Therapist</option>
-                    <option value="Color Specialist">Color Specialist</option>
-                  </select>
                 </div>
               </div>
 
@@ -943,7 +1002,7 @@ export function OwnerRegistrationView({
                               isDarkMode ? 'text-[#8B98AF]' : 'text-slate-500'
                             }`}
                           >
-                            +91 {st.phone} · {st.role}
+                            +91 {st.phone}
                           </span>
                         </div>
                       </div>
