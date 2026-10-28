@@ -1319,14 +1319,15 @@ export async function saveBillToDb(
 
 /**
  * Persist a staff member strictly into the current salon's staff table.
+ * Exactly matches StyleFleet Mobile App schema.
  */
 export async function saveStaffMemberToDb(
   shopId: string,
-  member: { name: string; phone: string; role?: string }
+  member: { id?: string; name: string; phone: string; role?: string }
 ): Promise<string | null> {
   try {
     const cleanPhone = (member.phone || '').replace(/\D/g, '').slice(-10);
-    const staffId = generateUuid();
+    const staffId = isValidUuid(member.id) ? member.id! : generateUuid();
     const { data, error } = await supabase
       .from('staff')
       .insert({
@@ -1337,6 +1338,7 @@ export async function saveStaffMemberToDb(
         role: member.role || 'Stylist',
         is_active: true,
         target_amount_minor: 500000,
+        invitation_status: 'not_invited',
         rating: '5.0',
         permissions: {
           customers: true,

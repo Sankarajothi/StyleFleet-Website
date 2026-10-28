@@ -552,22 +552,28 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [staff, isHydrated]);
 
   const addStaff = ({ name, phone, role: staffRole }: { name: string; phone: string; role?: string }) => {
+    const staffId = generateUuid();
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const newStaff: StaffMember = {
-      id: `st-${Date.now()}`,
+      id: staffId,
       name: name.trim(),
       role: staffRole?.trim() || 'Stylist',
-      phone: phone.trim(),
+      phone: cleanPhone || phone.trim(),
       rev: 0,
       count: 0,
       rating: '5.0',
       chair: 'Available',
       status: 'active',
       invited: false,
-      permissions: ['billing', 'appointments'],
+      permissions: ['customers', 'sales', 'appointments', 'reminders'],
     };
     setStaff((prev) => [...prev, newStaff]);
-    if (currentShopId) {
-      saveStaffMemberToDb(currentShopId, { name, phone, role: staffRole });
+    const effectiveShopId =
+      currentShopId ||
+      shopProfile?.id ||
+      (typeof window !== 'undefined' ? localStorage.getItem('stylefleet_shop_id') : null);
+    if (effectiveShopId) {
+      saveStaffMemberToDb(effectiveShopId, { id: staffId, name, phone: cleanPhone, role: staffRole });
     }
     showToast(`Stylist "${name}" added to Team!`);
   };
