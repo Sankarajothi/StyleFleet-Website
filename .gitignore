@@ -36,3 +36,5 @@ next-env.d.ts
 # agent scratch & skills
 .taste-skill/
 .agents/
+
+.vercel

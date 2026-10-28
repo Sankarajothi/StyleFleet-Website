@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
   Crown, 
-  Sparkles, 
   Scissors, 
   CheckCircle2, 
   Clock, 
@@ -142,35 +141,6 @@ export default function HomePage() {
       }
     } catch {
       showToast('Network error sending OTP. Please try again.', 'error');
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  // Instant One-Click Demo Login for Owner or Supervisor
-  const handleQuickDemoLogin = async (demoRole: 'owner' | 'stylist') => {
-    const demoPhone = demoRole === 'owner' ? '9999999999' : '8888888888';
-    setRole(demoRole);
-    setPhone(demoPhone);
-    setIsSendingOtp(true);
-    try {
-      const res = await fetch('/api/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: demoPhone }),
-      });
-      const data = await res.json();
-      if (data.success && data.sessionId) {
-        setOtpSessionId(data.sessionId);
-        setOtp(['1', '2', '3', '4', '5', '6']);
-        setAuthStep('otp');
-        showToast(`Demo ${demoRole === 'owner' ? 'Owner' : 'Supervisor'} selected! Accessing workspace...`, 'success');
-        setTimeout(() => {
-          verifyOtp('123456');
-        }, 350);
-      }
-    } catch {
-      showToast('Error initializing demo login', 'error');
     } finally {
       setIsSendingOtp(false);
     }
@@ -1030,35 +1000,6 @@ export default function HomePage() {
               {/* STEP 1: CLEAN MOBILE INPUT */}
               {authStep === 'phone' && (
                 <form onSubmit={handlePhoneSubmit} className="space-y-4 pt-2">
-                  {/* One-Click Instant Demo Access */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-                        <span>One-Click Demo Access</span>
-                      </span>
-                      <span className="text-[10px] text-[#94A3B8] font-mono">Code: 123456</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickDemoLogin('owner')}
-                        className="px-3 py-2 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                      >
-                        <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
-                        <span>Demo Owner</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickDemoLogin('stylist')}
-                        className="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 text-sky-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                      >
-                        <Scissors className="w-3.5 h-3.5 text-sky-400" />
-                        <span>Demo Supervisor</span>
-                      </button>
-                    </div>
-                  </div>
-
                   <div>
                     <label htmlFor="mobile-input" className="block text-xs font-bold text-[#94A3B8] mb-2">
                       Mobile Number
