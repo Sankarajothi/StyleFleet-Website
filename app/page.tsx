@@ -6,39 +6,105 @@ import { useRouter } from 'next/navigation';
 import { 
   Crown, 
   Scissors, 
-  CheckCircle2, 
-  Clock, 
-  ArrowRight, 
-  Calendar, 
-  Zap, 
-  TrendingUp, 
-  UserCheck, 
-  CreditCard,
-  ChevronRight,
-  ShieldCheck,
-  Star,
-  Check,
-  X,
-  MessageCircle,
-  Sparkles,
-  BarChart3,
-  Users,
-  Smartphone,
-  Globe,
-  Receipt,
-  Layers,
-  Award,
-  PhoneCall,
-  Instagram
+  PhoneCall, 
+  MessageCircle, 
+  Instagram,
+  CheckCircle2
 } from 'lucide-react';
 import { OwnerRegistrationView } from '@/components/owner-registration';
-import { AnimatedCounter } from '@/components/animated-counter';
 import { findSalonByPhone } from '@/lib/supabase-service';
-import gsap from 'gsap';
+
+// Service list for the interactive front-desk demo
+const DEMO_SERVICES = [
+  ['Signature haircut & fade', '35 min', 800],
+  ['Beard precision sculpt', '20 min', 450],
+  ['Moroccan keratin spa', '55 min', 1800],
+  ['24K gold facial', '40 min', 1400],
+] as const;
+
+// Language translation data for multilingual bill
+const LANGUAGE_DICTIONARY = {
+  English: [
+    ['Haircut', '₹800'],
+    ['Beard sculpt', '₹450'],
+    ['Keratin spa', '₹1,800'],
+    'Total',
+  ],
+  'தமிழ்': [
+    ['முடி திருத்துதல்', '₹800'],
+    ['தாடி ஷேப்பிங்', '₹450'],
+    ['கெரட்டின் ஸ்பா', '₹1,800'],
+    'மொத்தத் தொகை',
+  ],
+  'हिन्दी': [
+    ['हेयरकट', '₹800'],
+    ['दाढ़ी शेपिंग', '₹450'],
+    ['केराटिन स्पा', '₹1,800'],
+    'कुल राशि',
+  ],
+} as const;
+
+// Stat Counter component with smooth cubic ease-out on scroll
+function StatCounter({
+  target,
+  suffix = '',
+  prefix = '',
+}: {
+  target: number;
+  suffix?: string;
+  prefix?: string;
+}) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const animatedRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !animatedRef.current) {
+            animatedRef.current = true;
+            const startTime = performance.now();
+            const duration = 1400;
+
+            const step = (currentTime: number) => {
+              const elapsed = currentTime - startTime;
+              const k = Math.min(1, elapsed / duration);
+              const eased = 1 - Math.pow(1 - k, 3);
+              setVal(Math.round(target * eased));
+              if (k < 1) {
+                requestAnimationFrame(step);
+              }
+            };
+            requestAnimationFrame(step);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target]);
+
+  return (
+    <div ref={ref}>
+      <b>
+        {prefix}
+        {val}
+        {suffix}
+      </b>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
-  const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // Navigation View State: Landing Page vs Login vs Register
   const [view, setView] = useState<'home' | 'login' | 'register'>('home');
   const [role, setRole] = useState<'owner' | 'stylist'>('owner');
   const [authStep, setAuthStep] = useState<'phone' | 'otp'>('phone');
@@ -56,36 +122,34 @@ export default function HomePage() {
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Interactive Dribbble Demo State
-  const [demoSelectedServices, setDemoSelectedServices] = useState<string[]>([
-    'Haircut & Fade',
-    'Beard Sculpt',
-  ]);
-  const [demoActiveChair, setDemoActiveChair] = useState<number>(2);
-  const landingLang = 'en';
-  const [pricingInterval, setPricingInterval] = useState<'annual' | 'monthly'>('annual');
+  // Interactive Demo State
+  const [activeServices, setActiveServices] = useState<number[]>([0, 1]);
+  const [waSent, setWaSent] = useState(false);
+  const [shownTotal, setShownTotal] = useState(1250);
+  const sumTotal = activeServices.reduce((sum, i) => sum + DEMO_SERVICES[i][2], 0);
 
-  const demoServicesList = [
-    { id: 'Haircut & Fade', name: 'Signature Haircut & Fade', price: 800, time: '35m' },
-    { id: 'Beard Sculpt', name: 'Beard Precision Sculpt', price: 450, time: '20m' },
-    { id: 'Keratin Ritual', name: 'Moroccan Keratin Spa', price: 1800, time: '55m' },
-    { id: 'Gold Glow Facial', name: '24K Luxury Gold Facial', price: 1400, time: '40m' },
-  ];
+  // Animated running total for interactive demo bill
+  useEffect(() => {
+    const from = shownTotal;
+    const to = sumTotal;
+    const t0 = performance.now();
+    let raf: number;
 
-  const demoTotal = demoSelectedServices.reduce((sum, serviceId) => {
-    const item = demoServicesList.find((s) => s.id === serviceId);
-    return sum + (item ? item.price : 0);
-  }, 0);
-
-  const toggleDemoService = (serviceId: string) => {
-    if (demoSelectedServices.includes(serviceId)) {
-      if (demoSelectedServices.length > 1) {
-        setDemoSelectedServices(demoSelectedServices.filter((s) => s !== serviceId));
+    const f = (t: number) => {
+      const k = Math.min(1, (t - t0) / 500);
+      const eased = 1 - Math.pow(1 - k, 3);
+      setShownTotal(Math.round(from + (to - from) * eased));
+      if (k < 1) {
+        raf = requestAnimationFrame(f);
       }
-    } else {
-      setDemoSelectedServices([...demoSelectedServices, serviceId]);
-    }
-  };
+    };
+
+    raf = requestAnimationFrame(f);
+    return () => cancelAnimationFrame(raf);
+  }, [sumTotal]);
+
+  // Multilingual Paper Receipt State
+  const [currentLang, setCurrentLang] = useState<'English' | 'தமிழ்' | 'हिन्दी'>('English');
 
   // Toast notification helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -95,7 +159,7 @@ export default function HomePage() {
     }, 3800);
   };
 
-  // Switch to login page
+  // Switch to login view
   const openLogin = (selectedRole: 'owner' | 'stylist' = 'owner') => {
     setRole(selectedRole);
     setAuthStep('phone');
@@ -110,63 +174,6 @@ export default function HomePage() {
     setView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  // GSAP 3 Studio-Grade Motion Orchestration (scoped to mainContainerRef)
-  useEffect(() => {
-    if (view !== 'home' || !mainContainerRef.current) return;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    const ctx = gsap.context(() => {
-      // 1. Entrance timeline for Hero Section
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-      tl.from('.hero-headline-anim', {
-        y: 28,
-        opacity: 0,
-        duration: 1.05,
-      })
-      .from('.hero-subtitle-anim', {
-        y: 18,
-        opacity: 0,
-        duration: 0.85,
-      }, '-=0.6')
-      .from('.hero-cta-anim', {
-        y: 16,
-        scale: 0.96,
-        opacity: 0,
-        duration: 0.75,
-      }, '-=0.5')
-      .from('.hero-device-anim', {
-        y: 40,
-        opacity: 0,
-        duration: 1.15,
-        ease: 'power4.out',
-      }, '-=0.4');
-
-      // 2. Ambient gold & blue glow breathing pulse
-      gsap.to('.glow-orb.glow-gold', {
-        scale: 1.2,
-        opacity: 0.75,
-        duration: 4.5,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      });
-
-      gsap.to('.glow-orb.glow-blue', {
-        scale: 1.25,
-        opacity: 0.65,
-        duration: 5.5,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      });
-    }, mainContainerRef);
-
-    return () => ctx.revert();
-  }, [view]);
 
   // Timer for OTP resend countdown
   useEffect(() => {
@@ -298,7 +305,6 @@ export default function HomePage() {
 
     setIsVerifyingOtp(true);
 
-    // Verify through 2Factor API route if session exists
     if (otpSessionId) {
       try {
         const res = await fetch('/api/otp/verify', {
@@ -324,7 +330,6 @@ export default function HomePage() {
     // Look up salon in cloud Supabase database
     const dbLookup = await findSalonByPhone(cleanPhone, role);
 
-    // Helper: Clear local caches from other salons before loading new workspace
     const clearLocalSalonCache = () => {
       try {
         localStorage.removeItem('stylefleet_bills_db');
@@ -350,83 +355,50 @@ export default function HomePage() {
             role: 'stylist',
             phone: cleanPhone,
             shopId: dbLookup.shopId,
-            staffName: dbLookup.staffName,
+            shopName: dbLookup.shopName || 'StyleFleet Salon',
             staffId: dbLookup.staffId,
-            shopName: dbLookup.shopName,
-            timestamp: Date.now(),
+            stylistName: stylistDisplayName,
+            stylistRole: 'Stylist',
+            loginTime: new Date().toISOString(),
           })
         );
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 600);
-        return;
+        setTimeout(() => router.push('/dashboard'), 500);
       } else {
-        showToast(
-          dbLookup.error || 'This phone number is not registered as an active stylist. Please contact your salon owner.',
-          'error'
-        );
+        showToast(`No stylist profile found for +91 ${cleanPhone}. Please ask your salon owner to add your phone number.`, 'error');
         setIsVerifyingOtp(false);
-        return;
       }
-    }
-
-    // Role is Owner (or auto-detected from phone in database)
-    if (dbLookup.found && dbLookup.role === 'stylist' && dbLookup.shopId) {
-      clearLocalSalonCache();
-      const stylistDisplayName = dbLookup.staffName || 'Stylist';
-      showToast(`Welcome back, ${stylistDisplayName}! Logged in to ${dbLookup.shopName || 'Salon'}.`, 'success');
-      
-      localStorage.setItem('stylefleet_shop_id', dbLookup.shopId);
-      localStorage.setItem(
-        'stylefleet_auth_session',
-        JSON.stringify({
-          isLoggedIn: true,
-          role: 'stylist',
-          phone: cleanPhone,
-          shopId: dbLookup.shopId,
-          staffName: dbLookup.staffName,
-          staffId: dbLookup.staffId,
-          shopName: dbLookup.shopName,
-          timestamp: Date.now(),
-        })
-      );
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 600);
-      return;
-    }
-
-    if (dbLookup.found && dbLookup.role === 'owner' && dbLookup.shopId) {
-      clearLocalSalonCache();
-      showToast(`Welcome back! Logged in to ${dbLookup.shopName || 'your salon'}.`, 'success');
-      localStorage.setItem('stylefleet_shop_id', dbLookup.shopId);
-      localStorage.setItem(
-        'stylefleet_auth_session',
-        JSON.stringify({
-          isLoggedIn: true,
-          role: 'owner',
-          phone: cleanPhone,
-          shopId: dbLookup.shopId,
-          shopName: dbLookup.shopName,
-          timestamp: Date.now(),
-        })
-      );
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 600);
     } else {
-      // New Owner -> Route to Registration Form
-      showToast('New Salon Owner! Complete your salon registration.', 'success');
-      setTimeout(() => {
-        router.push(`/register?phone=${cleanPhone}`);
-      }, 500);
+      // Owner workspace authentication
+      if (dbLookup.found && dbLookup.shopId) {
+        clearLocalSalonCache();
+        const salonName = dbLookup.shopName || 'StyleFleet Salon';
+        showToast(`Welcome back! Successfully logged into ${salonName}.`, 'success');
+
+        localStorage.setItem('stylefleet_shop_id', dbLookup.shopId);
+        localStorage.setItem(
+          'stylefleet_auth_session',
+          JSON.stringify({
+            isLoggedIn: true,
+            role: 'owner',
+            phone: cleanPhone,
+            shopId: dbLookup.shopId,
+            shopName: salonName,
+            loginTime: new Date().toISOString(),
+          })
+        );
+        setTimeout(() => router.push('/dashboard'), 500);
+      } else {
+        showToast(`No salon registered with +91 ${cleanPhone}. Setting up your new salon workspace!`, 'success');
+        setView('register');
+      }
     }
   };
 
+  // If user selected registration
   if (view === 'register') {
     return (
       <OwnerRegistrationView
-        initialPhone={phone}
+        initialPhone={phone.replace(/\D/g, '').slice(-10)}
         onBackToLogin={() => setView('login')}
         onRegistrationComplete={() => router.push('/dashboard')}
       />
@@ -434,1615 +406,746 @@ export default function HomePage() {
   }
 
   return (
-    <div
-      ref={mainContainerRef}
-      className="min-h-screen flex flex-col justify-between selection:bg-[#D4AF37] selection:text-[#07152B] bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,rgba(16,37,76,0.95),transparent_65%),radial-gradient(ellipse_120%_80%_at_100%_0%,rgba(212,175,55,0.12),transparent_65%),radial-gradient(ellipse_120%_80%_at_0%_100%,rgba(212,175,55,0.1),transparent_65%),radial-gradient(ellipse_120%_80%_at_100%_100%,rgba(16,37,76,0.95),transparent_65%),linear-gradient(135deg,#050E1D_0%,#081932_50%,#050E1D_100%)] text-slate-100 relative overflow-x-hidden"
-    >
-      {/* Ambient Drifting Glow Orbs */}
-      <div className="ambient-glow-wrapper">
-        <div className="glow-orb glow-gold" />
-        <div className="glow-orb glow-blue" />
-      </div>
+    <div className="landing-exact" id="top">
 
-      {/* ================= FLOATING LUXURY PILL NAVBAR ================= */}
-      <header className="sticky top-2 sm:top-4 z-50 px-2 sm:px-6 w-full max-w-[1400px] mx-auto transition-all">
-        <div className="floating-pill-nav rounded-full px-3 sm:px-8 py-2 sm:py-3 flex items-center justify-between shadow-2xl gap-2">
-          {/* Brand Logo & Title */}
-          <button onClick={returnHome} className="flex items-center gap-2.5 sm:gap-3 group text-left shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
-              <img
-                src="/assets/stylefleet-logo.png"
-                alt="StyleFleet Logo"
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-                style={{ maxWidth: '40px', maxHeight: '40px' }}
-              />
-            </div>
-            <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
-              StyleFleet
-            </span>
-          </button>
-
-          {/* Center Nav Links (Home view only) */}
-          {view === 'home' && (
-            <nav className="hidden lg:flex items-center gap-1.5 bg-[#07152B]/70 px-4 py-1.5 rounded-full border border-white/[0.06]">
-              <a
-                href="#features"
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
-              >
-                {landingLang === 'en' ? 'Features' : 'அம்சங்கள்'}
-              </a>
-              <a
-                href="#comparison"
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
-              >
-                {landingLang === 'en' ? 'Comparison' : 'ஒப்பீடு'}
-              </a>
-              <a
-                href="#bento"
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
-              >
-                {landingLang === 'en' ? 'Ecosystem' : 'தள மேலோட்டம்'}
-              </a>
-              <a
-                href="#testimonials"
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
-              >
-                {landingLang === 'en' ? 'Reviews' : 'மதிப்புரைகள்'}
-              </a>
-              <a
-                href="#pricing"
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
-              >
-                {landingLang === 'en' ? 'Pricing' : 'விலை விவரம்'}
-              </a>
-            </nav>
-          )}
-
-          {/* Right Action Cluster: Quick Portal Entry */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            {view === 'home' ? (
-              <button
-                onClick={() => openLogin('owner')}
-                className="px-3 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap"
-              >
-                <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#07152B] shrink-0" />
-                <span>{landingLang === 'en' ? 'Get Started' : 'தொடங்கு'}</span>
-                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 hidden xs:inline" />
-              </button>
-            ) : (
-              <button
-                onClick={returnHome}
-                className="text-xs sm:text-sm py-1.5 px-3 sm:px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white flex items-center gap-1.5 transition-all font-semibold whitespace-nowrap"
-              >
-                <span>← Back</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* ================= VIEW 1: HOME / LANDING PAGE ================= */}
+      {/* ================= VIEW 1: EXACT LUXURY LANDING PAGE ================= */}
       {view === 'home' && (
-        <main className="flex-1 relative z-10">
-          
-          {/* ================= SECTION 1: HERO (RealBroks Inspired Full-Width) ================= */}
-          <section className="relative pt-6 pb-14 sm:pt-14 sm:pb-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto text-center overflow-hidden min-h-[calc(100vh-80px)] flex flex-col justify-center items-center">
-            {/* Subtle Hero Radial Grid Background */}
-            <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
-            
-            {/* Main Editorial Headline with Balanced Luxury Gradient */}
-            <h1 className="hero-headline-anim text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.14] sm:leading-[1.1] max-w-4xl mx-auto break-words px-1 mt-3 sm:mt-5">
-              <span className="bg-gradient-to-r from-[#E0C068] via-[#FFF5D0] to-[#E0C068] bg-clip-text text-transparent">
-                Built for Salons, Designed for Growth.
-              </span>
-            </h1>
-
-            {/* Hero Subtitle */}
-            <p className="hero-subtitle-anim mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
-              Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.
-            </p>
-
-            {/* Dual Hero CTA: In one single row across mobile & desktop with real brand logos */}
-            <div className="hero-cta-anim mt-7 sm:mt-9 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
-              {/* Google Play Button */}
-              <a
-                href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
-              >
-                {/* Real Authentic Google Play 4-Color Logo */}
-                <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 512 512">
-                  <path fill="#4285F4" d="M48.2 24.3C44.7 28 42.7 33.7 42.7 41.3v429.4c0 7.6 2 13.3 5.5 17l2.1 1.9L274.4 265.5v-5.2L50.3 22.4l-2.1 1.9z" />
-                  <path fill="#FBBC04" d="M349 340.2l-74.6-74.7v-5.2l74.6-74.7 1.8 1 88.2 50.1c25.2 14.3 25.2 37.8 0 52.2l-88.2 50.1-1.8 1.2z" />
-                  <path fill="#EA4335" d="M350.8 339l-76.4-76.4L50.3 486.7c8.3 8.8 22.1 9.9 37.4 1.2L350.8 339z" />
-                  <path fill="#34A853" d="M350.8 173L87.7 24.1C72.4 15.4 58.6 16.5 50.3 25.3l224.1 224.1 76.4-76.4z" />
-                </svg>
-                <div className="text-left leading-tight shrink min-w-0">
-                  <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
-                    GET IT ON
-                  </span>
-                  <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
-                    Google Play
-                  </span>
-                </div>
+        <>
+          {/* Navigation Bar */}
+          <nav>
+            <div className="wrap">
+              <a className="logo" href="#top">
+                <i />
+                StyleFleet
               </a>
-
-              {/* iOS App Store Button */}
-              <a
-                href="#ios-download"
-                onClick={(e) => {
-                  e.preventDefault();
-                  showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
-                }}
-                className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
-              >
-                {/* Real Authentic Apple Logo */}
-                <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 fill-white group-hover:scale-105 transition-transform" viewBox="0 0 170 170">
-                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-5.77-8.7-10.42-18.79-13.97-30.27-3.55-11.48-5.33-22.42-5.33-32.83 0-14.36 3.55-26.33 10.66-35.91 7.11-9.58 16.14-14.43 27.09-14.56 5.34 0 11.27 1.48 17.79 4.43 6.52 2.96 10.74 4.49 12.67 4.49 1.74 0 6.06-1.57 12.96-4.71 6.9-3.14 12.96-4.58 18.18-4.33 13.94.65 24.96 5.86 33.05 15.64-12.19 7.4-18.17 17.51-17.95 30.34.22 10.02 4.13 18.49 11.75 25.43 7.62 6.94 16.75 10.97 27.42 12.09-2.18 6.53-4.91 13.28-8.2 20.25zM119.22 31.84c0-7.72 2.76-14.89 8.28-21.52 5.53-6.63 12.41-10.66 20.65-12.09.22 1.09.33 2.18.33 3.26 0 7.61-2.85 14.86-8.54 21.74-5.69 6.87-12.71 10.87-21.06 12-0.22-1.09-.33-2.18-.33-3.39z" />
-                </svg>
-                <div className="text-left leading-tight shrink min-w-0">
-                  <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
-                    DOWNLOAD ON THE
-                  </span>
-                  <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
-                    App Store
-                  </span>
-                </div>
+              <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#compare">Comparison</a></li>
+                <li><a href="#languages">Languages</a></li>
+                <li><a href="#reviews">Reviews</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+              </ul>
+              <a className="btn gold" href="#pricing">
+                Get started
               </a>
             </div>
+          </nav>
 
-            {/* Micro Feature Trust Badges */}
-            <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-400 font-semibold px-2">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{landingLang === 'en' ? 'Zero Hardware Lock-in' : 'எந்த சாதனத்திலும் இயங்கும்'}</span>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{landingLang === 'en' ? 'Direct WhatsApp Billing' : 'வாட்ஸ்அப் டிஜிட்டல் பில்கள்'}</span>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{landingLang === 'en' ? 'Instant 60s Setup' : '60 வினாடி உடனடி தொடக்கம்'}</span>
-              </div>
-            </div>
-
-            {/* ================= HERO DEVICE / LIVE INTERACTIVE SHOWCASE ================= */}
-            <div className="hero-device-anim mt-12 sm:mt-16 relative w-full max-w-[1340px] mx-auto">
-              {/* Outer Glow Halo */}
-              <div className="absolute -inset-2 bg-gradient-to-r from-[#D4AF37]/30 via-blue-500/25 to-[#D4AF37]/30 rounded-[36px] blur-3xl opacity-80" />
-
-              {/* Luxury Frame Container */}
-              <div className="relative rounded-[28px] sm:rounded-[32px] bg-[#091730]/95 border border-white/20 shadow-2xl overflow-hidden backdrop-blur-2xl">
-                {/* Frame Header / Browser Bar */}
-                <div className="px-6 py-4 bg-[#07152B]/95 border-b border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                    <span className="ml-3 text-[11px] font-mono text-slate-400 hidden sm:inline">
-                      https://app.stylefleet.in/billing/express
-                    </span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] sm:text-xs font-bold text-emerald-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Live Salon Floor • 4 Chairs Active</span>
-                  </div>
-                </div>
-
-                {/* Hero Showcase Interior: Split Billing Simulator */}
-                <div className="p-4 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 text-left">
-                  {/* Left Column: Interactive Service Selector */}
-                  <div className="lg:col-span-7 space-y-5 sm:space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#D4AF37]">
-                          Interactive Front-Desk Demo
-                        </span>
-                        <h3 className="text-xl sm:text-2xl font-extrabold text-white">Express Service Matrix</h3>
-                      </div>
-                      <span className="text-xs text-slate-400 font-medium hidden sm:inline">Click to select services:</span>
-                    </div>
-
-                    {/* Services Chips */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                      {demoServicesList.map((service) => {
-                        const isSelected = demoSelectedServices.includes(service.id);
-                        return (
-                          <button
-                            key={service.id}
-                            type="button"
-                            onClick={() => toggleDemoService(service.id)}
-                            className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-md shadow-[#D4AF37]/10'
-                                : 'bg-[#0B1E3B]/70 border-white/10 hover:border-white/20'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 sm:gap-3">
-                              <div
-                                className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                  isSelected ? 'bg-[#D4AF37] text-[#07152B]' : 'bg-white/10 text-slate-400'
-                                }`}
-                              >
-                                {isSelected ? '✓' : '+'}
-                              </div>
-                              <div>
-                                <strong className="text-xs sm:text-sm font-bold text-white block leading-tight">
-                                  {service.name}
-                                </strong>
-                                <span className="text-[10px] text-slate-400">{service.time} session</span>
-                              </div>
-                            </div>
-                            <span className="text-xs sm:text-sm font-extrabold text-[#D4AF37]">₹{service.price}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Stylist & Payment Mode Selector Preview */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-1 sm:pt-2">
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                          Assigned Stylist
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-xs font-bold flex items-center justify-center">
-                            A
-                          </div>
-                          <span className="text-xs font-bold text-white">Anand (Master)</span>
-                        </div>
-                      </div>
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                          Payment Mode
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
-                            UPI Split
-                          </span>
-                          <span className="text-xs font-bold text-white">Instant QR Pay</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Live Luxury Invoice Preview */}
-                  <div className="lg:col-span-5 bg-[#0B1E3B]/90 border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col justify-between shadow-xl">
-                    <div>
-                      <div className="flex items-center justify-between pb-3 sm:pb-3.5 border-b border-white/10">
-                        <div className="flex items-center gap-2 sm:gap-2.5">
-                          <img
-                            src="/assets/stylefleet-logo.png"
-                            alt="StyleFleet"
-                            width={24}
-                            height={24}
-                            className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-                          />
-                          <span className="text-xs sm:text-sm font-extrabold text-white">Luxe Salon • Digital Bill</span>
-                        </div>
-                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-bold">
-                          #SF-8924
-                        </span>
-                      </div>
-
-                      {/* Line Items */}
-                      <div className="py-3 sm:py-4 space-y-2 sm:space-y-2.5">
-                        {demoSelectedServices.map((id) => {
-                          const item = demoServicesList.find((s) => s.id === id);
-                          if (!item) return null;
-                          return (
-                            <div key={id} className="flex items-center justify-between text-xs sm:text-sm">
-                              <span className="text-slate-300">{item.name}</span>
-                              <span className="text-white font-bold">₹{item.price}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Calculations */}
-                      <div className="pt-3 sm:pt-3.5 border-t border-white/10 space-y-1.5 text-xs">
-                        <div className="flex justify-between text-slate-400 text-[11px] sm:text-xs">
-                          <span>Subtotal ({demoSelectedServices.length} items)</span>
-                          <span>₹{demoTotal}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-400 text-[11px] sm:text-xs">
-                          <span>GST / Taxes (Included)</span>
-                          <span>₹0.00</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm sm:text-base font-extrabold text-white pt-2.5 border-t border-white/10">
-                          <span>Grand Total</span>
-                          <span className="text-xl sm:text-2xl text-[#D4AF37]">₹{demoTotal}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="pt-5 sm:pt-6 space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => openLogin('owner')}
-                        className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20BE5B] text-black text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
-                      >
-                        <MessageCircle className="w-4 h-4 fill-black" />
-                        <span>Share on WhatsApp & Print</span>
-                      </button>
-                      <p className="text-[10px] text-center text-slate-400">
-                        Average checkout completed in under 15 seconds
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Live Badge 1: Daily Revenue */}
-              <div className="hidden sm:block absolute -left-6 bottom-8 min-w-[240px] bg-[#0D2244]/95 border border-[#D4AF37]/50 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-floating-dashboard text-left">
-                <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 mb-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Today Collection
-                  </span>
-                  <span className="text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
-                    +22.8%
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-white">
-                  <AnimatedCounter value={38450} prefix="₹ " />
-                </div>
-                <div className="w-full bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-[#D4AF37] h-full rounded-full" style={{ width: '74%' }} />
-                </div>
-                <span className="text-[10px] text-[#D4AF37] font-semibold mt-1 block">
-                  18 Bills • Zero Outstanding Dues
-                </span>
-              </div>
-
-              {/* Floating Live Badge 2: Chair Schedule */}
-              <div className="hidden sm:flex absolute -right-6 top-12 items-center gap-3 bg-[#0D2244]/95 border border-white/20 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-float-reverse text-left">
-                <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#E0C068] font-black text-sm">
-                  02
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Floor Schedule</span>
-                  <strong className="text-xs sm:text-sm font-bold text-white block">Chair 02: Hair Spa</strong>
-                  <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                    In Session • 22 mins left
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= SECTION 2: STATS TICKER ================= */}
-          <section id="stats" className="border-y border-white/10 bg-[#0B1E3B]/80 py-10 px-4 sm:px-8">
-            <div className="w-full max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
-                  <AnimatedCounter value={15} suffix=" Seconds" />
-                </span>
-                <span className="text-xs sm:text-sm text-slate-300 block font-medium">
-                  {landingLang === 'en' ? 'Express Multi-Service Checkout' : 'மின்னல் வேக பில்லிங் வேகம்'}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
-                  <AnimatedCounter value={99} suffix=".2%" />
-                </span>
-                <span className="text-xs sm:text-sm text-slate-300 block font-medium">
-                  {landingLang === 'en' ? 'Appointment Retention via WhatsApp' : 'வாடிக்கையாளர் வருகை விகிதம்'}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
-                  <AnimatedCounter value={360} suffix="° Tracking" />
-                </span>
-                <span className="text-xs sm:text-sm text-slate-300 block font-medium">
-                  {landingLang === 'en' ? 'Real-Time Financial Audit' : 'முழுமையான வருமானக் கணக்குகள்'}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
-                  ₹0
-                </span>
-                <span className="text-xs sm:text-sm text-slate-300 block font-medium">
-                  {landingLang === 'en' ? 'Hardware Lock-in (Any Device)' : 'கூடுதல் மிஷின் செலவுகள் இல்லை'}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= SECTION 3: COMPARISON SHOWCASE (Old Way vs StyleFleet Way) ================= */}
-          <section id="comparison" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                <span>{landingLang === 'en' ? 'The Industry Shift' : 'புரட்சிகர மாற்றம்'}</span>
-              </div>
-              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                {landingLang === 'en'
-                  ? 'The Old Way vs The StyleFleet Way'
-                  : 'பழைய முறைகள் vs StyleFleet முறை'}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300">
-                {landingLang === 'en'
-                  ? 'Why premier salons are switching from paper books and clunky legacy software to StyleFleet.'
-                  : 'பாரம்பரிய லெட்ஜர் குறிப்புகளிலிருந்து நவீன சலூன்கள் ஏன் StyleFleet-க்கு மாறுகின்றன என்பதைக் காணுங்கள்.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
-              {/* Left Card: The Old Way */}
-              <div className="rounded-3xl p-8 bg-[#091730] border border-rose-500/25 relative overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                      {landingLang === 'en' ? 'Legacy Practice' : 'பழைய முறை'}
-                    </span>
-                    <h3 className="text-2xl font-extrabold text-white">
-                      {landingLang === 'en' ? 'The Traditional Way' : 'லெட்ஜர் & பழைய சாஃப்ட்வேர்'}
-                    </h3>
-                  </div>
-                  <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                    <X className="w-5 h-5 stroke-[2.5]" />
-                  </div>
-                </div>
-
-                <ul className="space-y-4 text-sm text-slate-300">
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs shrink-0 mt-0.5">✕</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Chaotic Paper Registers' : 'காகித லெட்ஜர் குழப்பங்கள்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Lost receipts, accidental calculation mistakes, and messy handwriting at the counter.'
-                        : 'பில் புத்தகங்கள் தொலைந்து போவது, கூட்டல் கணக்கு தவறுகள் மற்றும் கவுண்ட்டர் தாமதம்.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs shrink-0 mt-0.5">✕</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Empty Styling Chairs & Double-Bookings' : 'சேர் முரண்பாடுகள் & வீண் காத்திருப்பு'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'No visibility over which stylist is available, causing walk-in clients to walk away.'
-                        : 'எந்த ஸ்டைலிஸ்ட் ஃப்ரீயாக இருக்கிறார் என்று தெரியாமல் வாடிக்கையாளர்கள் கிளம்பி விடுவது.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs shrink-0 mt-0.5">✕</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Stylist Commission Disputes' : 'கமிஷன் கணக்கு வாக்குவாதங்கள்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Nightly arguments over tips, service share, and deductions without an audit trail.'
-                        : 'தினசரி இரவு ஸ்டைலிஸ்ட்டுகளுடன் கமிஷன் மற்றும் டிப்ஸ் குறித்து எழும் சந்தேகங்கள்.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs shrink-0 mt-0.5">✕</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Expensive Clunky POS Machines' : 'விலையுயர்ந்த POS மிஷின்கள்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Forced hardware purchases, monthly hardware rentals, and device breakdowns.'
-                        : 'ஆயிரக்கணக்கான ரூபாய் கொடுத்து வாங்க வேண்டிய தேவையற்ற பெரிய மிஷின்கள்.'}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Right Card: The StyleFleet Way */}
-              <div className="rounded-3xl p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 bg-[#D4AF37] text-[#07152B] font-extrabold text-[10px] uppercase tracking-wider py-1 px-4 rounded-bl-xl shadow-md">
-                  {landingLang === 'en' ? 'Recommended' : 'புதிய தரநிலை'}
-                </div>
-
-                <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">
-                      {landingLang === 'en' ? 'Next-Gen Platform' : 'நவீன தொழில்நுட்பம்'}
-                    </span>
-                    <h3 className="text-2xl font-extrabold text-white">
-                      {landingLang === 'en' ? 'The StyleFleet Way' : 'StyleFleet சொகுசு வழி'}
-                    </h3>
-                  </div>
-                  <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
-                    <Check className="w-5 h-5 stroke-[2.5]" />
-                  </div>
-                </div>
-
-                <ul className="space-y-4 text-sm text-slate-300">
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs shrink-0 mt-0.5 font-bold">✓</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? '15-Second Express Digital Checkout' : '15 வினாடி மின்னல் வேக பில்லிங்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Rapid multi-service selection, split UPI/Card/Cash, and immediate WhatsApp invoices.'
-                        : 'பல சேவைகளை நொடிகளில் தேர்ந்தெடுத்து, UPI அல்லது ரொக்கமாக பில் போட்டு வாட்ஸ்அப்பில் அனுப்பலாம்.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs shrink-0 mt-0.5 font-bold">✓</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Live Floor Chair Matrix' : 'நேரடி சேர் கண்காணிப்பு'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Instant visibility of occupied, cleaning, and ready styling chairs to maximize turnover.'
-                        : 'ஒவ்வொரு சேரிலும் யார் இருக்கிறார்கள், எப்போது முடியும் என்பதை துல்லியமாகத் தெரிந்துகொள்ளலாம்.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs shrink-0 mt-0.5 font-bold">✓</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Automated Stylist Commission Audits' : 'வெளிப்படையான கமிஷன் கணக்குகள்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Every staff member views their own daily tips and earnings live with granular owner permissions.'
-                        : 'ஸ்டைலிஸ்ட்டுகள் தங்கள் உழைப்பின் பலனையும் கமிஷனையும் தங்கள் மொபைலிலேயே உடனடியாகப் பார்க்கலாம்.'}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs shrink-0 mt-0.5 font-bold">✓</span>
-                    <span>
-                      <strong className="text-white block font-bold">
-                        {landingLang === 'en' ? 'Cloud Native on Any Mobile or Tab' : 'எந்த மொபைலிலும் இயங்கும் க்ளவுட் தளம்'}
-                      </strong>
-                      {landingLang === 'en'
-                        ? 'Open in your mobile browser or iPad. Zero installation, zero hardware cost, instant OTP login.'
-                        : 'விலையுயர்ந்த மிஷின் தேவையில்லை. உங்கள் மொபைல் அல்லது டேப்லெட்டிலேயே 100% இயங்கும்.'}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= SECTION 4: BENTO GRID ECOSYSTEM ================= */}
-          <section id="bento" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto scroll-mt-20">
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                <span>{landingLang === 'en' ? 'Integrated Salon Architecture' : 'ஒருங்கிணைந்த சலூன் கட்டமைப்பு'}</span>
-              </div>
-              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                {landingLang === 'en'
-                  ? 'From First Haircut to Final Store Profit.'
-                  : 'முதல் ஹேர்கட் முதல் இறுதி லாபம் வரை.'}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300">
-                {landingLang === 'en'
-                  ? 'Explore the modular building blocks that make StyleFleet the gold standard for premier salons.'
-                  : 'சலூன் நிர்வாகத்தின் ஒவ்வொரு அம்சத்தையும் அதிவேகமாகவும் அழகாகவும் மாற்றும் கருவிகள்.'}
-              </p>
-            </div>
-
-            {/* Bento Grid Layout (5 Tiles) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-              
-              {/* TILE 1 (Large 2-col): Express Checkout */}
-              <div className="md:col-span-2 bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
-                      01 • Express Front Desk
-                    </span>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                      {landingLang === 'en' ? 'Express Multi-Service Checkout' : 'மின்னல் வேக பில்லிங் முறை'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                      {landingLang === 'en'
-                        ? 'Combine haircut, coloring, spa rituals, and beard sculpt in one consolidated receipt. Assign individual stylists to each service and process UPI or cash splits effortlessly.'
-                        : 'ஒரே பில்லில் பல சேவைகளை நொடிகளில் சேர்த்து, தனித்தனி ஸ்டைலிஸ்ட்டுகளை நியமித்து, பணத்தை விரைவாக வசூலிக்கலாம்.'}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shrink-0">
-                    <Zap className="w-6 h-6" />
-                  </div>
-                </div>
-
-                {/* Micro Visual Card */}
-                <div className="mt-8 p-5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-3.5">
-                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-300">
-                    <span>{landingLang === 'en' ? 'Live Front Desk Queue' : 'லைவ் கவுண்ட்டர்'}</span>
-                    <span className="text-[#D4AF37]">{landingLang === 'en' ? 'Avg Checkout: 14.8s' : 'சராசரி நேரம்: 14.8 விநாடி'}</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-[10px] text-slate-400 block font-medium">Haircut</span>
-                      <strong className="text-white block font-bold text-sm">₹800</strong>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-[10px] text-slate-400 block font-medium">Beard Trim</span>
-                      <strong className="text-white block font-bold text-sm">₹450</strong>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-[10px] text-slate-400 block font-medium">Keratin Spa</span>
-                      <strong className="text-white block font-bold text-sm">₹1,800</strong>
-                    </div>
-                    <div className="p-3 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40">
-                      <span className="text-[10px] text-[#E0C068] block font-bold">Total</span>
-                      <strong className="text-white block font-extrabold text-sm">₹3,050</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* TILE 2: Live Floor Chair Matrix */}
-              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
-                      02 • Floor Queue
-                    </span>
-                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                    {landingLang === 'en' ? 'Live Chair Matrix' : 'லைவ் சேர் கண்காணிப்பு'}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {landingLang === 'en'
-                      ? 'Eliminate client wait-time chaos. Track chair occupancy, turnover cycles, and stylist allocations in real-time.'
-                      : 'எந்த சேர் பிஸியாக உள்ளது, எது தயாராக உள்ளது என்பதை உடனுக்குடன் தெரிந்துகொண்டு வாடிக்கையாளர்களை வரவேற்கலாம்.'}
-                  </p>
-                </div>
-
-                <div className="mt-6 space-y-2.5">
-                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="font-bold text-white">Chair 01</span>
-                    </div>
-                    <span className="text-emerald-400 text-xs font-semibold">Active Fade</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                      <span className="font-bold text-white">Chair 02</span>
-                    </div>
-                    <span className="text-blue-300 text-xs font-semibold">Walk-in Ready</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <span className="font-bold text-white">Chair 03</span>
-                    </div>
-                    <span className="text-amber-300 text-xs font-semibold">Keratin Spa (30m)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* TILE 3: Automated WhatsApp Invoicing */}
-              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
-                      03 • Customer Delight
-                    </span>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                      <MessageCircle className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                    {landingLang === 'en' ? 'Automated WhatsApp Bills' : 'வாட்ஸ்அப் டிஜிட்டல் பில்'}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {landingLang === 'en'
-                      ? 'Customers receive itemized luxury digital receipts right on their WhatsApp with salon branding and UPI QR code.'
-                      : 'வாடிக்கையாளர்களின் வாட்ஸ்அப்பிற்கே அழகிய டிஜிட்டல் பில் மற்றும் பேமெண்ட் QR தானாகச் செல்லும்.'}
-                  </p>
-                </div>
-
-                <div className="mt-6 p-4 rounded-xl bg-[#07152B] border border-emerald-500/30 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>WhatsApp Message Preview</span>
-                  </div>
-                  <p className="text-slate-300 text-[11px] sm:text-xs leading-relaxed italic bg-black/20 p-2.5 rounded-lg">
-                    “Dear Priya, thank you for visiting Luxe Salon! Your bill of ₹1,800 is paid. View your itemized receipt here...”
-                  </p>
-                </div>
-              </div>
-
-              {/* TILE 4: Stylist Workspace & Tips */}
-              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
-                      04 • Staff Harmony
-                    </span>
-                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <Scissors className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                    {landingLang === 'en' ? 'Stylist Commission Hub' : 'ஸ்டைலிஸ்ட் கமிஷன் தளம்'}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {landingLang === 'en'
-                      ? 'Empower stylists with dedicated logins. They see their assigned queue, tips earned, and commission totals transparently.'
-                      : 'ஸ்டைலிஸ்ட்டுகளுக்கான தனி லாகின். அவர்கள் செய்த பில்கள், அன்றைய டிப்ஸ் மற்றும் கமிஷன் அனைத்தும் வெளிப்படை.'}
-                  </p>
-                </div>
-
-                <div className="mt-6 p-4 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-400">Stylist Anand</span>
-                    <span className="text-emerald-400 font-bold">₹1,240 Commission</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-400">Stylist Deepa</span>
-                    <span className="text-emerald-400 font-bold">₹1,680 Commission</span>
-                  </div>
-                  <div className="pt-2 border-t border-white/10 flex justify-between text-xs text-slate-400 font-semibold">
-                    <span>Auto-Audited Daily</span>
-                    <span className="text-white font-bold">Zero Disputes</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* TILE 5: 360° Financial Audits */}
-              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
-                      05 • Profit Intelligence
-                    </span>
-                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <TrendingUp className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                    {landingLang === 'en' ? '360° Financial Audits' : 'முழு லாபக் கணக்குகள்'}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {landingLang === 'en'
-                      ? 'Live tracking of salon revenue, everyday tea/utility expenses, product costs, and true net profit in one tap.'
-                      : 'தினசரி வசூல், டீ மற்றும் இதர செலவுகள், பொருட்கள் கொள்முதல் மற்றும் நிகர லாபத்தை ஒரு கிளிக்கில் தெரிந்து கொள்ளலாம்.'}
-                  </p>
-                </div>
-
-                <div className="mt-6 p-4 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-400">Daily Revenue</span>
-                    <span className="text-white font-bold">₹38,450</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-400">Recorded Expenses</span>
-                    <span className="text-rose-400 font-bold">- ₹4,200</span>
-                  </div>
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs sm:text-sm font-bold">
-                    <span className="text-[#D4AF37]">Net Store Profit</span>
-                    <span className="text-emerald-400 font-extrabold">₹34,250</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </section>
-
-          {/* ================= SECTION 5: MULTI-LANGUAGE SECTION ================= */}
-          <section id="languages" className="py-16 sm:py-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
-            <div className="rounded-3xl p-8 sm:p-14 bg-gradient-to-r from-[#0B1E3B] via-[#091730] to-[#0B1E3B] border border-white/10 shadow-2xl">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-                <div className="lg:col-span-7 space-y-4 text-left">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                    <Globe className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    <span>{landingLang === 'en' ? 'Regional Excellence' : 'பன்மொழி ஆதரவு'}</span>
-                  </div>
-                  <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                    {landingLang === 'en'
-                      ? 'Speaks your language. Delights your clients.'
-                      : 'உங்கள் மொழியில் இயங்கும். வாடிக்கையாளர்களுக்கு எளிதாகும்.'}
-                  </h2>
-                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
-                    {landingLang === 'en'
-                      ? 'StyleFleet bridges language barriers effortlessly. Generate invoices and WhatsApp alerts in English, Tamil (தமிழ்), or Hindi (हिन्दी) so every client and staff feels right at home.'
-                      : 'ஆங்கிலம், தமிழ் மற்றும் ஹிந்தி ஆகிய மூன்று மொழிகளிலும் பில்களையும் வாட்ஸ்அப் செய்திகளையும் அனுப்பி உங்கள் வாடிக்கையாளர்களிடம் நற்பெயரைப் பெறுங்கள்.'}
-                  </p>
-                  <div className="pt-3 flex flex-wrap gap-2.5 text-xs sm:text-sm font-bold">
-                    <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white">
-                      English (Global)
-                    </span>
-                    <span className="px-4 py-2 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#E0C068]">
-                      தமிழ் (Tamil Nadu)
-                    </span>
-                    <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white">
-                      हिन्दी (North India)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-5 bg-[#07152B] p-6 rounded-3xl border border-white/10 text-left space-y-3.5 shadow-2xl">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <span className="text-xs sm:text-sm font-bold text-white">பில் முன்னோட்டம் (Tamil Bill)</span>
-                    <span className="text-[10px] sm:text-xs text-emerald-400 font-bold bg-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                      உறுதி செய்யப்பட்டது
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    <div className="flex justify-between text-slate-300">
-                      <span>முடி திருத்துதல் (Haircut)</span>
-                      <strong className="text-white">₹800</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>தாடி ஷேப்பிங் (Beard Sculpt)</span>
-                      <strong className="text-white">₹450</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-300">
-                      <span>கேரட்டின் ஸ்பா (Keratin Spa)</span>
-                      <strong className="text-white">₹1,800</strong>
-                    </div>
-                    <div className="pt-2.5 border-t border-white/10 flex justify-between font-extrabold text-sm sm:text-base text-white">
-                      <span className="text-[#D4AF37]">மொத்தத் தொகை:</span>
-                      <span className="text-[#D4AF37]">₹3,050</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= SECTION 6: VERIFIED TESTIMONIALS ================= */}
-          <section id="testimonials" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                <span>{landingLang === 'en' ? 'Salon Owner Feedback' : 'உரிமையாளர்களின் கருத்துகள்'}</span>
-              </div>
-              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                {landingLang === 'en'
-                  ? 'Loved by India’s Master Stylists'
-                  : 'சலூன் உரிமையாளர்கள் கொண்டாடும் தளம்'}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300">
-                {landingLang === 'en'
-                  ? 'Read how salon owners transformed their daily operations and unlocked higher client retention.'
-                  : 'StyleFleet மூலம் தங்கள் சலூன் வருவாயையும் வேகத்தையும் உயர்த்திய முன்னணி உரிமையாளர்களின் அனுபவம்.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 text-left">
-              {/* Review 1 */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-1 text-[#D4AF37]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                    {landingLang === 'en'
-                      ? '“StyleFleet reduced our front desk rush by 80%. Our clients love receiving their digital bills directly on WhatsApp, and tracking chair turnover is effortless.”'
-                      : '“எங்கள் சலூனின் கூட்ட நெரிசல் பில்லிங் நேரம் 80% குறைந்துள்ளது. வாட்ஸ்அப் பில் முறையை வாடிக்கையாளர்கள் மிகவும் விரும்புகிறார்கள்.”'}
-                  </p>
-                </div>
-                <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
-                    KR
-                  </div>
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold text-white block">Kavitha R.</strong>
-                    <span className="text-[11px] text-slate-400 block">The Velvet Mirror, Chennai</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Review 2 */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-[#D4AF37]/40 shadow-2xl flex flex-col justify-between relative">
-                <div className="absolute top-4 right-4 text-[10px] bg-[#D4AF37]/15 text-[#E0C068] font-bold px-2.5 py-1 rounded-full border border-[#D4AF37]/30">
-                  Verified Owner
-                </div>
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-1 text-[#D4AF37]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                    {landingLang === 'en'
-                      ? '“Stylists can track their own daily commissions and tips clearly. Zero disputes and total peace of mind every single night when closing registers.”'
-                      : '“ஸ்டைலிஸ்ட்டுகள் தங்கள் கமிஷனை தெளிவாகப் பார்க்க முடிகிறது. தினமும் இரவில் கமிஷன் குறித்த எந்த வாக்குவாதமும் இல்லாமல் நிம்மதியாக உள்ளது.”'}
-                  </p>
-                </div>
-                <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
-                    RK
-                  </div>
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold text-white block">Rajesh K.</strong>
-                    <span className="text-[11px] text-slate-400 block">Blade & Beard Studio, Coimbatore</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Review 3 */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-1 text-[#D4AF37]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
-                    {landingLang === 'en'
-                      ? '“Best salon software hands down. Setup took less than 2 minutes using mobile OTP. No expensive POS machines needed, runs straight on our counter tablet.”'
-                      : '“சிறந்த சலூன் மென்பொருள்! மொபைல் எண் மூலம் 2 நிமிடத்தில் தொடங்கியது. பெரிய மிஷின் எதுவும் தேவையில்லாமல் டேப்லெட்டிலேயே இயங்குகிறது.”'}
-                  </p>
-                </div>
-                <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
-                    AM
-                  </div>
-                  <div>
-                    <strong className="text-xs sm:text-sm font-bold text-white block">Ananya M.</strong>
-                    <span className="text-[11px] text-slate-400 block">Glamour Lounge, Bengaluru</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ================= SECTION 7: TRANSPARENT SUBSCRIPTION PRICING ================= */}
-          <section id="pricing" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto scroll-mt-20">
-            <div className="text-center max-w-3xl mx-auto mb-14 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                <span>{landingLang === 'en' ? 'Official Salon Subscription' : 'சலூன் சந்தா திட்டங்கள்'}</span>
-              </div>
-              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                {landingLang === 'en' ? 'Transparent Subscription Plans' : 'தெளிவான கட்டண விவரங்கள்'}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300">
-                {landingLang === 'en'
-                  ? 'All plans include unlimited digital bills, appointments, WhatsApp sharing, chair turnover, and multi-stylist permissions.'
-                  : 'அனைத்து திட்டங்களிலும் அன்லிமிடெட் பில்லிங், வாட்ஸ்அப் பகிர்வு, சேர் மேலாண்மை மற்றும் ஸ்டைலிஸ்ட் கமிஷன் அணுகல் உண்டு.'}
-              </p>
-
-              {/* Tax Transparency Banner & Example Math */}
-              <div className="mt-4 p-4 rounded-2xl bg-[#07152B]/90 border border-white/10 max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shrink-0">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <strong className="text-white block font-bold">100% Tax Compliant (18% GST Applicable)</strong>
-                    <span className="text-slate-400 text-[11px] block mt-0.5">
-                      For ex: Plan ₹2,999.00 + CGST (9%) ₹269.91 + SGST (9%) ₹269.91 = <strong className="text-[#D4AF37]">₹3,538.82 Total</strong>
-                    </span>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 shrink-0">
-                  Official GST Invoice
-                </span>
-              </div>
-            </div>
-
-            {/* Mobile Scroll Indicator Pill */}
-            <div className="lg:hidden flex items-center justify-center gap-1.5 mb-4 text-[11px] text-[#D4AF37] font-bold">
-              <span>← Swipe side-by-side to compare all plans →</span>
-            </div>
-
-            {/* Official Subscription Cards: Side-by-Side Scrollable Area */}
-            <div className="flex overflow-x-auto pb-6 pt-1 gap-5 sm:gap-6 lg:grid lg:grid-cols-3 lg:gap-8 text-left max-w-7xl mx-auto items-stretch snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D4AF37]/30 scrollbar-track-transparent">
-              
-              {/* TIER 1: 3 Months Plan */}
-              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-2xl font-extrabold text-white">3 Months</h3>
-                      <span className="text-xs text-slate-400 block mt-0.5">Quarterly Salon Foundation</span>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold shrink-0">
-                      Starter
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">
-                        <AnimatedCounter value={2999} prefix="₹" duration={1200} />
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
-                    </div>
-                    <span className="text-[11px] text-[#D4AF37] font-semibold block">
-                      Equivalent to ₹999 / month
-                    </span>
-                  </div>
-
-                  {/* GST Breakdown Box */}
-                  <div className="p-3.5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-1.5 text-xs">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                      Tax & Total Breakdown:
-                    </span>
-                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
-                      <span>Base Plan Price:</span>
-                      <strong className="text-white">₹2,999.00</strong>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>CGST (9%):</span>
-                      <span>₹269.91</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>SGST (9%):</span>
-                      <span>₹269.91</span>
-                    </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
-                      <span className="text-white">Total Amount:</span>
-                      <strong className="text-base font-extrabold text-white">₹3,538.82</strong>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2.5 pt-2 text-xs text-slate-300">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>3 Months Unlimited Digital WhatsApp Billing</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Multi-Stylist Workspace Access</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Live Chair Floor Queue & Matrix</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Daily Expense & Profit Auditing</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Zero Hardware Lock-in (Any Device)</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs sm:text-sm font-bold border border-white/15 transition-all cursor-pointer"
-                >
-                  Get Started • ₹3,538.82 Total
-                </button>
-              </div>
-
-              {/* TIER 2: 6 Months Plan */}
-              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-2xl font-extrabold text-white">6 Months</h3>
-                      <span className="text-xs text-slate-400 block mt-0.5">Half-Year Salon Growth</span>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] text-blue-300 font-bold shrink-0">
-                      Special Offer
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {/* Strike-through Base Price & Tag */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹5,999</span>
-                    </div>
-
-                    {/* Offer Price & GST Tag */}
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">
-                        <AnimatedCounter value={5499} prefix="₹" duration={1200} />
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
-                    </div>
-
-                    <span className="text-[11px] text-emerald-400 font-semibold block">
-                      Offer Price • Save ₹500 instantly (~₹916 / mo)
-                    </span>
-                  </div>
-
-                  {/* GST Breakdown Box */}
-                  <div className="p-3.5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-1.5 text-xs">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                      Tax & Total Breakdown:
-                    </span>
-                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
-                      <span>Offer Plan Price:</span>
-                      <strong className="text-white">₹5,499.00</strong>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>CGST (9%):</span>
-                      <span>₹494.91</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>SGST (9%):</span>
-                      <span>₹494.91</span>
-                    </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
-                      <span className="text-white">Total Amount:</span>
-                      <strong className="text-base font-extrabold text-white">₹6,488.82</strong>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2.5 pt-2 text-xs text-slate-300">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>All 3 Months Features Included</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>6 Months Continuous Cloud Sync</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>Stylist Commission & Tip Tracking</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>Automated Appointment Attendance Reminders</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>Priority WhatsApp Support</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
-                >
-                  Claim 6 Months • ₹6,488.82 Total
-                </button>
-              </div>
-
-              {/* TIER 3: 12 Months Plan (Most Popular with Gold Gradient & Halo) */}
-              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-2xl font-extrabold text-white">12 Months</h3>
-                      <span className="text-xs text-[#E0C068] block mt-0.5 font-bold">Annual Complete Salon OS</span>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[11px] text-[#E0C068] font-black shrink-0">
-                      Best Value
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {/* Strike-through Base Price & Tag */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹11,999</span>
-                    </div>
-
-                    {/* Offer Price & GST Tag */}
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] tracking-tight">
-                        <AnimatedCounter value={9999} prefix="₹" duration={1200} />
-                      </span>
-                      <span className="text-xs font-semibold text-slate-300 shrink-0 whitespace-nowrap">(Excl. GST)</span>
-                    </div>
-
-                    <span className="text-[11px] text-emerald-400 font-semibold block">
-                      Offer Price • Best Value (~₹833 / month)
-                    </span>
-                  </div>
-
-                  {/* GST Breakdown Box */}
-                  <div className="p-3.5 rounded-2xl bg-[#07152B] border border-[#D4AF37]/30 space-y-1.5 text-xs">
-                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] block tracking-wider">
-                      Tax & Total Breakdown:
-                    </span>
-                    <div className="flex justify-between items-center text-slate-300 text-[11px] gap-2">
-                      <span>Offer Plan Price:</span>
-                      <strong className="text-white">₹9,999.00</strong>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>CGST (9%):</span>
-                      <span>₹899.91</span>
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400 text-[11px] gap-2">
-                      <span>SGST (9%):</span>
-                      <span>₹899.91</span>
-                    </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold gap-2">
-                      <span className="text-[#D4AF37]">Total Amount:</span>
-                      <strong className="text-base font-extrabold text-[#D4AF37]">₹11,798.82</strong>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>All 6 Months Features Included</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Full 365 Days Uninterrupted Cloud Access</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>360° Financial Audit & Real-Time Net Profit</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Dedicated VIP Onboarding & Staff Training</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>Custom WhatsApp Sender ID & Receipt Logo</span>
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                      <span>24/7 Dedicated Priority Relationship Manager</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-xs sm:text-sm font-black shadow-xl shadow-[#D4AF37]/30 transition-all cursor-pointer"
-                >
-                  Start Annual OS • ₹11,798.82 Total
-                </button>
-              </div>
-
-            </div>
-          </section>
-
-          {/* ================= SECTION 8: BOTTOM CTA BANNER ================= */}
-          <section className="py-20 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
-            <div className="relative rounded-3xl p-8 sm:p-14 text-center overflow-hidden bg-gradient-to-r from-[#0B1E3B] via-[#0D2244] to-[#0B1E3B] border border-[#D4AF37]/50 shadow-2xl">
-              {/* Gold Halo background flare */}
-              <div className="absolute -inset-10 bg-radial-gradient from-[#D4AF37]/15 to-transparent blur-3xl pointer-events-none" />
-
-              <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5 relative z-10">
-                <span className="text-xs font-extrabold text-[#E0C068] uppercase tracking-[0.25em] block">
-                  Start Your Salon Transformation
-                </span>
-                <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                  Make every salon day effortless.
-                </h2>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal max-w-2xl mx-auto">
-                  Say goodbye to chaotic paper registers and messy calculations. Experience 15-second express billing, live styling chair queue, and automated WhatsApp invoices on any mobile or desktop.
+          {/* Hero Section */}
+          <header className="hero">
+            <div className="wrap">
+              <div>
+                <h1 className="in">
+                  Built for salons, designed for <em>growth.</em>
+                </h1>
+                <p className="lead in">
+                  Bill multiple services in 15 seconds, see every styling chair live, send invoices on WhatsApp, and know your real profit at closing time. One calm workspace, on any phone or tablet.
                 </p>
-
-                {/* Real Google Play and Download on the App Store buttons in one single row */}
-                <div className="pt-3 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
-                  {/* Google Play Button */}
+                <div className="cta in">
                   <a
+                    className="btn gold"
                     href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
                   >
-                    {/* Real Authentic Google Play 4-Color Logo */}
-                    <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 512 512">
-                      <path fill="#4285F4" d="M48.2 24.3C44.7 28 42.7 33.7 42.7 41.3v429.4c0 7.6 2 13.3 5.5 17l2.1 1.9L274.4 265.5v-5.2L50.3 22.4l-2.1 1.9z" />
-                      <path fill="#FBBC04" d="M349 340.2l-74.6-74.7v-5.2l74.6-74.7 1.8 1 88.2 50.1c25.2 14.3 25.2 37.8 0 52.2l-88.2 50.1-1.8 1.2z" />
-                      <path fill="#EA4335" d="M350.8 339l-76.4-76.4L50.3 486.7c8.3 8.8 22.1 9.9 37.4 1.2L350.8 339z" />
-                      <path fill="#34A853" d="M350.8 173L87.7 24.1C72.4 15.4 58.6 16.5 50.3 25.3l224.1 224.1 76.4-76.4z" />
-                    </svg>
-                    <div className="text-left leading-tight shrink min-w-0">
-                      <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
-                        GET IT ON
-                      </span>
-                      <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
-                        Google Play
-                      </span>
-                    </div>
+                    Get it on Google Play
                   </a>
-
-                  {/* iOS App Store Button */}
                   <a
+                    className="btn ghost"
                     href="#ios-download"
                     onClick={(e) => {
                       e.preventDefault();
                       showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
                     }}
-                    className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
                   >
-                    {/* Real Authentic Apple Logo */}
-                    <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 fill-white group-hover:scale-105 transition-transform" viewBox="0 0 170 170">
-                      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-5.77-8.7-10.42-18.79-13.97-30.27-3.55-11.48-5.33-22.42-5.33-32.83 0-14.36 3.55-26.33 10.66-35.91 7.11-9.58 16.14-14.43 27.09-14.56 5.34 0 11.27 1.48 17.79 4.43 6.52 2.96 10.74 4.49 12.67 4.49 1.74 0 6.06-1.57 12.96-4.71 6.9-3.14 12.96-4.58 18.18-4.33 13.94.65 24.96 5.86 33.05 15.64-12.19 7.4-18.17 17.51-17.95 30.34.22 10.02 4.13 18.49 11.75 25.43 7.62 6.94 16.75 10.97 27.42 12.09-2.18 6.53-4.91 13.28-8.2 20.25zM119.22 31.84c0-7.72 2.76-14.89 8.28-21.52 5.53-6.63 12.41-10.66 20.65-12.09.22 1.09.33 2.18.33 3.26 0 7.61-2.85 14.86-8.54 21.74-5.69 6.87-12.71 10.87-21.06 12-0.22-1.09-.33-2.18-.33-3.39z" />
-                    </svg>
-                    <div className="text-left leading-tight shrink min-w-0">
-                      <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
-                        DOWNLOAD ON THE
-                      </span>
-                      <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
-                        App Store
-                      </span>
-                    </div>
+                    Download on the App Store
+                  </a>
+                </div>
+                <div className="trust in">
+                  <span>No hardware to buy</span>
+                  <span>Bills sent on WhatsApp</span>
+                  <span>Set up in 60 seconds</span>
+                </div>
+              </div>
+
+              {/* Interactive Front-Desk Demo */}
+              <div className="demo in" aria-label="Interactive billing demo">
+                <header>
+                  <span className="live">Live salon floor · 4 chairs active</span>
+                  <span>Try the front desk</span>
+                </header>
+                <div id="svcs">
+                  {DEMO_SERVICES.map((s, i) => {
+                    const isSelected = activeServices.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className="svc"
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setActiveServices((prev) =>
+                            prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+                          );
+                          setWaSent(false);
+                        }}
+                      >
+                        <span>
+                          <b>{s[0]}</b>
+                          <small>{s[1]}</small>
+                        </span>
+                        <span style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          ₹{s[2].toLocaleString('en-IN')}
+                          <span className="tick">✓</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="bill">
+                  <div className="meta">
+                    <span>Luxe Salon · Digital bill</span>
+                    <span>#SF-8924</span>
+                  </div>
+                  <div id="lines">
+                    {activeServices.length === 0 ? (
+                      <div className="row">Select a service to start a bill</div>
+                    ) : (
+                      activeServices.map((i) => {
+                        const s = DEMO_SERVICES[i];
+                        return (
+                          <div className="row" key={i}>
+                            <span>{s[0]}</span>
+                            <span>₹{s[2].toLocaleString('en-IN')}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  <div className="tot">
+                    <span>Grand total</span>
+                    <b id="total">₹{shownTotal.toLocaleString('en-IN')}</b>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`btn wa ${waSent ? 'sent' : ''}`}
+                  id="wa"
+                  onClick={() => {
+                    if (activeServices.length > 0) {
+                      setWaSent(true);
+                    }
+                  }}
+                >
+                  {waSent ? 'Bill sent to Priya ✓' : 'Share on WhatsApp'}
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Stats Section */}
+          <div className="wrap">
+            <div className="stats">
+              <div>
+                <StatCounter target={15} />
+                <span>seconds to check out</span>
+              </div>
+              <div>
+                <StatCounter target={92} suffix="%" />
+                <span>appointments kept via WhatsApp</span>
+              </div>
+              <div>
+                <StatCounter target={360} suffix="°" />
+                <span>real-time financial audit</span>
+              </div>
+              <div>
+                <b>₹0</b>
+                <span>hardware lock-in, any device</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Comparison Section */}
+          <section id="compare">
+            <div className="wrap">
+              <h2>The old way, and the StyleFleet way.</h2>
+              <p className="lead">Why busy salons are leaving paper books and clunky legacy software behind.</p>
+              <div className="cmp">
+                <div className="old">
+                  <h3>The traditional way</h3>
+                  <ul style={{ padding: 0 }}>
+                    <li><b>Paper registers</b>Lost receipts, wrong sums, and handwriting nobody can read.</li>
+                    <li><b>Empty chairs and double bookings</b>No view of who is free, so walk-ins leave.</li>
+                    <li><b>Commission disputes</b>Nightly arguments over tips and shares with no record.</li>
+                    <li><b>Expensive POS machines</b>Forced purchases, monthly rentals, and breakdowns.</li>
+                  </ul>
+                </div>
+                <div className="new">
+                  <h3>The StyleFleet way</h3>
+                  <ul style={{ padding: 0 }}>
+                    <li><b>15-second digital checkout</b>Pick services, split UPI, card and cash, send the invoice.</li>
+                    <li><b>Live chair matrix</b>See which chairs are in use, cleaning, or ready.</li>
+                    <li><b>Automatic commission audits</b>Each stylist sees their own tips and earnings live.</li>
+                    <li><b>Runs on any phone or tablet</b>Sign in with an OTP. No install, no hardware cost.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section id="features" style={{ background: 'var(--bg2)' }}>
+            <div className="wrap">
+              <h2>Everything from first haircut to final profit.</h2>
+              <p className="lead">Five connected tools that cover the whole salon day.</p>
+              <div className="mods">
+                <div className="mod wide">
+                  <h3>Express checkout</h3>
+                  <p>Combine a haircut, colour, spa and beard sculpt on one receipt. Assign a stylist to each service.</p>
+                  <div className="chip"><span>Haircut</span><b>₹800</b></div>
+                  <div className="chip"><span>Keratin spa</span><b>₹1,800</b></div>
+                  <div className="chip on"><span>Total</span><b>₹3,050</b></div>
+                </div>
+                <div className="mod wide">
+                  <h3>Live chair matrix</h3>
+                  <p>Track which chairs are busy, when they free up, and who is working.</p>
+                  <div className="chip on"><span>Chair 1</span><b>Fade in progress</b></div>
+                  <div className="chip"><span>Chair 2</span><b>Ready for walk-in</b></div>
+                  <div className="chip"><span>Chair 3</span><b>Keratin spa, 30 min</b></div>
+                </div>
+                <div className="mod">
+                  <h3>WhatsApp bills</h3>
+                  <p>Clients get an itemised receipt with your branding and a UPI QR code.</p>
+                  <div className="chip on">Your bill of ₹1,800 is paid.</div>
+                </div>
+                <div className="mod">
+                  <h3>Stylist hub</h3>
+                  <p>Every stylist has a login to see their queue, tips and commission.</p>
+                  <div className="chip"><span>Anand</span><b>₹1,240</b></div>
+                  <div className="chip"><span>Deepa</span><b>₹1,680</b></div>
+                </div>
+                <div className="mod">
+                  <h3>Profit audit</h3>
+                  <p>Revenue, expenses and net profit in one tap.</p>
+                  <div className="chip"><span>Revenue</span><b>₹38,450</b></div>
+                  <div className="chip"><span>Expenses</span><b>−₹4,200</b></div>
+                  <div className="bar"><i /></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Multilingual Section */}
+          <section id="languages">
+            <div className="wrap lang">
+              <div>
+                <h2>Speaks your language.</h2>
+                <p className="lead">
+                  Create invoices and WhatsApp alerts in English, Tamil or Hindi so every client and stylist feels at home.
+                </p>
+                <div className="tabs" role="tablist" id="tabs">
+                  {(['English', 'தமிழ்', 'हिन्दी'] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="tab"
+                      role="tab"
+                      aria-selected={currentLang === k}
+                      onClick={() => setCurrentLang(k)}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="paper" id="paper" role="tabpanel" aria-live="polite">
+                {LANGUAGE_DICTIONARY[currentLang].slice(0, 3).map((r, i) => (
+                  <div className="r" key={i}>
+                    <span>{r[0]}</span>
+                    <b>{r[1]}</b>
+                  </div>
+                ))}
+                <div className="t">
+                  <span>{LANGUAGE_DICTIONARY[currentLang][3]}</span>
+                  <span>₹3,050</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Reviews Section */}
+          <section id="reviews" style={{ background: 'var(--bg2)' }}>
+            <div className="wrap">
+              <h2>Loved by India's master stylists.</h2>
+              <div className="rev">
+                <figure>
+                  <blockquote>StyleFleet cut our front-desk rush by 80%. Clients love getting their bills on WhatsApp.</blockquote>
+                  <figcaption>
+                    <i>KR</i>
+                    <span><b>Kavitha R.</b>The Velvet Mirror, Chennai</span>
+                  </figcaption>
+                </figure>
+                <figure>
+                  <blockquote>Stylists track their own commission and tips. No disputes, and a calm close every night.</blockquote>
+                  <figcaption>
+                    <i>RK</i>
+                    <span><b>Rajesh K.</b>Blade &amp; Beard Studio, Coimbatore</span>
+                  </figcaption>
+                </figure>
+                <figure>
+                  <blockquote>Setup took two minutes with a mobile OTP. It runs on our counter tablet, no POS machine needed.</blockquote>
+                  <figcaption>
+                    <i>AM</i>
+                    <span><b>Ananya M.</b>Glamour Lounge, Bengaluru</span>
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing Section */}
+          <section id="pricing">
+            <div className="wrap">
+              <h2>Simple plans, clear taxes.</h2>
+              <p className="lead">
+                Every plan includes unlimited digital bills, appointments, WhatsApp sharing, chair tracking and multi-stylist access.
+              </p>
+              <div className="price">
+                <div className="plan">
+                  <h3>3 months</h3>
+                  <small>Quarterly foundation</small>
+                  <div className="amt">₹2,999</div>
+                  <small>₹999 a month, plus 18% GST · ₹3,538.82 total</small>
+                  <ul>
+                    <li>Unlimited WhatsApp billing</li>
+                    <li>Multi-stylist workspace</li>
+                    <li>Live chair matrix</li>
+                    <li>Daily expense and profit audit</li>
+                  </ul>
+                  <button type="button" className="btn ghost" onClick={() => openLogin('owner')}>
+                    Get started
+                  </button>
+                </div>
+
+                <div className="plan best">
+                  <span className="flag">Most popular · Save ₹2,000</span>
+                  <h3>12 months</h3>
+                  <small>Annual complete salon OS</small>
+                  <div className="amt">
+                    ₹9,999<s>₹11,999</s>
+                  </div>
+                  <small>About ₹833 a month, plus 18% GST · ₹11,798.82 total</small>
+                  <ul>
+                    <li>Everything in 6 months</li>
+                    <li>365 days of cloud access</li>
+                    <li>360° audit with live net profit</li>
+                    <li>VIP onboarding and staff training</li>
+                    <li>Custom WhatsApp sender ID and logo</li>
+                    <li>Dedicated relationship manager</li>
+                  </ul>
+                  <button type="button" className="btn gold" onClick={() => openLogin('owner')}>
+                    Start annual plan
+                  </button>
+                </div>
+
+                <div className="plan">
+                  <h3>6 months</h3>
+                  <small>Half-year growth · Save ₹500</small>
+                  <div className="amt">
+                    ₹5,499<s>₹5,999</s>
+                  </div>
+                  <small>About ₹916 a month, plus 18% GST · ₹6,488.82 total</small>
+                  <ul>
+                    <li>Everything in 3 months</li>
+                    <li>Commission and tip tracking</li>
+                    <li>Appointment reminders</li>
+                    <li>Priority WhatsApp support</li>
+                  </ul>
+                  <button type="button" className="btn ghost" onClick={() => openLogin('owner')}>
+                    Claim 6 months
+                  </button>
+                </div>
+              </div>
+              <p className="gst">100% tax compliant. You receive an official GST invoice with every plan.</p>
+            </div>
+          </section>
+
+          {/* Final Call to Action */}
+          <section style={{ paddingTop: 0 }}>
+            <div className="wrap">
+              <div className="final">
+                <h2>Make every salon day effortless.</h2>
+                <p className="lead">
+                  Fast billing, a live chair queue and automatic WhatsApp invoices on any phone or desktop.
+                </p>
+                <div className="cta">
+                  <a
+                    className="btn gold"
+                    href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get it on Google Play
+                  </a>
+                  <a
+                    className="btn ghost"
+                    style={{ color: '#F6EFE2', borderColor: 'rgba(246,239,226,.35)' }}
+                    id="ios-download"
+                    href="#top"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
+                    }}
+                  >
+                    Download on the App Store
                   </a>
                 </div>
               </div>
             </div>
           </section>
 
-        </main>
+          {/* Footer */}
+          <footer>
+            <div className="wrap">
+              <div>
+                <a className="logo" href="#top">
+                  <i />
+                  StyleFleet
+                </a>
+                <p>Salon OS, a luxury management platform</p>
+              </div>
+              <div>
+                Request a free demo call: <b>+91 88705 00106</b>
+                <br />
+                <a
+                  href="https://wa.me/918870500106?text=Hi%20StyleFleet%2C%20I%20would%20like%20to%20request%20a%20free%20demo%20call."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  WhatsApp demo
+                </a>{' '}
+                ·{' '}
+                <a
+                  href="https://instagram.com/stylefleet"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Instagram
+                </a>
+              </div>
+              <div>
+                © 2026 StyleFleet. Powered by Tecstellar.
+                <br />
+                <button
+                  type="button"
+                  onClick={() => setShowPrivacyModal(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    font: 'inherit',
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Privacy policy
+                </button>{' '}
+                ·{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    font: 'inherit',
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Terms and conditions
+                </button>
+              </div>
+            </div>
+          </footer>
+        </>
       )}
 
       {/* ================= VIEW 2: DEDICATED CLEAN LOGIN PAGE ================= */}
       {view === 'login' && (
-        <section className="min-h-[calc(100vh-80px)] flex items-center justify-center p-4 sm:p-8 relative z-10">
-          <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0B1E3B]">
-            
-            {/* Left Visual Panel - Dynamically switches between Owner & Stylist */}
-            <div className="hidden md:block md:col-span-5 relative bg-[#07152B] overflow-hidden min-h-[520px]">
-              {/* 1. Salon Owner Visual */}
-              <div
-                className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                  role === 'owner' ? 'opacity-100 scale-100 z-10 pointer-events-auto' : 'opacity-0 scale-105 z-0 pointer-events-none'
-                }`}
-              >
-                <img
-                  src="/images/owner-workspace.jpg"
-                  alt="Executive Salon Owner Workspace"
-                  className="w-full h-full object-cover object-center filter brightness-[0.95] contrast-[1.05]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07152B] via-[#07152B]/45 to-transparent" /* taste-skill-ignore */ />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0B1E3B]/70" /* taste-skill-ignore */ />
-              </div>
+        <div className="min-h-screen flex flex-col justify-between">
+          <nav>
+            <div className="wrap">
+              <button type="button" className="logo" onClick={returnHome}>
+                <i />
+                StyleFleet
+              </button>
+              <button type="button" className="btn ghost" onClick={returnHome}>
+                ← Back to Home
+              </button>
+            </div>
+          </nav>
 
-              {/* 2. Stylist Visual */}
-              <div
-                className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                  role === 'stylist' ? 'opacity-100 scale-100 z-10 pointer-events-auto' : 'opacity-0 scale-105 z-0 pointer-events-none'
-                }`}
-              >
-                <img
-                  src="/images/stylist-workspace.jpg"
-                  alt="Master Hair Stylist Workspace"
-                  className="w-full h-full object-cover object-center filter brightness-[0.95] contrast-[1.05]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07152B] via-[#07152B]/45 to-transparent" /* taste-skill-ignore */ />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0B1E3B]/70" /* taste-skill-ignore */ />
-              </div>
-
-              {/* Visual Panel Info Overlay */}
-              <div className="absolute bottom-8 left-7 right-7 z-20 space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#07152B]/95 border border-[#F5A623]/50 shadow-lg">
-                  <div className="w-5 h-5 rounded-md overflow-hidden flex items-center justify-center p-0.5 bg-[#F5A623]/20 shrink-0">
-                    <img src="/assets/stylefleet-logo.png" alt="StyleFleet" width={20} height={20} className="w-5 h-5 object-contain" style={{ maxWidth: '20px', maxHeight: '20px' }} />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#F5A623] uppercase tracking-wider flex items-center gap-1.5">
-                    {role === 'owner' ? (
-                      <>
-                        <Crown className="w-3.5 h-3.5 text-[#F5A623]" />
-                        <span>Owner Workspace</span>
-                      </>
-                    ) : (
-                      <>
-                        <Scissors className="w-3.5 h-3.5 text-[#F5A623]" />
-                        <span>Stylist Workspace</span>
-                      </>
-                    )}
-                  </span>
+          <section className="min-h-[calc(100vh-160px)] flex items-center justify-center p-4 sm:p-8 relative z-10">
+            <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0B1E3B]">
+              
+              {/* Left Visual Panel - Dynamically switches between Owner & Stylist */}
+              <div className="hidden md:block md:col-span-5 relative bg-[#07152B] overflow-hidden min-h-[520px]">
+                {/* 1. Salon Owner Visual */}
+                <div
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                    role === 'owner' ? 'opacity-100 scale-100 z-10 pointer-events-auto' : 'opacity-0 scale-105 z-0 pointer-events-none'
+                  }`}
+                >
+                  <img
+                    src="/images/owner-workspace.jpg"
+                    alt="Executive Salon Owner Workspace"
+                    className="w-full h-full object-cover object-center filter brightness-[0.95] contrast-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#07152B] via-[#07152B]/45 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0B1E3B]/70" />
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-extrabold text-white tracking-tight">
-                    {role === 'owner' ? 'Total Salon Command' : 'Precision Hair & Beauty'}
-                  </h3>
-                  <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed font-normal bg-[#07152B]/90 p-3 rounded-2xl border border-white/10 shadow-md">
+                {/* 2. Stylist Visual */}
+                <div
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                    role === 'stylist' ? 'opacity-100 scale-100 z-10 pointer-events-auto' : 'opacity-0 scale-105 z-0 pointer-events-none'
+                  }`}
+                >
+                  <img
+                    src="/images/stylist-workspace.jpg"
+                    alt="Master Hair Stylist Workspace"
+                    className="w-full h-full object-cover object-center filter brightness-[0.95] contrast-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#07152B] via-[#07152B]/45 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0B1E3B]/70" />
+                </div>
+
+                {/* Visual Panel Info Overlay */}
+                <div className="absolute bottom-8 left-7 right-7 z-20 space-y-3">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#07152B]/95 border border-[#F5A623]/50 shadow-lg">
+                    <div className="w-5 h-5 rounded-md overflow-hidden flex items-center justify-center p-0.5 bg-[#F5A623]/20 shrink-0">
+                      <img src="/assets/stylefleet-logo.png" alt="StyleFleet" width={20} height={20} className="w-5 h-5 object-contain" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#F5A623] uppercase tracking-wider flex items-center gap-1.5">
+                      {role === 'owner' ? (
+                        <>
+                          <Crown className="w-3.5 h-3.5 text-[#F5A623]" />
+                          <span>Owner Workspace</span>
+                        </>
+                      ) : (
+                        <>
+                          <Scissors className="w-3.5 h-3.5 text-[#F5A623]" />
+                          <span>Stylist Workspace</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-extrabold text-white tracking-tight">
+                      {role === 'owner' ? 'Total Salon Command' : 'Precision Hair & Beauty'}
+                    </h3>
+                    <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed font-normal bg-[#07152B]/90 p-3 rounded-2xl border border-white/10 shadow-md">
+                      {role === 'owner'
+                        ? '“Complete visibility over express billing, chair schedules, staff commissions, and real-time revenue analytics.”'
+                        : '“Dedicated chair schedules, service queues, personal tips tally, and transparent commission audits built for artists.”'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 text-[11px] font-semibold text-[#F5A623]">
+                    <span>Unified Luxury Salon Management Platform</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Form Panel */}
+              <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
+                
+                {/* Title & Badge */}
+                <div className="space-y-1 mb-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                      {role === 'owner' ? 'Salon Owner Workspace' : 'Stylist Workspace'}
+                    </h2>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30">
+                      {role === 'owner' ? (
+                        <>
+                          <Crown className="w-3 h-3 text-[#F5A623]" />
+                          <span>Owner</span>
+                        </>
+                      ) : (
+                        <>
+                          <Scissors className="w-3 h-3 text-[#F5A623]" />
+                          <span>Stylist</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#94A3B8] leading-relaxed">
                     {role === 'owner'
-                      ? '“Complete visibility over express billing, chair schedules, staff commissions, and real-time revenue analytics.”'
-                      : '“Dedicated chair schedules, service queues, personal tips tally, and transparent commission audits built for artists.”'}
+                      ? 'Sign in to access your salon billing, appointments, staff team & real-time revenue analytics.'
+                      : 'Sign in to review your scheduled appointments, active chair queue & personal tips.'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 pt-1 text-[11px] font-semibold text-[#F5A623]">
-                  <span>Unified Luxury Salon Management Platform</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Form Panel (Clean, Uncluttered, Pure Inputs) */}
-            <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
-              
-              {/* Top Control */}
-              <button
-                onClick={returnHome}
-                className="self-start mb-6 inline-flex items-center gap-2 text-xs font-semibold text-[#94A3B8] hover:text-[#F5A623] transition-colors"
-              >
-                <span>←</span> <span>Back to StyleFleet Home</span>
-              </button>
-
-              {/* Title & Badge */}
-              <div className="space-y-1 mb-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-extrabold text-white tracking-tight">
-                    {role === 'owner' ? 'Salon Owner Workspace' : 'Stylist Workspace'}
-                  </h2>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/30">
-                    {role === 'owner' ? (
-                      <>
-                        <Crown className="w-3 h-3 text-[#F5A623]" />
-                        <span>Owner</span>
-                      </>
-                    ) : (
-                      <>
-                        <Scissors className="w-3 h-3 text-[#F5A623]" />
-                        <span>Stylist</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-                <p className="text-xs text-[#94A3B8] leading-relaxed">
-                  {role === 'owner'
-                    ? 'Sign in to access your salon billing, appointments, staff team & real-time revenue analytics.'
-                    : 'Sign in to review your scheduled appointments, active chair queue & personal tips.'}
-                </p>
-              </div>
-
-              {/* Role Selection Tabs */}
-              <div className="grid grid-cols-2 gap-3 my-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRole('owner');
-                    setAuthStep('phone');
-                  }}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
-                    role === 'owner'
-                      ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
-                      : 'bg-[#07152B] border-white/5 hover:border-white/20'
-                  }`}
-                >
-                  <Crown className={`w-5 h-5 mb-1.5 ${role === 'owner' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
-                  <strong className="text-xs block font-bold text-white">Salon Owner</strong>
-                  <span className="text-[10px] text-[#94A3B8] block mt-0.5">Billing & Management</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRole('stylist');
-                    setAuthStep('phone');
-                  }}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
-                    role === 'stylist'
-                      ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
-                      : 'bg-[#07152B] border-white/5 hover:border-white/20'
-                  }`}
-                >
-                  <Scissors className={`w-5 h-5 mb-1.5 ${role === 'stylist' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
-                  <strong className="text-xs block font-bold text-white">Stylist</strong>
-                  <span className="text-[10px] text-[#94A3B8] block mt-0.5">Queue & Daily Tips</span>
-                </button>
-              </div>
-
-              {/* STEP 1: CLEAN MOBILE INPUT */}
-              {authStep === 'phone' && (
-                <form onSubmit={handlePhoneSubmit} className="space-y-4 pt-2">
-                  <div>
-                    <label htmlFor="mobile-input" className="block text-xs font-bold text-[#94A3B8] mb-2">
-                      Mobile Number
-                    </label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-4 text-sm font-bold text-[#F5A623] select-none">+91</span>
-                      <input
-                        id="mobile-input"
-                        type="tel"
-                        maxLength={10}
-                        inputMode="numeric"
-                        placeholder="Enter 10-digit mobile number"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        required
-                        className="w-full py-3.5 pl-14 pr-4 rounded-2xl bg-[#07152B] border border-white/10 focus:border-[#F5A623] outline-none text-white text-sm font-semibold transition-all placeholder:text-[#94A3B8]/50"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Terms and Policy Agreement */}
-                  <div
-                    className="flex items-center gap-2.5 pt-0.5 select-none cursor-pointer group"
-                    onClick={() => setAgreeToTerms(!agreeToTerms)}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                        agreeToTerms
-                          ? 'bg-[#D4AF37] border-[#D4AF37] text-[#07152B]'
-                          : 'bg-[#07152B] border-white/30 group-hover:border-[#D4AF37]/60'
-                      }`}
-                    >
-                      {agreeToTerms && (
-                        <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </div>
-                    <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
-                      I agree to the{' '}
-                      <span
-                        className="text-[#D4AF37] font-semibold hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTermsModal(true);
-                        }}
-                      >
-                        Terms of Service
-                      </span>{' '}
-                      &{' '}
-                      <span
-                        className="text-[#D4AF37] font-semibold hover:underline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPrivacyModal(true);
-                        }}
-                      >
-                        Privacy Policy
-                      </span>{' '}
-                      of StyleFleet
-                    </label>
-                  </div>
-
+                {/* Role Selection Tabs */}
+                <div className="grid grid-cols-2 gap-3 my-4">
                   <button
-                    type="submit"
-                    disabled={isSendingOtp}
-                    className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 mt-2 ${
-                      isSendingOtp ? 'opacity-70 cursor-wait' : ''
+                    type="button"
+                    onClick={() => {
+                      setRole('owner');
+                      setAuthStep('phone');
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all ${
+                      role === 'owner'
+                        ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
+                        : 'bg-[#07152B] border-white/5 hover:border-white/20'
                     }`}
                   >
-                    {isSendingOtp ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                        <span>Sending SMS verification code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Continue with Mobile</span>
-                        <span>↗</span>
-                      </>
-                    )}
+                    <Crown className={`w-5 h-5 mb-1.5 ${role === 'owner' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
+                    <strong className="text-xs block font-bold text-white">Salon Owner</strong>
+                    <span className="text-[10px] text-[#94A3B8] block mt-0.5">Billing & Management</span>
                   </button>
 
-                  <p className="text-[11px] text-center text-[#5E697E] pt-2">
-                    Secure authentication via SMS verification code.
-                  </p>
-                </form>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole('stylist');
+                      setAuthStep('phone');
+                    }}
+                    className={`p-4 rounded-2xl border text-left transition-all ${
+                      role === 'stylist'
+                        ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
+                        : 'bg-[#07152B] border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <Scissors className={`w-5 h-5 mb-1.5 ${role === 'stylist' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
+                    <strong className="text-xs block font-bold text-white">Stylist</strong>
+                    <span className="text-[10px] text-[#94A3B8] block mt-0.5">Queue & Daily Tips</span>
+                  </button>
+                </div>
 
-              {/* STEP 2: CLEAN 6-DIGIT OTP VERIFICATION */}
-              {authStep === 'otp' && (
-                <div className="space-y-4 pt-2">
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                {/* STEP 1: MOBILE INPUT */}
+                {authStep === 'phone' && (
+                  <form onSubmit={handlePhoneSubmit} className="space-y-4 pt-2">
                     <div>
-                      <span className="text-[11px] text-[#A7B0C3] block">Verifying SMS with a two-step factor</span>
-                      <strong className="text-xs font-bold text-white">+91 {phone}</strong>
+                      <label htmlFor="mobile-input" className="block text-xs font-bold text-[#94A3B8] mb-2">
+                        Mobile Number
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-4 text-sm font-bold text-[#F5A623] select-none">+91</span>
+                        <input
+                          id="mobile-input"
+                          type="tel"
+                          maxLength={10}
+                          inputMode="numeric"
+                          placeholder="Enter 10-digit mobile number"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          required
+                          className="w-full py-3.5 pl-14 pr-4 rounded-2xl bg-[#07152B] border border-white/10 focus:border-[#F5A623] outline-none text-white text-sm font-semibold transition-all placeholder:text-[#94A3B8]/50"
+                        />
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setAuthStep('phone')}
-                      className="text-xs font-bold text-[#E0C068] hover:underline"
-                    >
-                      Change
-                    </button>
-                  </div>
 
+                    {/* Terms and Policy Agreement */}
+                    <div
+                      className="flex items-center gap-2.5 pt-0.5 select-none cursor-pointer group"
+                      onClick={() => setAgreeToTerms(!agreeToTerms)}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                          agreeToTerms
+                            ? 'bg-[#D4AF37] border-[#D4AF37] text-[#07152B]'
+                            : 'bg-[#07152B] border-white/30 group-hover:border-[#D4AF37]/60'
+                        }`}
+                      >
+                        {agreeToTerms && (
+                          <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                      <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
+                        I agree to the{' '}
+                        <span
+                          className="text-[#D4AF37] font-semibold hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowTermsModal(true);
+                          }}
+                        >
+                          Terms of Service
+                        </span>{' '}
+                        &{' '}
+                        <span
+                          className="text-[#D4AF37] font-semibold hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPrivacyModal(true);
+                          }}
+                        >
+                          Privacy Policy
+                        </span>
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSendingOtp}
+                      className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 ${
+                        isSendingOtp ? 'opacity-70 cursor-wait' : ''
+                      }`}
+                    >
+                      {isSendingOtp ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
+                          <span>Dispatching verification SMS...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Continue with Mobile</span>
+                          <span>→</span>
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-[11px] text-center text-[#5E697E] pt-2">
+                      Secure authentication via SMS verification code.
+                    </p>
+                  </form>
+                )}
+
+                {/* STEP 2: SMS OTP VERIFICATION */}
+                {authStep === 'otp' && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       verifyOtp(otp.join(''));
                     }}
-                    className="space-y-4"
+                    className="space-y-4 pt-2"
                   >
                     <div>
-                      <label className="block text-xs font-semibold text-[#A7B0C3] mb-2">
-                        Enter 6-Digit OTP
-                      </label>
-                      <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-[#94A3B8]">SMS Verification Code</label>
+                        <button
+                          type="button"
+                          onClick={() => setAuthStep('phone')}
+                          className="text-xs text-[#F5A623] hover:underline font-semibold"
+                        >
+                          Change Number
+                        </button>
+                      </div>
+                      <p className="text-xs text-[#94A3B8] mb-3">
+                        Enter the 6-digit code dispatched via SMS to <strong className="text-white">+91 {phone}</strong>
+                      </p>
+
+                      <div className="grid grid-cols-6 gap-2">
                         {otp.map((digit, idx) => (
                           <input
                             key={idx}
@@ -2102,110 +1205,36 @@ export default function HomePage() {
                       Secure authentication via SMS verification code.
                     </p>
                   </form>
-                </div>
-              )}
+                )}
 
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ================= FOOTER ================= */}
-      <footer className="border-t border-white/[0.08] py-10 px-4 sm:px-8 xl:px-12 bg-[#050E1D] text-xs text-[#94A3B8]">
-        <div className="w-full max-w-[1440px] mx-auto space-y-8">
-          {/* Main Footer Upper Row: Logo & Contact Cluster */}
-          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 text-center md:text-left">
-            {/* StyleFleet Brand Logo & Tagline */}
-            <div className="flex items-center gap-3.5 group">
-              <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 bg-[#07152B] flex items-center justify-center p-0 shrink-0 shadow-xl group-hover:scale-105 transition-transform">
-                <img
-                  src="/assets/stylefleet-logo.png"
-                  alt="StyleFleet Logo"
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-cover"
-                  style={{ maxWidth: '40px', maxHeight: '40px' }}
-                />
               </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-extrabold tracking-tight text-white leading-tight">
+            </div>
+          </section>
+
+          <footer>
+            <div className="wrap">
+              <div>
+                <a className="logo" href="#top">
+                  <i />
                   StyleFleet
-                </span>
-                <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
-                  Salon Management Platform
-                </span>
+                </a>
+                <p>Salon OS, a luxury management platform</p>
+              </div>
+              <div>
+                Request a free demo call: <b>+91 88705 00106</b>
+              </div>
+              <div>
+                © 2026 StyleFleet. Powered by Tecstellar.
               </div>
             </div>
-
-            {/* Contact Information & Free Demo Call Action */}
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <a
-                href="tel:+918870500106"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/50 text-white text-xs font-bold transition-all shadow-md active:scale-95 group"
-              >
-                <PhoneCall className="w-4 h-4 text-[#D4AF37] group-hover:rotate-12 transition-transform" />
-                <span>
-                  Request a Free Demo Call:{' '}
-                  <strong className="text-[#F7C948] underline decoration-[#F7C948]/50 decoration-1 underline-offset-2">
-                    +91 88705 00106
-                  </strong>
-                </span>
-              </a>
-
-              <a
-                href="https://wa.me/918870500106?text=Hi%20StyleFleet%2C%20I%20would%20like%20to%20request%20a%20free%20demo%20call."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all"
-              >
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>WhatsApp Demo</span>
-              </a>
-
-              {/* Instagram Official Link */}
-              <a
-                href="https://instagram.com/stylefleet"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#E1306C]/50 text-slate-300 hover:text-white text-xs font-semibold transition-all group"
-              >
-                <Instagram className="w-4 h-4 text-[#E1306C] group-hover:scale-110 transition-transform" />
-                <span>Instagram</span>
-              </a>
-            </div>
-          </div>
-
-          {/* Lower Legal Row */}
-          <div className="pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left text-[#94A3B8] text-[11px] font-medium">
-            <div>
-              <span>© 2026 StyleFleet. Powered by Tecstellar. All rights reserved.</span>
-            </div>
-
-            <div className="flex items-center gap-4 text-slate-400">
-              <button
-                type="button"
-                onClick={() => setShowPrivacyModal(true)}
-                className="hover:text-[#D4AF37] transition-colors underline-offset-4 hover:underline cursor-pointer"
-              >
-                Privacy Policy
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => setShowTermsModal(true)}
-                className="hover:text-[#D4AF37] transition-colors underline-offset-4 hover:underline cursor-pointer"
-              >
-                Terms and Conditions
-              </button>
-            </div>
-          </div>
+          </footer>
         </div>
-      </footer>
+      )}
 
       {/* ================= PRIVACY POLICY MODAL ================= */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto scrollbar-thin">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto text-white">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-lg font-black text-white">StyleFleet Privacy Policy</h3>
               <button
@@ -2245,8 +1274,8 @@ export default function HomePage() {
 
       {/* ================= TERMS AND CONDITIONS MODAL ================= */}
       {showTermsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto scrollbar-thin">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto text-white">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-lg font-black text-white">Terms & Conditions</h3>
               <button
@@ -2287,7 +1316,7 @@ export default function HomePage() {
       {/* ================= TOAST NOTIFICATION ================= */}
       {toast && (
         <div
-          className="fixed bottom-7 left-1/2 -translate-x-1/2 z-50 px-5 py-3.5 rounded-2xl bg-[#0B1E3B] border border-white/10 shadow-2xl text-xs font-bold flex items-center gap-3 animate-fadeIn"
+          className="fixed bottom-7 left-1/2 -translate-x-1/2 z-50 px-5 py-3.5 rounded-2xl bg-[#0B1E3B] border shadow-2xl text-xs font-bold flex items-center gap-3"
           style={{ borderColor: toast.type === 'error' ? '#EF4444' : '#F5A623' }}
         >
           {toast.type === 'error' ? (
@@ -2304,6 +1333,7 @@ export default function HomePage() {
           <span className="text-white">{toast.message}</span>
         </div>
       )}
+
     </div>
   );
 }

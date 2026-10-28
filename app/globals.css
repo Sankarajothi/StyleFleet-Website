@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './landing.css';
+
 :root {
   --bg-primary: #0B1F44;
   --bg-card: #121B33;
