@@ -27,7 +27,9 @@ import {
   Globe,
   Receipt,
   Layers,
-  Award
+  Award,
+  PhoneCall,
+  Instagram
 } from 'lucide-react';
 import { OwnerRegistrationView } from '@/components/owner-registration';
 import { AnimatedCounter } from '@/components/animated-counter';
@@ -47,6 +49,8 @@ export default function HomePage() {
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -1376,11 +1380,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Official Subscription Cards (3 Months, 6 Months, 12 Months) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 text-left max-w-7xl mx-auto items-stretch">
+            {/* Mobile Scroll Indicator Pill */}
+            <div className="lg:hidden flex items-center justify-center gap-1.5 mb-4 text-[11px] text-[#D4AF37] font-bold">
+              <span>← Swipe side-by-side to compare all plans →</span>
+            </div>
+
+            {/* Official Subscription Cards: Side-by-Side Scrollable Area */}
+            <div className="flex overflow-x-auto pb-6 pt-1 gap-5 sm:gap-6 lg:grid lg:grid-cols-3 lg:gap-8 text-left max-w-7xl mx-auto items-stretch snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D4AF37]/30 scrollbar-track-transparent">
               
               {/* TIER 1: 3 Months Plan */}
-              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
+              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
                 <div className="space-y-5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -1394,7 +1403,9 @@ export default function HomePage() {
 
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">₹2,999</span>
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">
+                        <AnimatedCounter value={2999} prefix="₹" duration={1200} />
+                      </span>
                       <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
                     </div>
                     <span className="text-[11px] text-[#D4AF37] font-semibold block">
@@ -1459,7 +1470,7 @@ export default function HomePage() {
               </div>
 
               {/* TIER 2: 6 Months Plan */}
-              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
+              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
                 <div className="absolute -top-3.5 right-6 bg-blue-500 text-white text-[10px] uppercase font-black px-3 py-1 rounded-full shadow-md">
                   Save ₹500 Offer
                 </div>
@@ -1486,7 +1497,9 @@ export default function HomePage() {
 
                     {/* Offer Price & GST Tag */}
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">₹5,499</span>
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-white tracking-tight">
+                        <AnimatedCounter value={5499} prefix="₹" duration={1200} />
+                      </span>
                       <span className="text-xs font-semibold text-slate-400 shrink-0 whitespace-nowrap">(Excl. GST)</span>
                     </div>
 
@@ -1552,7 +1565,7 @@ export default function HomePage() {
               </div>
 
               {/* TIER 3: 12 Months Plan (Most Popular with Gold Gradient & Halo) */}
-              <div className="rounded-3xl p-6 sm:p-7 xl:p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
+              <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#F5A623] text-[#07152B] text-[10px] uppercase font-black px-4 py-1 rounded-full shadow-lg whitespace-nowrap">
                   ⭐ Most Popular • Save ₹2,000 Offer
                 </div>
@@ -1579,7 +1592,9 @@ export default function HomePage() {
 
                     {/* Offer Price & GST Tag */}
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] tracking-tight">₹9,999</span>
+                      <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] tracking-tight">
+                        <AnimatedCounter value={9999} prefix="₹" duration={1200} />
+                      </span>
                       <span className="text-xs font-semibold text-slate-300 shrink-0 whitespace-nowrap">(Excl. GST)</span>
                     </div>
 
@@ -1653,40 +1668,69 @@ export default function HomePage() {
 
           {/* ================= SECTION 8: BOTTOM CTA BANNER ================= */}
           <section className="py-20 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
-            <div className="relative rounded-3xl p-10 sm:p-16 text-center overflow-hidden bg-gradient-to-r from-[#0B1E3B] via-[#0D2244] to-[#0B1E3B] border border-[#D4AF37]/50 shadow-2xl">
+            <div className="relative rounded-3xl p-8 sm:p-14 text-center overflow-hidden bg-gradient-to-r from-[#0B1E3B] via-[#0D2244] to-[#0B1E3B] border border-[#D4AF37]/50 shadow-2xl">
               {/* Gold Halo background flare */}
               <div className="absolute -inset-10 bg-radial-gradient from-[#D4AF37]/15 to-transparent blur-3xl pointer-events-none" />
 
-              <div className="max-w-3xl mx-auto space-y-5 relative z-10">
+              <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5 relative z-10">
                 <span className="text-xs font-extrabold text-[#E0C068] uppercase tracking-[0.25em] block">
-                  {landingLang === 'en' ? 'Start Your Salon Transformation' : 'இன்றே தொடங்குங்கள்'}
+                  Start Your Salon Transformation
                 </span>
                 <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
-                  {landingLang === 'en'
-                    ? 'Make every salon day flow effortlessly.'
-                    : 'ஒவ்வொரு நாளும் உங்கள் சலூனை எளிதாக வழிநடத்துங்கள்.'}
+                  Make every salon day effortless.
                 </h2>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
-                  {landingLang === 'en'
-                    ? 'Join over 500+ modern salons and master stylists operating with high visual elegance, zero hardware lock-in, and instant mobile setup.'
-                    : '500-க்கும் மேற்பட்ட சலூன்களுடன் இணைந்து உங்கள் சேவையை மேலும் பிரீமியமாக மாற்றுங்கள். தொடங்குவதற்கு 60 விநாடிகள் மட்டுமே.'}
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal max-w-2xl mx-auto">
+                  Say goodbye to chaotic paper registers and messy calculations. Experience 15-second express billing, live styling chair queue, and automated WhatsApp invoices on any mobile or desktop.
                 </p>
-                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
-                  <button
-                    onClick={() => openLogin('owner')}
-                    className="w-full sm:w-auto py-3.5 sm:py-4 px-6 sm:px-9 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:brightness-110 text-[#07152B] text-sm sm:text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+
+                {/* Real Google Play and Download on the App Store buttons in one single row */}
+                <div className="pt-3 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
+                  {/* Google Play Button */}
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
                   >
-                    <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[#07152B] shrink-0" />
-                    <span>{landingLang === 'en' ? 'Get Started as Owner' : 'உரிமையாளராகத் தொடங்கு'}</span>
-                    <ArrowRight className="w-4 h-4 shrink-0" />
-                  </button>
-                  <button
-                    onClick={() => openLogin('stylist')}
-                    className="w-full sm:w-auto bg-[#07152B] hover:bg-[#0D2348] border border-white/15 hover:border-[#D4AF37]/50 text-white py-3.5 sm:py-4 px-6 sm:px-8 text-sm sm:text-base font-semibold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    {/* Real Authentic Google Play 4-Color Logo */}
+                    <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 512 512">
+                      <path fill="#4285F4" d="M48.2 24.3C44.7 28 42.7 33.7 42.7 41.3v429.4c0 7.6 2 13.3 5.5 17l2.1 1.9L274.4 265.5v-5.2L50.3 22.4l-2.1 1.9z" />
+                      <path fill="#FBBC04" d="M349 340.2l-74.6-74.7v-5.2l74.6-74.7 1.8 1 88.2 50.1c25.2 14.3 25.2 37.8 0 52.2l-88.2 50.1-1.8 1.2z" />
+                      <path fill="#EA4335" d="M350.8 339l-76.4-76.4L50.3 486.7c8.3 8.8 22.1 9.9 37.4 1.2L350.8 339z" />
+                      <path fill="#34A853" d="M350.8 173L87.7 24.1C72.4 15.4 58.6 16.5 50.3 25.3l224.1 224.1 76.4-76.4z" />
+                    </svg>
+                    <div className="text-left leading-tight shrink min-w-0">
+                      <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
+                        GET IT ON
+                      </span>
+                      <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
+                        Google Play
+                      </span>
+                    </div>
+                  </a>
+
+                  {/* iOS App Store Button */}
+                  <a
+                    href="#ios-download"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      showToast('StyleFleet iOS App is rolling out on the App Store.', 'success');
+                    }}
+                    className="flex-1 min-w-0 py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-2xl bg-gradient-to-r from-[#07152B] via-[#0D2244] to-[#07152B] hover:brightness-110 border border-[#D4AF37]/60 hover:border-[#F7C948] text-white shadow-xl shadow-[#D4AF37]/15 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 cursor-pointer backdrop-blur-md group"
                   >
-                    <Scissors className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                    <span>{landingLang === 'en' ? 'Stylist Workspace' : 'ஸ்டைலிஸ்ட் தளம்'}</span>
-                  </button>
+                    {/* Real Authentic Apple Logo */}
+                    <svg className="w-5 h-5 sm:w-7 sm:h-7 shrink-0 fill-white group-hover:scale-105 transition-transform" viewBox="0 0 170 170">
+                      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.96-14.34-5.77-8.7-10.42-18.79-13.97-30.27-3.55-11.48-5.33-22.42-5.33-32.83 0-14.36 3.55-26.33 10.66-35.91 7.11-9.58 16.14-14.43 27.09-14.56 5.34 0 11.27 1.48 17.79 4.43 6.52 2.96 10.74 4.49 12.67 4.49 1.74 0 6.06-1.57 12.96-4.71 6.9-3.14 12.96-4.58 18.18-4.33 13.94.65 24.96 5.86 33.05 15.64-12.19 7.4-18.17 17.51-17.95 30.34.22 10.02 4.13 18.49 11.75 25.43 7.62 6.94 16.75 10.97 27.42 12.09-2.18 6.53-4.91 13.28-8.2 20.25zM119.22 31.84c0-7.72 2.76-14.89 8.28-21.52 5.53-6.63 12.41-10.66 20.65-12.09.22 1.09.33 2.18.33 3.26 0 7.61-2.85 14.86-8.54 21.74-5.69 6.87-12.71 10.87-21.06 12-0.22-1.09-.33-2.18-.33-3.39z" />
+                    </svg>
+                    <div className="text-left leading-tight shrink min-w-0">
+                      <span className="text-[7.5px] sm:text-[10px] uppercase tracking-wider block text-slate-300 font-bold whitespace-nowrap">
+                        DOWNLOAD ON THE
+                      </span>
+                      <span className="text-xs sm:text-base font-black text-white tracking-tight whitespace-nowrap">
+                        App Store
+                      </span>
+                    </div>
+                  </a>
                 </div>
               </div>
             </div>
@@ -1887,7 +1931,27 @@ export default function HomePage() {
                       )}
                     </div>
                     <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
-                      I agree to the <span className="text-[#D4AF37] font-semibold hover:underline">Terms of Service</span> & <span className="text-[#D4AF37] font-semibold hover:underline">Privacy Policy</span> of StyleFleet
+                      I agree to the{' '}
+                      <span
+                        className="text-[#D4AF37] font-semibold hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTermsModal(true);
+                        }}
+                      >
+                        Terms of Service
+                      </span>{' '}
+                      &{' '}
+                      <span
+                        className="text-[#D4AF37] font-semibold hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPrivacyModal(true);
+                        }}
+                      >
+                        Privacy Policy
+                      </span>{' '}
+                      of StyleFleet
                     </label>
                   </div>
 
@@ -2014,22 +2078,178 @@ export default function HomePage() {
       )}
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t border-white/[0.08] py-8 px-4 sm:px-8 xl:px-12 bg-[#07152B] text-xs text-[#94A3B8]">
-        <div className="w-full max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Brand & Platform */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#D4AF37]/40 bg-[#0B1E3B] flex items-center justify-center p-0 shrink-0">
-              <img src="/assets/stylefleet-logo.png" alt="StyleFleet" width={32} height={32} className="w-8 h-8 object-cover" style={{ maxWidth: '32px', maxHeight: '32px' }} />
+      <footer className="border-t border-white/[0.08] py-10 px-4 sm:px-8 xl:px-12 bg-[#050E1D] text-xs text-[#94A3B8]">
+        <div className="w-full max-w-[1440px] mx-auto space-y-8">
+          {/* Main Footer Upper Row: Logo & Contact Cluster */}
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 text-center md:text-left">
+            {/* StyleFleet Brand Logo & Tagline */}
+            <div className="flex items-center gap-3.5 group">
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 bg-[#07152B] flex items-center justify-center p-0 shrink-0 shadow-xl group-hover:scale-105 transition-transform">
+                <img
+                  src="/assets/stylefleet-logo.png"
+                  alt="StyleFleet Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                  style={{ maxWidth: '40px', maxHeight: '40px' }}
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-extrabold tracking-tight text-white leading-tight">
+                  StyleFleet
+                </span>
+                <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
+                  Salon OS • Luxury Management Platform
+                </span>
+              </div>
             </div>
-            <span className="text-white font-semibold text-xs tracking-wide">Salon Management Platform</span>
+
+            {/* Contact Information & Free Demo Call Action */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <a
+                href="tel:+918870500106"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/50 text-white text-xs font-bold transition-all shadow-md active:scale-95 group"
+              >
+                <PhoneCall className="w-4 h-4 text-[#D4AF37] group-hover:rotate-12 transition-transform" />
+                <span>
+                  Request a Free Demo Call:{' '}
+                  <strong className="text-[#F7C948] underline decoration-[#F7C948]/50 decoration-1 underline-offset-2">
+                    +91 88705 00106
+                  </strong>
+                </span>
+              </a>
+
+              <a
+                href="https://wa.me/918870500106?text=Hi%20StyleFleet%2C%20I%20would%20like%20to%20request%20a%20free%20demo%20call."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>WhatsApp Demo</span>
+              </a>
+
+              {/* Instagram Official Link */}
+              <a
+                href="https://instagram.com/stylefleet"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#E1306C]/50 text-slate-300 hover:text-white text-xs font-semibold transition-all group"
+              >
+                <Instagram className="w-4 h-4 text-[#E1306C] group-hover:scale-110 transition-transform" />
+                <span>Instagram</span>
+              </a>
+            </div>
           </div>
 
-          {/* Clean minimal copyright notice */}
-          <div className="text-center sm:text-right text-[#94A3B8] text-xs font-medium">
-            <span>All rights reserved</span>
+          {/* Lower Legal Row */}
+          <div className="pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left text-[#94A3B8] text-[11px] font-medium">
+            <div>
+              <span>© 2026 StyleFleet. Powered by Tecstellar. All rights reserved.</span>
+            </div>
+
+            <div className="flex items-center gap-4 text-slate-400">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                className="hover:text-[#D4AF37] transition-colors underline-offset-4 hover:underline cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className="hover:text-[#D4AF37] transition-colors underline-offset-4 hover:underline cursor-pointer"
+              >
+                Terms and Conditions
+              </button>
+            </div>
           </div>
         </div>
       </footer>
+
+      {/* ================= PRIVACY POLICY MODAL ================= */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto scrollbar-thin">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-black text-white">StyleFleet Privacy Policy</h3>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+              <p>
+                <strong>1. Data Ownership:</strong> All client records, invoices, staff commissions, and financial metrics entered into StyleFleet remain the exclusive property of your salon.
+              </p>
+              <p>
+                <strong>2. SMS & Authentication:</strong> Mobile verification codes are dispatched strictly for account security and two-step factor authorization. Your salon phone numbers will never be sold, rented, or shared with third-party advertisers.
+              </p>
+              <p>
+                <strong>3. Cloud Security:</strong> All transactional logs and client databases are secured via enterprise-grade end-to-end encrypted databases powered by Supabase.
+              </p>
+              <p>
+                <strong>4. Contact & Inquiries:</strong> For questions regarding data processing or account deletion, contact our support desk at +91 88705 00106 or support@stylefleet.in.
+              </p>
+            </div>
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-5 py-2 rounded-xl bg-[#D4AF37] text-[#07152B] font-bold text-xs shadow-md cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= TERMS AND CONDITIONS MODAL ================= */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg bg-[#07152B] border border-[#D4AF37]/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 text-left max-h-[85vh] overflow-y-auto scrollbar-thin">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-black text-white">Terms & Conditions</h3>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+              <p>
+                <strong>1. Platform Service:</strong> StyleFleet provides comprehensive cloud salon management software including multi-chair matrix, digital WhatsApp billing, and financial audits.
+              </p>
+              <p>
+                <strong>2. Subscription & Taxation:</strong> All stated subscription plans are exclusive of 18% GST (9% CGST + 9% SGST). Official tax invoices are issued automatically upon plan activation.
+              </p>
+              <p>
+                <strong>3. Fair Usage:</strong> Paid plans include unlimited digital billing, appointment bookings, and staff management. Automated messaging is subject to standard WhatsApp Business guidelines.
+              </p>
+              <p>
+                <strong>4. Operator:</strong> StyleFleet is engineered and powered by Tecstellar. All intellectual property rights are reserved. Support hotline: +91 88705 00106.
+              </p>
+            </div>
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="px-5 py-2 rounded-xl bg-[#D4AF37] text-[#07152B] font-bold text-xs shadow-md cursor-pointer"
+              >
+                Accept & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= TOAST NOTIFICATION ================= */}
       {toast && (
