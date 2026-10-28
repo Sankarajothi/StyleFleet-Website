@@ -792,16 +792,19 @@ export function SalesAndBillsView({
           </div>
         </div>
 
-        {/* LARGEST BEAUTIFUL NEW BILL BUTTON */}
+        {/* LUXURY PREMIUM NEW BILL BUTTON */}
         <button
           type="button"
           onClick={() => setShowNewBillModal(true)}
-          className="px-6 py-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-lg shadow-[#D4AF37]/25 hover:scale-[1.02] active:scale-95 transition-transform cursor-pointer shrink-0"
+          className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
         >
-          <svg className="w-5 h-5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          <svg className="w-5 h-5 text-[#07152B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1z" />
+            <path d="M8 7h8" />
+            <path d="M8 11h8" />
+            <path d="M8 15h5" />
           </svg>
-          <span>+ New Express Bill</span>
+          <span>New Bill</span>
         </button>
       </div>
 
@@ -1940,8 +1943,10 @@ export function SalesAndBillsView({
                     : 'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200'
                 }`}
               >
-                <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1z" />
+                  <path d="M8 8h8" />
+                  <path d="M8 12h6" />
                 </svg>
                 <span>Next Bill</span>
               </button>
@@ -2113,10 +2118,10 @@ export function SalesAndBillsView({
                 </div>
                 <div>
                   <h3 className={`text-base sm:text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    Express Billing POS
+                    New Bill
                   </h3>
                   <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                    Quick-tap services, client details, payment modes & instant bill generation
+                    Select services, client details, payment modes & generate official bill
                   </p>
                 </div>
               </div>
@@ -2583,8 +2588,10 @@ export function SalesAndBillsView({
                         : 'bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] active:scale-95 shadow-[#D4AF37]/25'
                     }`}
                   >
-                    <svg className="w-5 h-5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    <svg className="w-5 h-5 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <path d="M9 15l2 2 4-4" />
                     </svg>
                     <span>Generate Bill & Open Invoice (₹{cartTotal})</span>
                   </button>
