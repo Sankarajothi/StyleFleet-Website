@@ -386,7 +386,7 @@ export default function HomePage() {
       <header className="sticky top-2 sm:top-4 z-50 px-2 sm:px-6 w-full max-w-[1400px] mx-auto transition-all">
         <div className="floating-pill-nav rounded-full px-3 sm:px-8 py-2 sm:py-3 flex items-center justify-between shadow-2xl gap-2">
           {/* Brand Logo & Title */}
-          <button onClick={returnHome} className="flex items-center gap-2 sm:gap-3 group text-left shrink-0">
+          <button onClick={returnHome} className="flex items-center gap-2.5 sm:gap-3 group text-left shrink-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
               <img
                 src="/assets/stylefleet-logo.png"
@@ -397,14 +397,9 @@ export default function HomePage() {
                 style={{ maxWidth: '40px', maxHeight: '40px' }}
               />
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
-                StyleFleet
-              </span>
-              <span className="hidden sm:block text-[8px] sm:text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
-                Salon OS
-              </span>
-            </div>
+            <span className="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
+              StyleFleet
+            </span>
           </button>
 
           {/* Center Nav Links (Home view only) */}
@@ -446,23 +441,14 @@ export default function HomePage() {
           {/* Right Action Cluster: Quick Portal Entry */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {view === 'home' ? (
-              <>
-                <button
-                  onClick={() => openLogin('stylist')}
-                  className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all cursor-pointer"
-                >
-                  <Scissors className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  <span>{landingLang === 'en' ? 'Stylist Portal' : 'ஸ்டைலிஸ்ட்'}</span>
-                </button>
-                <button
-                  onClick={() => openLogin('owner')}
-                  className="px-3 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap"
-                >
-                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#07152B] shrink-0" />
-                  <span>{landingLang === 'en' ? 'Get Started' : 'தொடங்கு'}</span>
-                  <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 hidden xs:inline" />
-                </button>
-              </>
+              <button
+                onClick={() => openLogin('owner')}
+                className="px-3 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 shrink-0 whitespace-nowrap"
+              >
+                <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#07152B] shrink-0" />
+                <span>{landingLang === 'en' ? 'Get Started' : 'தொடங்கு'}</span>
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 hidden xs:inline" />
+              </button>
             ) : (
               <button
                 onClick={returnHome}
@@ -484,11 +470,10 @@ export default function HomePage() {
             {/* Subtle Hero Radial Grid Background */}
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
-            {/* Main Punchy Editorial Headline (Large & Impactful) */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-5xl mx-auto break-words px-1 mt-4 sm:mt-6">
-              Built for Salons.{' '}
-              <span className="bg-gradient-to-r from-[#D4AF37] via-[#F7C948] to-[#F5A623] bg-clip-text text-transparent">
-                Designed for Growth.
+            {/* Main Editorial Headline with Balanced Luxury Gradient */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.14] sm:leading-[1.1] max-w-4xl mx-auto break-words px-1 mt-3 sm:mt-5">
+              <span className="bg-gradient-to-r from-[#E0C068] via-[#FFF5D0] to-[#E0C068] bg-clip-text text-transparent">
+                Built for Salons, Designed for Growth.
               </span>
             </h1>
 
