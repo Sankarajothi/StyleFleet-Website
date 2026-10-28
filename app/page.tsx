@@ -43,7 +43,7 @@ export default function HomePage() {
   const [otpSessionId, setOtpSessionId] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [agreeToTerms, setAgreeToTerms] = useState(true);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -95,6 +95,7 @@ export default function HomePage() {
     setAuthStep('phone');
     setPhone('');
     setOtp(['', '', '', '', '', '']);
+    setAgreeToTerms(false);
     setView('login');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1906,15 +1907,17 @@ export default function HomePage() {
                     onClick={() => setAgreeToTerms(!agreeToTerms)}
                   >
                     <div
-                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
                         agreeToTerms
                           ? 'bg-[#D4AF37] border-[#D4AF37] text-[#07152B]'
-                          : 'bg-[#07152B] border-white/20 opacity-0'
+                          : 'bg-[#07152B] border-white/30 group-hover:border-[#D4AF37]/60'
                       }`}
                     >
-                      <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
+                      {agreeToTerms && (
+                        <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
                     </div>
                     <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
                       I agree to the <span className="text-[#D4AF37] font-semibold hover:underline">Terms of Service</span> & <span className="text-[#D4AF37] font-semibold hover:underline">Privacy Policy</span> of StyleFleet
@@ -1931,7 +1934,7 @@ export default function HomePage() {
                     {isSendingOtp ? (
                       <>
                         <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                        <span>Sending SMS Code via 2Factor...</span>
+                        <span>Sending SMS verification code...</span>
                       </>
                     ) : (
                       <>
@@ -1952,7 +1955,7 @@ export default function HomePage() {
                 <div className="space-y-4 pt-2">
                   <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] text-[#A7B0C3] block">Verification code sent to</span>
+                      <span className="text-[11px] text-[#A7B0C3] block">Verifying SMS with a two-step factor</span>
                       <strong className="text-xs font-bold text-white">+91 {phone}</strong>
                     </div>
                     <button
@@ -2021,7 +2024,7 @@ export default function HomePage() {
                       {isVerifyingOtp ? (
                         <>
                           <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                          <span>Verifying with 2Factor...</span>
+                          <span>Verifying SMS with a two-step factor...</span>
                         </>
                       ) : (
                         <>
@@ -2030,6 +2033,10 @@ export default function HomePage() {
                         </>
                       )}
                     </button>
+
+                    <p className="text-[11px] text-center text-[#5E697E] pt-2">
+                      Secure authentication via SMS verification code.
+                    </p>
                   </form>
                 </div>
               )}
