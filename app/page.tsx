@@ -34,9 +34,11 @@ import {
 import { OwnerRegistrationView } from '@/components/owner-registration';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { findSalonByPhone } from '@/lib/supabase-service';
+import gsap from 'gsap';
 
 export default function HomePage() {
   const router = useRouter();
+  const mainContainerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'home' | 'login' | 'register'>('home');
   const [role, setRole] = useState<'owner' | 'stylist'>('owner');
   const [authStep, setAuthStep] = useState<'phone' | 'otp'>('phone');
@@ -108,6 +110,63 @@ export default function HomePage() {
     setView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // GSAP 3 Studio-Grade Motion Orchestration (scoped to mainContainerRef)
+  useEffect(() => {
+    if (view !== 'home' || !mainContainerRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      // 1. Entrance timeline for Hero Section
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      tl.from('.hero-headline-anim', {
+        y: 28,
+        opacity: 0,
+        duration: 1.05,
+      })
+      .from('.hero-subtitle-anim', {
+        y: 18,
+        opacity: 0,
+        duration: 0.85,
+      }, '-=0.6')
+      .from('.hero-cta-anim', {
+        y: 16,
+        scale: 0.96,
+        opacity: 0,
+        duration: 0.75,
+      }, '-=0.5')
+      .from('.hero-device-anim', {
+        y: 40,
+        opacity: 0,
+        duration: 1.15,
+        ease: 'power4.out',
+      }, '-=0.4');
+
+      // 2. Ambient gold & blue glow breathing pulse
+      gsap.to('.glow-orb.glow-gold', {
+        scale: 1.2,
+        opacity: 0.75,
+        duration: 4.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+
+      gsap.to('.glow-orb.glow-blue', {
+        scale: 1.25,
+        opacity: 0.65,
+        duration: 5.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }, mainContainerRef);
+
+    return () => ctx.revert();
+  }, [view]);
 
   // Timer for OTP resend countdown
   useEffect(() => {
@@ -375,7 +434,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-[#D4AF37] selection:text-[#07152B] bg-[#07152B] text-slate-100 relative overflow-x-hidden">
+    <div
+      ref={mainContainerRef}
+      className="min-h-screen flex flex-col justify-between selection:bg-[#D4AF37] selection:text-[#07152B] bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,rgba(16,37,76,0.95),transparent_65%),radial-gradient(ellipse_120%_80%_at_100%_0%,rgba(212,175,55,0.12),transparent_65%),radial-gradient(ellipse_120%_80%_at_0%_100%,rgba(212,175,55,0.1),transparent_65%),radial-gradient(ellipse_120%_80%_at_100%_100%,rgba(16,37,76,0.95),transparent_65%),linear-gradient(135deg,#050E1D_0%,#081932_50%,#050E1D_100%)] text-slate-100 relative overflow-x-hidden"
+    >
       {/* Ambient Drifting Glow Orbs */}
       <div className="ambient-glow-wrapper">
         <div className="glow-orb glow-gold" />
@@ -471,19 +533,19 @@ export default function HomePage() {
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
             {/* Main Editorial Headline with Balanced Luxury Gradient */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.14] sm:leading-[1.1] max-w-4xl mx-auto break-words px-1 mt-3 sm:mt-5">
+            <h1 className="hero-headline-anim text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-[1.14] sm:leading-[1.1] max-w-4xl mx-auto break-words px-1 mt-3 sm:mt-5">
               <span className="bg-gradient-to-r from-[#E0C068] via-[#FFF5D0] to-[#E0C068] bg-clip-text text-transparent">
                 Built for Salons, Designed for Growth.
               </span>
             </h1>
 
             {/* Hero Subtitle */}
-            <p className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
+            <p className="hero-subtitle-anim mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal px-2">
               Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.
             </p>
 
             {/* Dual Hero CTA: In one single row across mobile & desktop with real brand logos */}
-            <div className="mt-7 sm:mt-9 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
+            <div className="hero-cta-anim mt-7 sm:mt-9 flex flex-row items-center justify-center gap-2 sm:gap-4 w-full px-1 sm:px-2 max-w-xl mx-auto">
               {/* Google Play Button */}
               <a
                 href="https://play.google.com/store/apps/details?id=com.stylefleet.app"
@@ -549,7 +611,7 @@ export default function HomePage() {
             </div>
 
             {/* ================= HERO DEVICE / LIVE INTERACTIVE SHOWCASE ================= */}
-            <div className="mt-12 sm:mt-16 relative w-full max-w-[1340px] mx-auto">
+            <div className="hero-device-anim mt-12 sm:mt-16 relative w-full max-w-[1340px] mx-auto">
               {/* Outer Glow Halo */}
               <div className="absolute -inset-2 bg-gradient-to-r from-[#D4AF37]/30 via-blue-500/25 to-[#D4AF37]/30 rounded-[36px] blur-3xl opacity-80" />
 
@@ -1456,10 +1518,6 @@ export default function HomePage() {
 
               {/* TIER 2: 6 Months Plan */}
               <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
-                <div className="absolute -top-3.5 right-6 bg-blue-500 text-white text-[10px] uppercase font-black px-3 py-1 rounded-full shadow-md">
-                  Save ₹500 Offer
-                </div>
-
                 <div className="space-y-5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -1475,9 +1533,6 @@ export default function HomePage() {
                     {/* Strike-through Base Price & Tag */}
                     <div className="flex items-center gap-2">
                       <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹5,999</span>
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        Save ₹500
-                      </span>
                     </div>
 
                     {/* Offer Price & GST Tag */}
@@ -1551,10 +1606,6 @@ export default function HomePage() {
 
               {/* TIER 3: 12 Months Plan (Most Popular with Gold Gradient & Halo) */}
               <div className="min-w-[85vw] sm:min-w-[340px] lg:min-w-0 flex-1 shrink-0 snap-center rounded-3xl p-6 sm:p-7 xl:p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#F5A623] text-[#07152B] text-[10px] uppercase font-black px-4 py-1 rounded-full shadow-lg whitespace-nowrap">
-                  ⭐ Most Popular • Save ₹2,000 Offer
-                </div>
-
                 <div className="space-y-5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -1570,9 +1621,6 @@ export default function HomePage() {
                     {/* Strike-through Base Price & Tag */}
                     <div className="flex items-center gap-2">
                       <span className="text-base sm:text-lg font-bold text-slate-400 line-through">₹11,999</span>
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#D4AF37]/25 text-[#E0C068] border border-[#D4AF37]/40">
-                        Save ₹2,000
-                      </span>
                     </div>
 
                     {/* Offer Price & GST Tag */}
@@ -2084,7 +2132,7 @@ export default function HomePage() {
                   StyleFleet
                 </span>
                 <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
-                  Salon OS • Luxury Management Platform
+                  Salon Management Platform
                 </span>
               </div>
             </div>
