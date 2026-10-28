@@ -378,22 +378,22 @@ export default function HomePage() {
       </div>
 
       {/* ================= FLOATING LUXURY PILL NAVBAR ================= */}
-      <header className="sticky top-4 z-50 px-4 sm:px-6 w-full max-w-6xl mx-auto transition-all">
-        <div className="floating-pill-nav rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-2xl">
+      <header className="sticky top-4 z-50 px-3 sm:px-6 w-full max-w-[1400px] mx-auto transition-all">
+        <div className="floating-pill-nav rounded-full px-4 sm:px-8 py-3 flex items-center justify-between shadow-2xl">
           {/* Brand Logo & Title */}
           <button onClick={returnHome} className="flex items-center gap-3 group text-left">
-            <div className="w-9 h-9 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-lg bg-[#07152B] flex items-center justify-center p-0 shrink-0 group-hover:scale-105 transition-transform">
               <img
                 src="/assets/stylefleet-logo.png"
                 alt="StyleFleet Logo"
-                width={36}
-                height={36}
-                className="w-9 h-9 object-cover"
-                style={{ maxWidth: '36px', maxHeight: '36px' }}
+                width={40}
+                height={40}
+                className="w-10 h-10 object-cover"
+                style={{ maxWidth: '40px', maxHeight: '40px' }}
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm sm:text-base font-extrabold tracking-tight text-white leading-tight">
+              <span className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight">
                 StyleFleet
               </span>
               <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-bold">
@@ -404,34 +404,34 @@ export default function HomePage() {
 
           {/* Center Nav Links (Home view only) */}
           {view === 'home' && (
-            <nav className="hidden lg:flex items-center gap-1 bg-[#07152B]/70 px-3 py-1 rounded-full border border-white/[0.06]">
+            <nav className="hidden lg:flex items-center gap-1.5 bg-[#07152B]/70 px-4 py-1.5 rounded-full border border-white/[0.06]">
               <a
                 href="#features"
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
               >
                 {landingLang === 'en' ? 'Features' : 'அம்சங்கள்'}
               </a>
               <a
                 href="#comparison"
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
               >
                 {landingLang === 'en' ? 'Comparison' : 'ஒப்பீடு'}
               </a>
               <a
                 href="#bento"
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
               >
                 {landingLang === 'en' ? 'Ecosystem' : 'தள மேலோட்டம்'}
               </a>
               <a
                 href="#testimonials"
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
               >
                 {landingLang === 'en' ? 'Reviews' : 'மதிப்புரைகள்'}
               </a>
               <a
                 href="#pricing"
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#94A3B8] hover:text-white hover:bg-white/[0.08] transition-all"
               >
                 {landingLang === 'en' ? 'Pricing' : 'விலை விவரம்'}
               </a>
@@ -446,7 +446,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setLandingLang('en')}
-                  className={`px-2.5 py-1 rounded-full transition-all ${
+                  className={`px-3 py-1 rounded-full transition-all ${
                     landingLang === 'en'
                       ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
                       : 'text-[#94A3B8] hover:text-white'
@@ -457,7 +457,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setLandingLang('ta')}
-                  className={`px-2.5 py-1 rounded-full transition-all ${
+                  className={`px-3 py-1 rounded-full transition-all ${
                     landingLang === 'ta'
                       ? 'bg-[#D4AF37] text-[#07152B] shadow-sm'
                       : 'text-[#94A3B8] hover:text-white'
@@ -472,14 +472,14 @@ export default function HomePage() {
               <>
                 <button
                   onClick={() => openLogin('stylist')}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all cursor-pointer"
                 >
                   <Scissors className="w-3.5 h-3.5 text-[#D4AF37]" />
                   <span>{landingLang === 'en' ? 'Stylist Portal' : 'ஸ்டைலிஸ்ட்'}</span>
                 </button>
                 <button
                   onClick={() => openLogin('owner')}
-                  className="px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-5 sm:px-6 py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F5A623] hover:from-[#E0C068] hover:to-[#E5B224] text-[#07152B] text-xs sm:text-sm font-extrabold shadow-lg shadow-[#D4AF37]/20 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Crown className="w-3.5 h-3.5 text-[#07152B]" />
                   <span>{landingLang === 'en' ? 'Get Started' : 'தொடங்கு'}</span>
@@ -502,8 +502,8 @@ export default function HomePage() {
       {view === 'home' && (
         <main className="flex-1 relative z-10">
           
-          {/* ================= SECTION 1: HERO (RealBroks Inspired) ================= */}
-          <section className="relative pt-12 pb-20 sm:pt-20 sm:pb-28 px-4 sm:px-6 max-w-6xl mx-auto text-center overflow-hidden">
+          {/* ================= SECTION 1: HERO (RealBroks Inspired Full-Width) ================= */}
+          <section className="relative pt-8 pb-16 sm:pt-14 sm:pb-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto text-center overflow-hidden min-h-[calc(100vh-90px)] flex flex-col justify-center items-center">
             {/* Subtle Hero Radial Grid Background */}
             <div className="absolute inset-0 hero-mesh-bg pointer-events-none opacity-60" />
             
@@ -518,7 +518,7 @@ export default function HomePage() {
             </div>
 
             {/* Main Punchy Editorial Headline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.06] max-w-5xl mx-auto">
               {landingLang === 'en' ? (
                 <>
                   Built for Salons.{' '}
@@ -537,7 +537,7 @@ export default function HomePage() {
             </h1>
 
             {/* Hero Subtitle */}
-            <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
+            <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal">
               {landingLang === 'en'
                 ? 'Say goodbye to chaotic paper registers and messy calculations. StyleFleet delivers 15-second multi-service billing, real-time styling chair matrix, automatic WhatsApp invoices, and 360° financial audits in one unified luxury workspace.'
                 : 'பழைய லெட்ஜர் கணக்குகளுக்கும் பில்லிங் நெரிசலுக்கும் முற்றுப்புள்ளி வையுங்கள். 15 விநாடி பில்லிங், சேர் மேனேஜ்மென்ட், வாட்ஸ்அப் இன்வாய்ஸ் மற்றும் முழு வருமானக் கணக்குகள் ஒரே பிரீமியம் தளத்தில்.'}
@@ -547,7 +547,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={() => openLogin('owner')}
-                className="py-4 px-8 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
+                className="py-4 px-9 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-base font-extrabold shadow-2xl shadow-[#D4AF37]/30 active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Crown className="w-5 h-5 text-[#07152B]" />
                 <span>{landingLang === 'en' ? 'Get Started as Owner' : 'உரிமையாளராகத் தொடங்கு'}</span>
@@ -555,7 +555,7 @@ export default function HomePage() {
               </button>
               <button
                 onClick={() => openLogin('stylist')}
-                className="py-4 px-7 rounded-full bg-[#0B1E3B]/90 hover:bg-[#0D2448] border border-white/15 hover:border-[#D4AF37]/50 text-white text-base font-semibold shadow-xl active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer backdrop-blur-md"
+                className="py-4 px-8 rounded-full bg-[#0B1E3B]/90 hover:bg-[#0D2448] border border-white/15 hover:border-[#D4AF37]/50 text-white text-base font-semibold shadow-xl active:scale-[0.98] transition-all flex items-center gap-2 cursor-pointer backdrop-blur-md"
               >
                 <Scissors className="w-4 h-4 text-[#D4AF37]" />
                 <span>{landingLang === 'en' ? 'Stylist Workspace' : 'ஸ்டைலிஸ்ட் தளம்'}</span>
@@ -563,7 +563,7 @@ export default function HomePage() {
             </div>
 
             {/* Micro Feature Trust Badges */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-semibold">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm text-slate-400 font-semibold">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>{landingLang === 'en' ? 'Zero Hardware Lock-in' : 'எந்த மொபைல் அல்லது டேப்பிலும் இயங்கும்'}</span>
@@ -579,14 +579,14 @@ export default function HomePage() {
             </div>
 
             {/* ================= HERO DEVICE / LIVE INTERACTIVE SHOWCASE ================= */}
-            <div className="mt-14 relative max-w-5xl mx-auto">
+            <div className="mt-12 sm:mt-16 relative w-full max-w-[1340px] mx-auto">
               {/* Outer Glow Halo */}
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-[#D4AF37]/30 via-blue-500/20 to-[#D4AF37]/30 rounded-[32px] blur-2xl opacity-75" />
+              <div className="absolute -inset-2 bg-gradient-to-r from-[#D4AF37]/30 via-blue-500/25 to-[#D4AF37]/30 rounded-[36px] blur-3xl opacity-80" />
 
               {/* Luxury Frame Container */}
-              <div className="relative rounded-[28px] bg-[#091730]/95 border border-white/15 shadow-2xl overflow-hidden backdrop-blur-2xl">
+              <div className="relative rounded-[28px] sm:rounded-[32px] bg-[#091730]/95 border border-white/20 shadow-2xl overflow-hidden backdrop-blur-2xl">
                 {/* Frame Header / Browser Bar */}
-                <div className="px-5 py-3.5 bg-[#07152B]/95 border-b border-white/10 flex items-center justify-between">
+                <div className="px-6 py-4 bg-[#07152B]/95 border-b border-white/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
                     <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
@@ -595,28 +595,28 @@ export default function HomePage() {
                       https://app.stylefleet.in/billing/express
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-300">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] sm:text-xs font-bold text-emerald-300">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>Live Salon Floor • 4 Chairs Active</span>
                   </div>
                 </div>
 
                 {/* Hero Showcase Interior: Split Billing Simulator */}
-                <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
+                <div className="p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
                   {/* Left Column: Interactive Service Selector */}
-                  <div className="lg:col-span-7 space-y-5">
+                  <div className="lg:col-span-7 space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#D4AF37]">
                           Interactive Front-Desk Demo
                         </span>
-                        <h3 className="text-xl font-extrabold text-white">Express Service Matrix</h3>
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-white">Express Service Matrix</h3>
                       </div>
-                      <span className="text-xs text-slate-400 font-medium">Click to select services:</span>
+                      <span className="text-xs text-slate-400 font-medium hidden sm:inline">Click to select services:</span>
                     </div>
 
                     {/* Services Chips */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {demoServicesList.map((service) => {
                         const isSelected = demoSelectedServices.includes(service.id);
                         return (
@@ -624,28 +624,28 @@ export default function HomePage() {
                             key={service.id}
                             type="button"
                             onClick={() => toggleDemoService(service.id)}
-                            className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                            className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between ${
                               isSelected
                                 ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-md shadow-[#D4AF37]/10'
                                 : 'bg-[#0B1E3B]/70 border-white/10 hover:border-white/20'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-3">
                               <div
-                                className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold ${
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
                                   isSelected ? 'bg-[#D4AF37] text-[#07152B]' : 'bg-white/10 text-slate-400'
                                 }`}
                               >
                                 {isSelected ? '✓' : '+'}
                               </div>
                               <div>
-                                <strong className="text-xs font-bold text-white block leading-tight">
+                                <strong className="text-xs sm:text-sm font-bold text-white block leading-tight">
                                   {service.name}
                                 </strong>
                                 <span className="text-[10px] text-slate-400">{service.time} session</span>
                               </div>
                             </div>
-                            <span className="text-xs font-extrabold text-[#D4AF37]">₹{service.price}</span>
+                            <span className="text-xs sm:text-sm font-extrabold text-[#D4AF37]">₹{service.price}</span>
                           </button>
                         );
                       })}
@@ -653,7 +653,7 @@ export default function HomePage() {
 
                     {/* Stylist & Payment Mode Selector Preview */}
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div className="p-3 rounded-xl bg-[#0B1E3B]/80 border border-white/10">
+                      <div className="p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                           Assigned Stylist
                         </span>
@@ -664,7 +664,7 @@ export default function HomePage() {
                           <span className="text-xs font-bold text-white">Anand (Master)</span>
                         </div>
                       </div>
-                      <div className="p-3 rounded-xl bg-[#0B1E3B]/80 border border-white/10">
+                      <div className="p-3.5 rounded-2xl bg-[#0B1E3B]/80 border border-white/10">
                         <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                           Payment Mode
                         </span>
@@ -679,31 +679,31 @@ export default function HomePage() {
                   </div>
 
                   {/* Right Column: Live Luxury Invoice Preview */}
-                  <div className="lg:col-span-5 bg-[#0B1E3B]/90 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+                  <div className="lg:col-span-5 bg-[#0B1E3B]/90 border border-white/10 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
                     <div>
-                      <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
+                        <div className="flex items-center gap-2.5">
                           <img
                             src="/assets/stylefleet-logo.png"
                             alt="StyleFleet"
-                            width={22}
-                            height={22}
-                            className="w-5 h-5 object-contain"
+                            width={24}
+                            height={24}
+                            className="w-6 h-6 object-contain"
                           />
-                          <span className="text-xs font-extrabold text-white">Luxe Salon • Digital Bill</span>
+                          <span className="text-xs sm:text-sm font-extrabold text-white">Luxe Salon • Digital Bill</span>
                         </div>
-                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold">
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30 font-bold">
                           #SF-8924
                         </span>
                       </div>
 
                       {/* Line Items */}
-                      <div className="py-3 space-y-2">
+                      <div className="py-4 space-y-2.5">
                         {demoSelectedServices.map((id) => {
                           const item = demoServicesList.find((s) => s.id === id);
                           if (!item) return null;
                           return (
-                            <div key={id} className="flex items-center justify-between text-xs">
+                            <div key={id} className="flex items-center justify-between text-xs sm:text-sm">
                               <span className="text-slate-300">{item.name}</span>
                               <span className="text-white font-bold">₹{item.price}</span>
                             </div>
@@ -712,28 +712,28 @@ export default function HomePage() {
                       </div>
 
                       {/* Calculations */}
-                      <div className="pt-3 border-t border-white/10 space-y-1.5 text-xs">
-                        <div className="flex justify-between text-slate-400 text-[11px]">
+                      <div className="pt-3.5 border-t border-white/10 space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-400 text-[11px] sm:text-xs">
                           <span>Subtotal ({demoSelectedServices.length} items)</span>
                           <span>₹{demoTotal}</span>
                         </div>
-                        <div className="flex justify-between text-slate-400 text-[11px]">
+                        <div className="flex justify-between text-slate-400 text-[11px] sm:text-xs">
                           <span>GST / Taxes (Included)</span>
                           <span>₹0.00</span>
                         </div>
-                        <div className="flex justify-between items-center text-sm font-extrabold text-white pt-2 border-t border-white/10">
+                        <div className="flex justify-between items-center text-sm sm:text-base font-extrabold text-white pt-2.5 border-t border-white/10">
                           <span>Grand Total</span>
-                          <span className="text-xl text-[#D4AF37]">₹{demoTotal}</span>
+                          <span className="text-xl sm:text-2xl text-[#D4AF37]">₹{demoTotal}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-5 space-y-2">
+                    <div className="pt-6 space-y-2">
                       <button
                         type="button"
                         onClick={() => openLogin('owner')}
-                        className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20BE5B] text-black text-xs font-extrabold flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                        className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20BE5B] text-black text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
                       >
                         <MessageCircle className="w-4 h-4 fill-black" />
                         <span>Share on WhatsApp & Print</span>
@@ -747,7 +747,7 @@ export default function HomePage() {
               </div>
 
               {/* Floating Live Badge 1: Daily Revenue */}
-              <div className="hidden sm:block absolute -left-6 bottom-8 min-w-[220px] bg-[#0D2244]/95 border border-[#D4AF37]/50 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-floating-dashboard text-left">
+              <div className="hidden sm:block absolute -left-6 bottom-8 min-w-[240px] bg-[#0D2244]/95 border border-[#D4AF37]/50 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-floating-dashboard text-left">
                 <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 mb-1">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -757,7 +757,7 @@ export default function HomePage() {
                     +22.8%
                   </span>
                 </div>
-                <div className="text-2xl font-black text-white">
+                <div className="text-2xl sm:text-3xl font-black text-white">
                   <AnimatedCounter value={38450} prefix="₹ " />
                 </div>
                 <div className="w-full bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
@@ -769,13 +769,13 @@ export default function HomePage() {
               </div>
 
               {/* Floating Live Badge 2: Chair Schedule */}
-              <div className="hidden sm:flex absolute -right-6 top-12 items-center gap-3 bg-[#0D2244]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl animate-float-reverse text-left">
-                <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#E0C068] font-black text-xs">
+              <div className="hidden sm:flex absolute -right-6 top-12 items-center gap-3 bg-[#0D2244]/95 border border-white/20 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-float-reverse text-left">
+                <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#E0C068] font-black text-sm">
                   02
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase text-slate-400 block">Floor Schedule</span>
-                  <strong className="text-xs font-bold text-white block">Chair 02: Hair Spa</strong>
+                  <strong className="text-xs sm:text-sm font-bold text-white block">Chair 02: Hair Spa</strong>
                   <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
                     In Session • 22 mins left
@@ -786,10 +786,10 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 2: STATS TICKER ================= */}
-          <section id="stats" className="border-y border-white/10 bg-[#0B1E3B]/80 py-10 px-4 sm:px-6">
-            <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <section id="stats" className="border-y border-white/10 bg-[#0B1E3B]/80 py-10 px-4 sm:px-8">
+            <div className="w-full max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl font-black text-[#D4AF37] block">
+                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
                   <AnimatedCounter value={15} suffix=" Seconds" />
                 </span>
                 <span className="text-xs sm:text-sm text-slate-300 block font-medium">
@@ -797,7 +797,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl font-black text-[#D4AF37] block">
+                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
                   <AnimatedCounter value={99} suffix=".2%" />
                 </span>
                 <span className="text-xs sm:text-sm text-slate-300 block font-medium">
@@ -805,7 +805,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl font-black text-[#D4AF37] block">
+                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
                   <AnimatedCounter value={360} suffix="° Tracking" />
                 </span>
                 <span className="text-xs sm:text-sm text-slate-300 block font-medium">
@@ -813,7 +813,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="text-3xl sm:text-4xl font-black text-[#D4AF37] block">
+                <span className="text-3xl sm:text-4xl xl:text-5xl font-black text-[#D4AF37] block">
                   ₹0
                 </span>
                 <span className="text-xs sm:text-sm text-slate-300 block font-medium">
@@ -824,12 +824,12 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 3: COMPARISON SHOWCASE (Old Way vs StyleFleet Way) ================= */}
-          <section id="comparison" className="py-24 px-4 sm:px-6 max-w-6xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
+          <section id="comparison" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
                 <span>{landingLang === 'en' ? 'The Industry Shift' : 'புரட்சிகர மாற்றம்'}</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
                 {landingLang === 'en'
                   ? 'The Old Way vs The StyleFleet Way'
                   : 'பழைய முறைகள் vs StyleFleet முறை'}
@@ -841,7 +841,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
               {/* Left Card: The Old Way */}
               <div className="rounded-3xl p-8 bg-[#091730] border border-rose-500/25 relative overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
@@ -977,12 +977,12 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 4: BENTO GRID ECOSYSTEM ================= */}
-          <section id="bento" className="py-24 px-4 sm:px-6 max-w-6xl mx-auto scroll-mt-20">
+          <section id="bento" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto scroll-mt-20">
             <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
                 <span>{landingLang === 'en' ? 'Integrated Salon Architecture' : 'ஒருங்கிணைந்த சலூன் கட்டமைப்பு'}</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
                 {landingLang === 'en'
                   ? 'From First Haircut to Final Store Profit.'
                   : 'முதல் ஹேர்கட் முதல் இறுதி லாபம் வரை.'}
@@ -995,19 +995,19 @@ export default function HomePage() {
             </div>
 
             {/* Bento Grid Layout (5 Tiles) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
               
               {/* TILE 1 (Large 2-col): Express Checkout */}
-              <div className="md:col-span-2 bento-card-luxury p-7 sm:p-8 flex flex-col justify-between">
+              <div className="md:col-span-2 bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
+                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
                       01 • Express Front Desk
                     </span>
-                    <h3 className="text-2xl font-extrabold text-white">
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
                       {landingLang === 'en' ? 'Express Multi-Service Checkout' : 'மின்னல் வேக பில்லிங் முறை'}
                     </h3>
-                    <p className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
                       {landingLang === 'en'
                         ? 'Combine haircut, coloring, spa rituals, and beard sculpt in one consolidated receipt. Assign individual stylists to each service and process UPI or cash splits effortlessly.'
                         : 'ஒரே பில்லில் பல சேவைகளை நொடிகளில் சேர்த்து, தனித்தனி ஸ்டைலிஸ்ட்டுகளை நியமித்து, பணத்தை விரைவாக வசூலிக்கலாம்.'}
@@ -1019,44 +1019,44 @@ export default function HomePage() {
                 </div>
 
                 {/* Micro Visual Card */}
-                <div className="mt-6 p-4 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                <div className="mt-8 p-5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-3.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-300">
                     <span>{landingLang === 'en' ? 'Live Front Desk Queue' : 'லைவ் கவுண்ட்டர்'}</span>
                     <span className="text-[#D4AF37]">{landingLang === 'en' ? 'Avg Checkout: 14.8s' : 'சராசரி நேரம்: 14.8 விநாடி'}</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                    <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                       <span className="text-[10px] text-slate-400 block font-medium">Haircut</span>
-                      <strong className="text-white block font-bold">₹800</strong>
+                      <strong className="text-white block font-bold text-sm">₹800</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                       <span className="text-[10px] text-slate-400 block font-medium">Beard Trim</span>
-                      <strong className="text-white block font-bold">₹450</strong>
+                      <strong className="text-white block font-bold text-sm">₹450</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
                       <span className="text-[10px] text-slate-400 block font-medium">Keratin Spa</span>
-                      <strong className="text-white block font-bold">₹1,800</strong>
+                      <strong className="text-white block font-bold text-sm">₹1,800</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40">
+                    <div className="p-3 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40">
                       <span className="text-[10px] text-[#E0C068] block font-bold">Total</span>
-                      <strong className="text-white block font-extrabold">₹3,050</strong>
+                      <strong className="text-white block font-extrabold text-sm">₹3,050</strong>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* TILE 2: Live Floor Chair Matrix */}
-              <div className="bento-card-luxury p-7 sm:p-8 flex flex-col justify-between">
+              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
+                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
                       02 • Floor Queue
                     </span>
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <Clock className="w-4 h-4" />
+                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
+                      <Clock className="w-5 h-5" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-extrabold text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
                     {landingLang === 'en' ? 'Live Chair Matrix' : 'லைவ் சேர் கண்காணிப்பு'}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -1066,43 +1066,43 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="mt-5 space-y-2">
-                  <div className="p-2.5 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="mt-6 space-y-2.5">
+                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                       <span className="font-bold text-white">Chair 01</span>
                     </div>
-                    <span className="text-emerald-400 text-[11px] font-semibold">Active Fade</span>
+                    <span className="text-emerald-400 text-xs font-semibold">Active Fade</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
                       <span className="font-bold text-white">Chair 02</span>
                     </div>
-                    <span className="text-blue-300 text-[11px] font-semibold">Walk-in Ready</span>
+                    <span className="text-blue-300 text-xs font-semibold">Walk-in Ready</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <div className="p-3 rounded-xl bg-[#07152B]/80 border border-white/10 flex items-center justify-between text-xs sm:text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                       <span className="font-bold text-white">Chair 03</span>
                     </div>
-                    <span className="text-amber-300 text-[11px] font-semibold">Keratin Spa (30m)</span>
+                    <span className="text-amber-300 text-xs font-semibold">Keratin Spa (30m)</span>
                   </div>
                 </div>
               </div>
 
               {/* TILE 3: Automated WhatsApp Invoicing */}
-              <div className="bento-card-luxury p-7 sm:p-8 flex flex-col justify-between">
+              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
+                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
                       03 • Customer Delight
                     </span>
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                      <MessageCircle className="w-4 h-4" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                      <MessageCircle className="w-5 h-5" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-extrabold text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
                     {landingLang === 'en' ? 'Automated WhatsApp Bills' : 'வாட்ஸ்அப் டிஜிட்டல் பில்'}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -1112,29 +1112,29 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="mt-5 p-3.5 rounded-xl bg-[#07152B] border border-emerald-500/30 text-xs space-y-1.5">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-[11px]">
+                <div className="mt-6 p-4 rounded-xl bg-[#07152B] border border-emerald-500/30 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span>WhatsApp Message Preview</span>
                   </div>
-                  <p className="text-slate-300 text-[11px] leading-relaxed italic bg-black/20 p-2 rounded-lg">
+                  <p className="text-slate-300 text-[11px] sm:text-xs leading-relaxed italic bg-black/20 p-2.5 rounded-lg">
                     “Dear Priya, thank you for visiting Luxe Salon! Your bill of ₹1,800 is paid. View your itemized receipt here...”
                   </p>
                 </div>
               </div>
 
               {/* TILE 4: Stylist Workspace & Tips */}
-              <div className="bento-card-luxury p-7 sm:p-8 flex flex-col justify-between">
+              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
+                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
                       04 • Staff Harmony
                     </span>
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <Scissors className="w-4 h-4" />
+                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
+                      <Scissors className="w-5 h-5" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-extrabold text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
                     {landingLang === 'en' ? 'Stylist Commission Hub' : 'ஸ்டைலிஸ்ட் கமிஷன் தளம்'}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -1144,16 +1144,16 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="mt-5 p-3.5 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="mt-6 p-4 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-400">Stylist Anand</span>
                     <span className="text-emerald-400 font-bold">₹1,240 Commission</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-400">Stylist Deepa</span>
                     <span className="text-emerald-400 font-bold">₹1,680 Commission</span>
                   </div>
-                  <div className="pt-1.5 border-t border-white/10 flex justify-between text-[11px] text-slate-400 font-semibold">
+                  <div className="pt-2 border-t border-white/10 flex justify-between text-xs text-slate-400 font-semibold">
                     <span>Auto-Audited Daily</span>
                     <span className="text-white font-bold">Zero Disputes</span>
                   </div>
@@ -1161,17 +1161,17 @@ export default function HomePage() {
               </div>
 
               {/* TILE 5: 360° Financial Audits */}
-              <div className="bento-card-luxury p-7 sm:p-8 flex flex-col justify-between">
+              <div className="bento-card-luxury p-7 sm:p-9 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
+                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#D4AF37]">
                       05 • Profit Intelligence
                     </span>
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
-                      <TrendingUp className="w-4 h-4" />
+                    <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
+                      <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-extrabold text-white">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
                     {landingLang === 'en' ? '360° Financial Audits' : 'முழு லாபக் கணக்குகள்'}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -1181,16 +1181,16 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="mt-5 p-3.5 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="mt-6 p-4 rounded-xl bg-[#07152B]/80 border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-400">Daily Revenue</span>
                     <span className="text-white font-bold">₹38,450</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-400">Recorded Expenses</span>
                     <span className="text-rose-400 font-bold">- ₹4,200</span>
                   </div>
-                  <div className="pt-1.5 border-t border-white/10 flex items-center justify-between text-xs font-bold">
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs sm:text-sm font-bold">
                     <span className="text-[#D4AF37]">Net Store Profit</span>
                     <span className="text-emerald-400 font-extrabold">₹34,250</span>
                   </div>
@@ -1201,45 +1201,45 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 5: MULTI-LANGUAGE SECTION ================= */}
-          <section id="languages" className="py-20 px-4 sm:px-6 max-w-6xl mx-auto">
-            <div className="rounded-3xl p-8 sm:p-12 bg-gradient-to-r from-[#0B1E3B] via-[#091730] to-[#0B1E3B] border border-white/10 shadow-2xl">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <section id="languages" className="py-16 sm:py-24 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
+            <div className="rounded-3xl p-8 sm:p-14 bg-gradient-to-r from-[#0B1E3B] via-[#091730] to-[#0B1E3B] border border-white/10 shadow-2xl">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
                 <div className="lg:col-span-7 space-y-4 text-left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
                     <Globe className="w-3.5 h-3.5 text-[#D4AF37]" />
                     <span>{landingLang === 'en' ? 'Regional Excellence' : 'பன்மொழி ஆதரவு'}</span>
                   </div>
-                  <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                  <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
                     {landingLang === 'en'
                       ? 'Speaks your language. Delights your clients.'
                       : 'உங்கள் மொழியில் இயங்கும். வாடிக்கையாளர்களுக்கு எளிதாகும்.'}
                   </h2>
-                  <p className="text-sm text-slate-300 leading-relaxed font-normal">
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
                     {landingLang === 'en'
                       ? 'StyleFleet bridges language barriers effortlessly. Generate invoices and WhatsApp alerts in English, Tamil (தமிழ்), or Hindi (हिन्दी) so every client and staff feels right at home.'
                       : 'ஆங்கிலம், தமிழ் மற்றும் ஹிந்தி ஆகிய மூன்று மொழிகளிலும் பில்களையும் வாட்ஸ்அப் செய்திகளையும் அனுப்பி உங்கள் வாடிக்கையாளர்களிடம் நற்பெயரைப் பெறுங்கள்.'}
                   </p>
-                  <div className="pt-2 flex flex-wrap gap-2 text-xs font-bold">
-                    <span className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-white">
+                  <div className="pt-3 flex flex-wrap gap-2.5 text-xs sm:text-sm font-bold">
+                    <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white">
                       English (Global)
                     </span>
-                    <span className="px-3.5 py-1.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#E0C068]">
+                    <span className="px-4 py-2 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#E0C068]">
                       தமிழ் (Tamil Nadu)
                     </span>
-                    <span className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-white">
+                    <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white">
                       हिन्दी (North India)
                     </span>
                   </div>
                 </div>
 
-                <div className="lg:col-span-5 bg-[#07152B] p-5 rounded-2xl border border-white/10 text-left space-y-3 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="text-xs font-bold text-white">பில் முன்னோட்டம் (Tamil Bill)</span>
-                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                <div className="lg:col-span-5 bg-[#07152B] p-6 rounded-3xl border border-white/10 text-left space-y-3.5 shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="text-xs sm:text-sm font-bold text-white">பில் முன்னோட்டம் (Tamil Bill)</span>
+                    <span className="text-[10px] sm:text-xs text-emerald-400 font-bold bg-emerald-500/20 px-2.5 py-0.5 rounded-full">
                       உறுதி செய்யப்பட்டது
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-xs">
+                  <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between text-slate-300">
                       <span>முடி திருத்துதல் (Haircut)</span>
                       <strong className="text-white">₹800</strong>
@@ -1252,7 +1252,7 @@ export default function HomePage() {
                       <span>கேரட்டின் ஸ்பா (Keratin Spa)</span>
                       <strong className="text-white">₹1,800</strong>
                     </div>
-                    <div className="pt-2 border-t border-white/10 flex justify-between font-extrabold text-sm text-white">
+                    <div className="pt-2.5 border-t border-white/10 flex justify-between font-extrabold text-sm sm:text-base text-white">
                       <span className="text-[#D4AF37]">மொத்தத் தொகை:</span>
                       <span className="text-[#D4AF37]">₹3,050</span>
                     </div>
@@ -1263,12 +1263,12 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 6: VERIFIED TESTIMONIALS ================= */}
-          <section id="testimonials" className="py-24 px-4 sm:px-6 max-w-6xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
+          <section id="testimonials" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
                 <span>{landingLang === 'en' ? 'Salon Owner Feedback' : 'உரிமையாளர்களின் கருத்துகள்'}</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
                 {landingLang === 'en'
                   ? 'Loved by India’s Master Stylists'
                   : 'சலூன் உரிமையாளர்கள் கொண்டாடும் தளம்'}
@@ -1280,10 +1280,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 text-left">
               {/* Review 1 */}
-              <div className="rounded-2xl p-7 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-3">
+              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
+                <div className="space-y-3.5">
                   <div className="flex items-center gap-1 text-[#D4AF37]">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
@@ -1296,22 +1296,22 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
+                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
                     KR
                   </div>
                   <div>
-                    <strong className="text-xs font-bold text-white block">Kavitha R.</strong>
-                    <span className="text-[10px] text-slate-400 block">The Velvet Mirror, Chennai</span>
+                    <strong className="text-xs sm:text-sm font-bold text-white block">Kavitha R.</strong>
+                    <span className="text-[11px] text-slate-400 block">The Velvet Mirror, Chennai</span>
                   </div>
                 </div>
               </div>
 
               {/* Review 2 */}
-              <div className="rounded-2xl p-7 bg-[#0B1E3B] border border-[#D4AF37]/40 shadow-xl flex flex-col justify-between relative">
-                <div className="absolute top-4 right-4 text-[10px] bg-[#D4AF37]/15 text-[#E0C068] font-bold px-2 py-0.5 rounded border border-[#D4AF37]/30">
+              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-[#D4AF37]/40 shadow-2xl flex flex-col justify-between relative">
+                <div className="absolute top-4 right-4 text-[10px] bg-[#D4AF37]/15 text-[#E0C068] font-bold px-2.5 py-1 rounded-full border border-[#D4AF37]/30">
                   Verified Owner
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   <div className="flex items-center gap-1 text-[#D4AF37]">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
@@ -1324,19 +1324,19 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
+                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
                     RK
                   </div>
                   <div>
-                    <strong className="text-xs font-bold text-white block">Rajesh K.</strong>
-                    <span className="text-[10px] text-slate-400 block">Blade & Beard Studio, Coimbatore</span>
+                    <strong className="text-xs sm:text-sm font-bold text-white block">Rajesh K.</strong>
+                    <span className="text-[11px] text-slate-400 block">Blade & Beard Studio, Coimbatore</span>
                   </div>
                 </div>
               </div>
 
               {/* Review 3 */}
-              <div className="rounded-2xl p-7 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-3">
+              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
+                <div className="space-y-3.5">
                   <div className="flex items-center gap-1 text-[#D4AF37]">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
@@ -1349,188 +1349,303 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div className="pt-6 border-t border-white/10 mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
+                  <div className="w-11 h-11 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center font-bold text-[#D4AF37]">
                     AM
                   </div>
                   <div>
-                    <strong className="text-xs font-bold text-white block">Ananya M.</strong>
-                    <span className="text-[10px] text-slate-400 block">Glamour Lounge, Bengaluru</span>
+                    <strong className="text-xs sm:text-sm font-bold text-white block">Ananya M.</strong>
+                    <span className="text-[11px] text-slate-400 block">Glamour Lounge, Bengaluru</span>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* ================= SECTION 7: TRANSPARENT PRICING ================= */}
-          <section id="pricing" className="py-24 px-4 sm:px-6 max-w-6xl mx-auto scroll-mt-20">
-            <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
-                <span>{landingLang === 'en' ? 'Simple & Transparent' : 'வெளிப்படையான கட்டணங்கள்'}</span>
+          {/* ================= SECTION 7: TRANSPARENT SUBSCRIPTION PRICING ================= */}
+          <section id="pricing" className="py-20 sm:py-28 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto scroll-mt-20">
+            <div className="text-center max-w-3xl mx-auto mb-14 space-y-4">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-xs font-bold text-[#E0C068]">
+                <span>{landingLang === 'en' ? 'Official Salon Subscription' : 'சலூன் சந்தா திட்டங்கள்'}</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                {landingLang === 'en' ? 'Plans Built for Your Salon' : 'உங்கள் சலூனுக்கேற்ற திட்டங்கள்'}
+              <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
+                {landingLang === 'en' ? 'Transparent Subscription Plans' : 'தெளிவான கட்டண விவரங்கள்'}
               </h2>
               <p className="text-sm sm:text-base text-slate-300">
                 {landingLang === 'en'
-                  ? 'All plans include unlimited bills, appointments, WhatsApp sharing, and multi-stylist permissions.'
-                  : 'அனைத்து திட்டங்களிலும் அன்லிமிடெட் பில்லிங், வாட்ஸ்அப் பகிர்வு மற்றும் ஸ்டைலிஸ்ட் கமிஷன் அணுகல் உண்டு.'}
+                  ? 'All plans include unlimited digital bills, appointments, WhatsApp sharing, chair turnover, and multi-stylist permissions.'
+                  : 'அனைத்து திட்டங்களிலும் அன்லிமிடெட் பில்லிங், வாட்ஸ்அப் பகிர்வு, சேர் மேலாண்மை மற்றும் ஸ்டைலிஸ்ட் கமிஷன் அணுகல் உண்டு.'}
               </p>
 
-              {/* Billing Toggle: Annual (Save 20%) vs Monthly */}
-              <div className="pt-2 flex items-center justify-center gap-3">
-                <span className={`text-xs font-bold ${pricingInterval === 'monthly' ? 'text-white' : 'text-slate-400'}`}>
-                  {landingLang === 'en' ? 'Monthly' : 'மாதாந்திர'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setPricingInterval(pricingInterval === 'annual' ? 'monthly' : 'annual')}
-                  className="w-14 h-7 rounded-full bg-[#0B1E3B] border border-white/20 p-1 transition-colors relative flex items-center"
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-[#D4AF37] transition-transform ${
-                      pricingInterval === 'annual' ? 'translate-x-7' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-                <span className={`text-xs font-bold flex items-center gap-1.5 ${pricingInterval === 'annual' ? 'text-white' : 'text-slate-400'}`}>
-                  <span>{landingLang === 'en' ? 'Annual' : 'ஆண்டு திட்டம்'}</span>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold">
-                    Save 20%
-                  </span>
+              {/* Tax Transparency Banner & Example Math */}
+              <div className="mt-4 p-4 rounded-2xl bg-[#07152B]/90 border border-white/10 max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shrink-0">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <strong className="text-white block font-bold">100% Tax Compliant (18% GST Applicable)</strong>
+                    <span className="text-slate-400 text-[11px] block mt-0.5">
+                      For ex: Plan ₹2,999.00 + CGST (9%) ₹269.91 + SGST (9%) ₹269.91 = <strong className="text-[#D4AF37]">₹3,538.82 Total</strong>
+                    </span>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 shrink-0">
+                  Official GST Invoice
                 </span>
               </div>
             </div>
 
-            {/* Pricing Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            {/* Official Subscription Cards (3 Months, 6 Months, 12 Months) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10 text-left">
               
-              {/* TIER 1: Boutique / Studio */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-white">Studio</h3>
-                    <span className="text-xs text-slate-400 block mt-1">For single-chair artists & boutique studios</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-white">
-                      ₹{pricingInterval === 'annual' ? '599' : '749'}
+              {/* TIER 1: 3 Months Plan */}
+              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between hover:border-white/20 transition-all">
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-extrabold text-white">3 Months</h3>
+                      <span className="text-xs text-slate-400 block mt-0.5">Quarterly Salon Foundation</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold">
+                      Starter
                     </span>
-                    <span className="text-xs text-slate-400">/ month</span>
                   </div>
-                  <ul className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Unlimited Digital Bills & Receipts</span>
+
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl sm:text-5xl font-black text-white">₹2,999</span>
+                      <span className="text-xs font-semibold text-slate-400">(Excl. GST)</span>
+                    </div>
+                    <span className="text-[11px] text-[#D4AF37] font-semibold block mt-1">
+                      Equivalent to ₹999 / month
+                    </span>
+                  </div>
+
+                  {/* GST Breakdown Box */}
+                  <div className="p-3.5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-1.5 text-xs">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Tax & Total Breakdown:
+                    </span>
+                    <div className="flex justify-between text-slate-300 text-[11px]">
+                      <span>Base Plan Price:</span>
+                      <strong className="text-white">₹2,999.00</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>CGST (9%):</span>
+                      <span>₹269.91</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>SGST (9%):</span>
+                      <span>₹269.91</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                      <span className="text-white">Total Amount:</span>
+                      <strong className="text-base font-extrabold text-white">₹3,538.82</strong>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 pt-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>3 Months Unlimited Digital WhatsApp Billing</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Up to 2 Stylist Accounts</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Multi-Stylist Workspace Access</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>WhatsApp Bill Sharing</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Live Chair Floor Queue & Matrix</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Daily Expense Tracking</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Daily Expense & Profit Auditing</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Zero Hardware Lock-in (Any Device)</span>
                     </li>
                   </ul>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
+                  className="mt-8 w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs sm:text-sm font-bold border border-white/15 transition-all cursor-pointer"
                 >
-                  Get Started with Studio
+                  Get Started • ₹3,538.82 Total
                 </button>
               </div>
 
-              {/* TIER 2: Professional (Most Popular with Gold Halo) */}
-              <div className="rounded-3xl p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative">
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-[#07152B] text-[10px] uppercase font-black px-3.5 py-1 rounded-full shadow-md">
-                  Most Popular for Salons
+              {/* TIER 2: 6 Months Plan */}
+              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-blue-500/30 shadow-xl flex flex-col justify-between hover:border-blue-500/50 transition-all relative">
+                <div className="absolute -top-3.5 right-6 bg-blue-500 text-white text-[10px] uppercase font-black px-3 py-1 rounded-full shadow-md">
+                  Save ₹500 Offer
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-white">Professional</h3>
-                    <span className="text-xs text-slate-300 block mt-1">For growing unisex salons & spas</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-[#D4AF37]">
-                      ₹{pricingInterval === 'annual' ? '1,199' : '1,499'}
+
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-extrabold text-white">6 Months</h3>
+                      <span className="text-xs text-slate-400 block mt-0.5">Half-Year Salon Growth</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] text-blue-300 font-bold">
+                      Special Offer
                     </span>
-                    <span className="text-xs text-slate-400">/ month</span>
                   </div>
-                  <ul className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-200">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>All Studio features included</span>
+
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-slate-500 line-through">₹5,999</span>
+                      <span className="text-4xl sm:text-5xl font-black text-white">₹5,499</span>
+                      <span className="text-xs font-semibold text-slate-400">(Excl. GST)</span>
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-semibold block mt-1">
+                      Offer Price: Save ₹500 instantly (~₹916 / mo)
+                    </span>
+                  </div>
+
+                  {/* GST Breakdown Box */}
+                  <div className="p-3.5 rounded-2xl bg-[#07152B]/80 border border-white/10 space-y-1.5 text-xs">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Tax & Total Breakdown:
+                    </span>
+                    <div className="flex justify-between text-slate-300 text-[11px]">
+                      <span>Offer Plan Price:</span>
+                      <strong className="text-white">₹5,499.00</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>CGST (9%):</span>
+                      <span>₹494.91</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>SGST (9%):</span>
+                      <span>₹494.91</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                      <span className="text-white">Total Amount:</span>
+                      <strong className="text-base font-extrabold text-white">₹6,488.82</strong>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 pt-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>All 3 Months Features Included</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Up to 10 Stylist Workspaces</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>6 Months Continuous Cloud Sync</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Live Chair Floor Matrix & Queue</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Stylist Commission & Tip Tracking</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Staff Commission & Tip Breakdown</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Automated Appointment Attendance Reminders</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>360° Financial Audit & Profit Analysis</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Priority WhatsApp Support</span>
                     </li>
                   </ul>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-xs font-black shadow-xl shadow-[#D4AF37]/25 transition-all cursor-pointer"
+                  className="mt-8 w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
                 >
-                  Start Professional Plan
+                  Claim 6 Months • ₹6,488.82 Total
                 </button>
               </div>
 
-              {/* TIER 3: Multi-Outlet Enterprise */}
-              <div className="rounded-3xl p-8 bg-[#0B1E3B] border border-white/10 shadow-xl flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-white">Enterprise</h3>
-                    <span className="text-xs text-slate-400 block mt-1">For luxury salon chains & multi-outlet brands</span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-white">
-                      ₹{pricingInterval === 'annual' ? '2,499' : '2,999'}
+              {/* TIER 3: 12 Months Plan (Most Popular with Gold Gradient & Halo) */}
+              <div className="rounded-3xl p-8 bg-gradient-to-b from-[#0D2244] to-[#07152B] border-2 border-[#D4AF37] shadow-2xl flex flex-col justify-between relative hover:border-[#F5A623] transition-all">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#D4AF37] to-[#F5A623] text-[#07152B] text-[10px] uppercase font-black px-4 py-1 rounded-full shadow-lg">
+                  ⭐ Most Popular • Save ₹2,000 Offer
+                </div>
+
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-extrabold text-white">12 Months</h3>
+                      <span className="text-xs text-[#E0C068] block mt-0.5 font-bold">Annual Complete Salon OS</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[11px] text-[#E0C068] font-black">
+                      Best Value
                     </span>
-                    <span className="text-xs text-slate-400">/ month</span>
                   </div>
-                  <ul className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Everything in Professional</span>
+
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-slate-500 line-through">₹11,999</span>
+                      <span className="text-4xl sm:text-5xl font-black text-[#D4AF37]">₹9,999</span>
+                      <span className="text-xs font-semibold text-slate-300">(Excl. GST)</span>
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-semibold block mt-1">
+                      Offer Price: Save ₹2,000 (~₹833 / month)
+                    </span>
+                  </div>
+
+                  {/* GST Breakdown Box */}
+                  <div className="p-3.5 rounded-2xl bg-[#07152B] border border-[#D4AF37]/30 space-y-1.5 text-xs">
+                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] block tracking-wider">
+                      Tax & Total Breakdown:
+                    </span>
+                    <div className="flex justify-between text-slate-300 text-[11px]">
+                      <span>Offer Plan Price:</span>
+                      <strong className="text-white">₹9,999.00</strong>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>CGST (9%):</span>
+                      <span>₹899.91</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>SGST (9%):</span>
+                      <span>₹899.91</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs sm:text-sm font-bold">
+                      <span className="text-[#D4AF37]">Total Amount:</span>
+                      <strong className="text-base font-extrabold text-[#D4AF37]">₹11,798.82</strong>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>All 6 Months Features Included</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Unlimited Stylists & Staff</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Full 365 Days Uninterrupted Cloud Access</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Custom WhatsApp Sender ID Integration</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>360° Financial Audit & Real-Time Net Profit</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#D4AF37]" />
-                      <span>Dedicated Priority Relationship Manager</span>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Dedicated VIP Onboarding & Staff Training</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>Custom WhatsApp Sender ID & Receipt Logo</span>
+                    </li>
+                    <li className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                      <span>24/7 Dedicated Priority Relationship Manager</span>
                     </li>
                   </ul>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => openLogin('owner')}
-                  className="mt-8 w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
+                  className="mt-8 w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-110 text-[#07152B] text-xs sm:text-sm font-black shadow-xl shadow-[#D4AF37]/30 transition-all cursor-pointer"
                 >
-                  Talk to Enterprise Sales
+                  Start Annual OS • ₹11,798.82 Total
                 </button>
               </div>
 
@@ -1538,16 +1653,16 @@ export default function HomePage() {
           </section>
 
           {/* ================= SECTION 8: BOTTOM CTA BANNER ================= */}
-          <section className="py-20 px-4 sm:px-6 max-w-5xl mx-auto">
+          <section className="py-20 px-4 sm:px-8 xl:px-12 w-full max-w-[1440px] mx-auto">
             <div className="relative rounded-3xl p-10 sm:p-16 text-center overflow-hidden bg-gradient-to-r from-[#0B1E3B] via-[#0D2244] to-[#0B1E3B] border border-[#D4AF37]/50 shadow-2xl">
               {/* Gold Halo background flare */}
               <div className="absolute -inset-10 bg-radial-gradient from-[#D4AF37]/15 to-transparent blur-3xl pointer-events-none" />
 
-              <div className="max-w-2xl mx-auto space-y-5 relative z-10">
+              <div className="max-w-3xl mx-auto space-y-5 relative z-10">
                 <span className="text-xs font-extrabold text-[#E0C068] uppercase tracking-[0.25em] block">
                   {landingLang === 'en' ? 'Start Your Salon Transformation' : 'இன்றே தொடங்குங்கள்'}
                 </span>
-                <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+                <h2 className="text-3xl sm:text-5xl xl:text-6xl font-extrabold text-white tracking-tight">
                   {landingLang === 'en'
                     ? 'Make every salon day flow effortlessly.'
                     : 'ஒவ்வொரு நாளும் உங்கள் சலூனை எளிதாக வழிநடத்துங்கள்.'}
@@ -1894,8 +2009,8 @@ export default function HomePage() {
       )}
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t border-white/[0.08] py-8 px-4 sm:px-8 bg-[#07152B] text-xs text-[#94A3B8]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-white/[0.08] py-8 px-4 sm:px-8 xl:px-12 bg-[#07152B] text-xs text-[#94A3B8]">
+        <div className="w-full max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Brand & Platform */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#D4AF37]/40 bg-[#0B1E3B] flex items-center justify-center p-0 shrink-0">
