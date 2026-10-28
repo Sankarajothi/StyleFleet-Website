@@ -711,6 +711,8 @@ export function SalesAndBillsView({
       customerName: bill.cust,
       shopName: shopProfile.shopName || 'StyleFleet Salon',
       invoiceNumber: bill.id,
+      billId: bill.id,
+      pdfUrl: (bill as any).pdfUrl || (bill as any).pdf_url,
       totalAmount: bill.total,
       paidAmount: bill.paidAmount,
       dueAmount: bill.dueAmount,

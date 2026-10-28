@@ -1254,6 +1254,10 @@ export async function saveBillToDb(
     const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}`;
     const nowIso = new Date().toISOString();
 
+    const shortId = billId.slice(0, 4);
+    const officialPdfKey = `${bill.invoiceNumber}_${shortId}.pdf`;
+    const officialPdfUrl = `https://stylefleet.tecstellar.com/b/${officialPdfKey}`;
+
     const { error: billErr } = await supabase.from('bills').insert({
       id: billId,
       shop_id: shopId,
@@ -1270,6 +1274,7 @@ export async function saveBillToDb(
       due_amount_minor: dueMinor,
       notes: notesStr,
       issued_at: nowIso,
+      pdf_url: officialPdfUrl,
     });
 
     if (billErr) {
@@ -1310,6 +1315,30 @@ export async function saveBillToDb(
     } catch {
       // Payment table may have RLS
     }
+
+    // Trigger asynchronous PDF generation & Supabase Storage upload
+    try {
+      fetch('/api/invoices/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId,
+          billId,
+          invoiceNumber: bill.invoiceNumber,
+          customerName: bill.cust,
+          customerPhone: bill.phone,
+          items: bill.items,
+          subtotal: Math.round(subtotalMinor / 100),
+          discount: Math.round(discountMinor / 100),
+          tax: Math.round(taxMinor / 100),
+          total: Math.round(totalMinor / 100),
+          paidAmount: Math.round(paidMinor / 100),
+          dueAmount: Math.round(dueMinor / 100),
+          paymentMethod,
+          issuedAt: nowIso,
+        }),
+      }).catch((e) => console.warn('[Supabase] PDF upload background notice:', e));
+    } catch {}
 
     return billId;
   } catch {

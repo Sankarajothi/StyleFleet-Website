@@ -1101,6 +1101,7 @@ function DashboardContent() {
                   customerName: activeInvoice.cust || 'Client',
                   invoiceNumber: activeInvoice.id,
                   billId: activeInvoice.id,
+                  pdfUrl: (activeInvoice as any).pdfUrl || (activeInvoice as any).pdf_url,
                   totalAmount: activeInvoice.total,
                   paidAmount: activeInvoice.paidAmount,
                   dueAmount: activeInvoice.dueAmount,

@@ -107,6 +107,7 @@ export function buildOfficialWhatsAppBillMessage(params: {
   customerName: string;
   invoiceNumber: string;
   billId?: string;
+  pdfUrl?: string;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
@@ -125,6 +126,7 @@ export function buildOfficialWhatsAppBillMessage(params: {
     customerName,
     invoiceNumber,
     billId,
+    pdfUrl,
     totalAmount,
     paidAmount,
     dueAmount,
@@ -132,16 +134,15 @@ export function buildOfficialWhatsAppBillMessage(params: {
     socialLinks,
   } = params;
 
-  const cleanInv = encodeURIComponent((invoiceNumber || billId || '').trim());
-  let origin = '';
-  if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    origin = window.location.origin;
-  } else if (process.env.NEXT_PUBLIC_APP_URL) {
-    origin = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-  } else {
-    origin = 'https://stylefleet.tecstellar.com';
+  let billPdfUrl = (pdfUrl || '').trim();
+  if (!billPdfUrl) {
+    const rawInv = (invoiceNumber || billId || '').trim();
+    const shortId = billId ? billId.replace(/-/g, '').slice(0, 4) : '';
+    const filename = rawInv.toLowerCase().endsWith('.pdf')
+      ? rawInv
+      : (shortId ? `${rawInv}_${shortId}.pdf` : `${rawInv}.pdf`);
+    billPdfUrl = `https://stylefleet.tecstellar.com/b/${encodeURIComponent(filename)}`;
   }
-  const billPdfUrl = `${origin}/b/${cleanInv}`;
   const cleanShopPhone = (shopPhone || '').replace(/\D/g, '').slice(-10);
 
   // Social media block

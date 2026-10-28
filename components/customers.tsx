@@ -1973,6 +1973,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                   customerName: viewingBillInvoice.cust || 'Client',
                   invoiceNumber: viewingBillInvoice.id,
                   billId: viewingBillInvoice.id,
+                  pdfUrl: (viewingBillInvoice as any).pdfUrl || (viewingBillInvoice as any).pdf_url,
                   totalAmount: viewingBillInvoice.total,
                   paidAmount: viewingBillInvoice.paidAmount,
                   dueAmount: viewingBillInvoice.dueAmount,
