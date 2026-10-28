@@ -708,7 +708,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       const liveVisits = liveStats ? liveStats.visits : 0;
       const liveSpend = liveStats ? liveStats.spend : 0;
       const liveDue = liveStats ? liveStats.dues : Math.round((c.outstanding_due_minor || 0) / 100);
-      const lastVisit = liveStats ? liveStats.lastVisit : 'Recent';
+      const lastVisit = (liveStats && liveStats.visits > 0) ? liveStats.lastVisit : 'Never';
 
       return {
         id: c.id,

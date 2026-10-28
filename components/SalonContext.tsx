@@ -399,7 +399,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     vip = false,
     due = 0,
     notes = '',
-    lastVisit = 'Today',
+    lastVisit = 'Never',
     status = 'active',
   }: {
     name: string;
@@ -417,11 +417,11 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       name: name.trim(),
       phone: cleanPhone || phone.trim(),
       vip,
-      visits: 1,
+      visits: 0,
       spend: 0,
       due: Number(due) || 0,
       notes: notes || '',
-      lastVisit: lastVisit || 'Today',
+      lastVisit: lastVisit || 'Never',
       status: status || 'active',
     };
     setCustomers((prev) => [newCust, ...prev]);
@@ -501,11 +501,11 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         name: (nc.name || 'Client').trim(),
         phone: cleanPhone,
         vip: !!nc.vip,
-        visits: 1,
+        visits: 0,
         spend: 0,
         due: Number(nc.due) || 0,
         notes: nc.notes || 'Imported from phone contacts',
-        lastVisit: nc.lastVisit || 'Today',
+        lastVisit: nc.lastVisit || 'Never',
         status: 'active' as const,
       };
     }).filter((c) => c.phone && c.phone.length >= 7);

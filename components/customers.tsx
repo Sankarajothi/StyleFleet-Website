@@ -237,7 +237,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               vip: false,
               due: 0,
               notes: 'Imported from phone contacts',
-              lastVisit: 'New Client',
+              lastVisit: 'Never',
             };
           }).filter((c: any) => c.phone && c.phone.length >= 7);
 
@@ -282,7 +282,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       vip: formVip,
       due: Number(formDue) || 0,
       notes: formNotes.trim(),
-      lastVisit: 'Today',
+      lastVisit: 'Never',
     });
 
     setFormName('');
@@ -354,7 +354,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
         vip: false,
         due: 0,
         notes: sc.notes,
-        lastVisit: 'New Client',
+        lastVisit: 'Never',
       }));
 
     showToast(`Saving ${toImport.length} contact(s) to Supabase database...`);
@@ -528,10 +528,12 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A7B0C3] hover:text-white text-xs cursor-pointer"
+              className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs cursor-pointer ${
+                isDarkMode ? 'text-[#A7B0C3] hover:text-white' : 'text-slate-400 hover:text-slate-800'
+              }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           )}
@@ -854,11 +856,13 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 >
                   <div className="text-center">
                     <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Visits</span>
-                    <strong className={`text-xs font-extrabold ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>{c.visits || 1}</strong>
+                    <strong className={`text-xs font-extrabold ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>{c.visits ?? 0}</strong>
                   </div>
                   <div className="text-center">
                     <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Last Visit</span>
-                    <strong className={`text-[11px] font-bold truncate block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>{c.lastVisit || 'Recently'}</strong>
+                    <strong className={`text-[11px] font-bold truncate block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
+                      {(c.visits && c.visits > 0) ? (c.lastVisit || 'Recently') : 'Never'}
+                    </strong>
                   </div>
                   <div className="text-center">
                     <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Spent</span>
@@ -1104,10 +1108,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                     setHistoryCust(null);
                     setOpenDetailMenu(false);
                   }}
-                  className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-sm cursor-pointer"
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm cursor-pointer transition-colors shadow-sm ${
+                    isDarkMode
+                      ? 'bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-300'
+                  }`}
+                  aria-label="Close"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
@@ -1487,10 +1496,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               <button
                 type="button"
                 onClick={() => setNotesCust(null)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs cursor-pointer transition-colors shadow-sm ${
+                  isDarkMode
+                    ? 'bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-300'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -1551,10 +1565,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               <button
                 type="button"
                 onClick={() => setEditingCust(null)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs cursor-pointer transition-colors shadow-sm ${
+                  isDarkMode
+                    ? 'bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-300'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -1662,10 +1681,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               <button
                 type="button"
                 onClick={() => setShowManualModal(false)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs cursor-pointer transition-colors shadow-sm ${
+                  isDarkMode
+                    ? 'bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-300'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -1782,10 +1806,15 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
               <button
                 type="button"
                 onClick={() => setShowImportModal(false)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs cursor-pointer transition-colors shadow-sm ${
+                  isDarkMode
+                    ? 'bg-slate-800 hover:bg-slate-700 text-[#A7B0C3] hover:text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 border border-slate-300'
+                }`}
+                aria-label="Close"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
