@@ -11,12 +11,23 @@ interface AccountsViewProps {
 type PeriodFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 export const AccountsView: React.FC<AccountsViewProps> = () => {
-  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast, role, hasPermission } = useSalon();
+  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast, role, hasPermission, shopProfile } = useSalon();
   const canViewPastExpenses = role === 'owner' || hasPermission('past_expenses');
 
   // Time filter state
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('today');
   
+  // Registration Date from shopProfile or earliest transaction
+  const regDateStr = useMemo(() => {
+    if (shopProfile?.createdAt) {
+      const d = new Date(shopProfile.createdAt);
+      if (!isNaN(d.getTime())) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+    }
+    return new Date().toISOString().split('T')[0];
+  }, [shopProfile?.createdAt]);
+
   // Custom date range state
   const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [customStart, setCustomStart] = useState<string>(todayIso);
@@ -395,6 +406,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
               </label>
               <input
                 type="date"
+                min={regDateStr}
                 max={todayIso}
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
@@ -409,6 +421,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
               </label>
               <input
                 type="date"
+                min={customStart || regDateStr}
                 max={todayIso}
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}

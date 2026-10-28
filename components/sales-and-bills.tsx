@@ -66,6 +66,10 @@ export function SalesAndBillsView({
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
+  const formatDateToIso = (d: Date) => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   const getPreviousDateStr = (dateStr: string) => {
     const parts = dateStr.split('-');
     const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -83,11 +87,35 @@ export function SalesAndBillsView({
   const todayStr = useMemo(() => getTodayDateStr(), []);
   const yesterdayStr = useMemo(() => getPreviousDateStr(todayStr), [todayStr]);
 
+  // Salon registration date from shopProfile (or earliest bill)
+  const regDateObj = useMemo(() => {
+    if (shopProfile?.createdAt) {
+      const parsed = new Date(shopProfile.createdAt);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    let earliest = Infinity;
+    bills.forEach((b) => {
+      const t = b.isToday ? Date.now() : b.createdAt ? new Date(b.createdAt).getTime() : b.dateStr ? new Date(b.dateStr).getTime() : 0;
+      if (t > 0 && t < earliest) earliest = t;
+    });
+    if (earliest !== Infinity) return new Date(earliest);
+    return new Date();
+  }, [shopProfile?.createdAt, bills]);
+
+  const regDateStr = useMemo(() => formatDateToIso(regDateObj), [regDateObj]);
+
   // Primary Option: 'today' | 'custom' | 'deleted'
   const [salesOption, setSalesOption] = useState<SalesOption>('today');
+  const [customFilterMode, setCustomFilterMode] = useState<'single' | 'range'>('single');
   const [customDate, setCustomDate] = useState<string>(yesterdayStr);
+  const [customStartDate, setCustomStartDate] = useState<string>(yesterdayStr);
+  const [customEndDate, setCustomEndDate] = useState<string>(todayStr);
+
   const [showCustomDateModal, setShowCustomDateModal] = useState<boolean>(false);
+  const [tempFilterMode, setTempFilterMode] = useState<'single' | 'range'>('single');
   const [tempDateInput, setTempDateInput] = useState<string>(yesterdayStr);
+  const [tempStartDate, setTempStartDate] = useState<string>(yesterdayStr);
+  const [tempEndDate, setTempEndDate] = useState<string>(todayStr);
 
   // Peak Hours Time-based Bar Chart State
   const [timeGranularity, setTimeGranularity] = useState<'slots' | 'hourly'>('slots');
@@ -286,14 +314,29 @@ export function SalesAndBillsView({
     const priorMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
     const priorMonthStart = new Date(priorMonthEnd.getFullYear(), priorMonthEnd.getMonth(), 1, 0, 0, 0, 0);
 
-    // Custom Date
-    const parts = customDate.split('-');
-    const customDStart = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
-    const customDEnd = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
-    const customPriorStart = new Date(customDStart);
-    customPriorStart.setDate(customPriorStart.getDate() - 1);
-    const customPriorEnd = new Date(customDEnd);
-    customPriorEnd.setDate(customPriorEnd.getDate() - 1);
+    // Custom Date or Date Range
+    let customDStart: Date;
+    let customDEnd: Date;
+    let customPriorStart: Date;
+    let customPriorEnd: Date;
+
+    if (customFilterMode === 'range') {
+      const sParts = customStartDate.split('-');
+      const eParts = customEndDate.split('-');
+      customDStart = new Date(Number(sParts[0]), Number(sParts[1]) - 1, Number(sParts[2]), 0, 0, 0, 0);
+      customDEnd = new Date(Number(eParts[0]), Number(eParts[1]) - 1, Number(eParts[2]), 23, 59, 59, 999);
+      const spanMs = Math.max(86400000, customDEnd.getTime() - customDStart.getTime());
+      customPriorEnd = new Date(customDStart.getTime() - 1);
+      customPriorStart = new Date(customPriorEnd.getTime() - spanMs);
+    } else {
+      const parts = customDate.split('-');
+      customDStart = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+      customDEnd = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+      customPriorStart = new Date(customDStart);
+      customPriorStart.setDate(customPriorStart.getDate() - 1);
+      customPriorEnd = new Date(customDEnd);
+      customPriorEnd.setDate(customPriorEnd.getDate() - 1);
+    }
 
     return {
       today: { target: { start: todayStart, end: todayEnd }, prior: { start: yesterdayStart, end: yesterdayEnd } },
@@ -301,7 +344,7 @@ export function SalesAndBillsView({
       month: { target: { start: monthStart, end: todayEnd }, prior: { start: priorMonthStart, end: priorMonthEnd } },
       custom: { target: { start: customDStart, end: customDEnd }, prior: { start: customPriorStart, end: customPriorEnd } },
     };
-  }, [customDate]);
+  }, [customDate, customFilterMode, customStartDate, customEndDate]);
 
   const activeRange = useMemo(() => {
     if (salesOption === 'week') return dateRanges.week;
@@ -315,25 +358,29 @@ export function SalesAndBillsView({
       case 'today': return `Today (${formatDateReadable(todayStr)})`;
       case 'week': return 'This Week';
       case 'month': return 'This Month';
-      case 'custom': return customDate === yesterdayStr ? `Yesterday (${formatDateReadable(yesterdayStr)})` : formatDateReadable(customDate);
+      case 'custom':
+        if (customFilterMode === 'range') {
+          return `${formatDateReadable(customStartDate)} – ${formatDateReadable(customEndDate)}`;
+        }
+        return customDate === yesterdayStr ? `Yesterday (${formatDateReadable(yesterdayStr)})` : formatDateReadable(customDate);
       default: return 'Sales Analytics';
     }
-  }, [salesOption, todayStr, yesterdayStr, customDate]);
+  }, [salesOption, todayStr, yesterdayStr, customDate, customFilterMode, customStartDate, customEndDate]);
 
   const priorPeriodTitle = useMemo(() => {
     switch (salesOption) {
       case 'today': return 'Yesterday';
       case 'week': return 'Last Week';
       case 'month': return 'Last Month';
-      case 'custom': return 'Prior Day';
+      case 'custom': return customFilterMode === 'range' ? 'Prior Period' : 'Prior Day';
       default: return 'Prior Period';
     }
-  }, [salesOption]);
+  }, [salesOption, customFilterMode]);
 
   // Check if a bill falls within a date range
   const isBillInDateRange = (b: Bill, start: Date, end: Date) => {
     if (b.isDeleted) return false;
-    if (salesOption === 'today' || salesOption === 'custom') {
+    if (salesOption === 'today' || (salesOption === 'custom' && customFilterMode === 'single')) {
       const targetDStr = salesOption === 'custom' ? customDate : todayStr;
       if (start.getTime() === dateRanges.today.target.start.getTime() && b.isToday) return true;
       if (start.getTime() === dateRanges.today.prior.start.getTime() && b.isYesterday) return true;
@@ -754,7 +801,10 @@ export function SalesAndBillsView({
           <button
             type="button"
             onClick={() => {
+              setTempFilterMode(customFilterMode);
               setTempDateInput(customDate);
+              setTempStartDate(customStartDate);
+              setTempEndDate(customEndDate);
               setShowCustomDateModal(true);
             }}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition-colors cursor-pointer flex items-center gap-2 ${
@@ -770,7 +820,9 @@ export function SalesAndBillsView({
             </svg>
             <span>
               {salesOption === 'custom'
-                ? `Custom (${customDate === yesterdayStr ? 'Yesterday' : formatDateReadable(customDate)})`
+                ? customFilterMode === 'range'
+                  ? `Custom (${formatDateReadable(customStartDate)} – ${formatDateReadable(customEndDate)})`
+                  : `Custom (${customDate === yesterdayStr ? 'Yesterday' : formatDateReadable(customDate)})`
                 : 'Custom'}
             </span>
           </button>
@@ -819,7 +871,10 @@ export function SalesAndBillsView({
                 <button
                   type="button"
                   onClick={() => {
+                    setTempFilterMode(customFilterMode);
                     setTempDateInput(customDate);
+                    setTempStartDate(customStartDate);
+                    setTempEndDate(customEndDate);
                     setShowCustomDateModal(true);
                   }}
                   className="text-[11px] text-blue-400 hover:underline font-bold cursor-pointer"
@@ -1373,18 +1428,31 @@ export function SalesAndBillsView({
       {showCustomDateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div
-            className={`p-6 rounded-3xl border max-w-sm w-full space-y-4 shadow-2xl animate-scaleUp ${
+            className={`p-6 rounded-3xl border max-w-md w-full space-y-4 shadow-2xl animate-scaleUp ${
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
+            {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Pick Analytics Date
-              </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Custom Date Filter
+                  </h3>
+                  <p className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                    Choose a single day or filter by date range
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowCustomDateModal(false)}
-                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold cursor-pointer"
+                className="w-7 h-7 rounded-xl border border-white/10 flex items-center justify-center text-xs font-bold hover:bg-white/5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1392,83 +1460,224 @@ export function SalesAndBillsView({
               </button>
             </div>
 
-            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Select Today, Yesterday, or pick any specific calendar date to view complete day analytics.
-            </p>
-
-            {/* Quick Chips: Today or Yesterday */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Mode Switcher: Single Date vs Date Range */}
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-black/20 border border-white/10">
               <button
                 type="button"
-                onClick={() => {
-                  setSalesOption('today');
-                  setShowCustomDateModal(false);
-                }}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
-                  salesOption === 'today'
-                    ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                onClick={() => setTempFilterMode('single')}
+                className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  tempFilterMode === 'single'
+                    ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md'
                     : isDarkMode
-                    ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-700'
+                    ? 'text-slate-300 hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Today ({formatDateReadable(todayStr)})
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Single Date</span>
               </button>
-
               <button
                 type="button"
-                onClick={() => {
-                  setCustomDate(yesterdayStr);
-                  setSalesOption('custom');
-                  setShowCustomDateModal(false);
-                }}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
-                  salesOption === 'custom' && customDate === yesterdayStr
-                    ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                onClick={() => setTempFilterMode('range')}
+                className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  tempFilterMode === 'range'
+                    ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md'
                     : isDarkMode
-                    ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-700'
+                    ? 'text-slate-300 hover:text-white'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Yesterday ({formatDateReadable(yesterdayStr)})
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                <span>Date Range (From – To)</span>
               </button>
             </div>
 
-            {/* Calendar Date Picker */}
-            <div className="space-y-1.5 pt-2">
-              <label className="block text-[11px] font-bold text-[#A7B0C3]">
-                Or Choose Custom Date:
-              </label>
-              <input
-                type="date"
-                max={todayStr}
-                value={tempDateInput}
-                onChange={(e) => setTempDateInput(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
-                  isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                }`}
-              />
-            </div>
+            {/* Mode Specific Columns */}
+            {tempFilterMode === 'single' ? (
+              <div className="space-y-3">
+                {/* Quick Chips: Today or Yesterday */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSalesOption('today');
+                      setShowCustomDateModal(false);
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                      salesOption === 'today'
+                        ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    Today ({formatDateReadable(todayStr)})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempDateInput(yesterdayStr);
+                      setCustomDate(yesterdayStr);
+                      setCustomFilterMode('single');
+                      setSalesOption('custom');
+                      setShowCustomDateModal(false);
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                      salesOption === 'custom' && customFilterMode === 'single' && customDate === yesterdayStr
+                        ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                        : isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    Yesterday ({formatDateReadable(yesterdayStr)})
+                  </button>
+                </div>
+
+                {/* Single Date Input Column */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[11px] font-bold text-[#A7B0C3]">
+                    Choose Single Date:
+                  </label>
+                  <input
+                    type="date"
+                    min={regDateStr}
+                    max={todayStr}
+                    value={tempDateInput}
+                    onChange={(e) => setTempDateInput(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
+                      isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <p className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Available from registered date ({formatDateReadable(regDateStr)}) up to today.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Quick Range Presets */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 6);
+                      const s = formatDateToIso(d);
+                      setTempStartDate(s < regDateStr ? regDateStr : s);
+                      setTempEndDate(todayStr);
+                    }}
+                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                  >
+                    Last 7 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 13);
+                      const s = formatDateToIso(d);
+                      setTempStartDate(s < regDateStr ? regDateStr : s);
+                      setTempEndDate(todayStr);
+                    }}
+                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                  >
+                    Last 14 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 29);
+                      const s = formatDateToIso(d);
+                      setTempStartDate(s < regDateStr ? regDateStr : s);
+                      setTempEndDate(todayStr);
+                    }}
+                    className="py-1.5 px-2 rounded-lg border border-white/10 text-[10px] font-bold hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors cursor-pointer text-center"
+                  >
+                    Last 30 Days
+                  </button>
+                </div>
+
+                {/* Two Columns: From Date & To Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#A7B0C3]">
+                      From Date:
+                    </label>
+                    <input
+                      type="date"
+                      min={regDateStr}
+                      max={tempEndDate || todayStr}
+                      value={tempStartDate}
+                      onChange={(e) => setTempStartDate(e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#A7B0C3]">
+                      To Date:
+                    </label>
+                    <input
+                      type="date"
+                      min={tempStartDate || regDateStr}
+                      max={todayStr}
+                      value={tempEndDate}
+                      onChange={(e) => setTempEndDate(e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Range Preview Helper */}
+                <div className={`p-2.5 rounded-xl border text-center text-xs font-semibold ${
+                  isDarkMode ? 'bg-[#121B33]/60 border-white/5 text-[#D4AF37]' : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  Selected Range: {formatDateReadable(tempStartDate)} → {formatDateReadable(tempEndDate)}
+                </div>
+              </div>
+            )}
 
             {/* Modal Actions */}
             <div className="flex gap-2 pt-2 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => {
-                  if (tempDateInput) {
-                    setCustomDate(tempDateInput);
-                    setSalesOption('custom');
-                    setShowCustomDateModal(false);
+                  if (tempFilterMode === 'single') {
+                    if (tempDateInput) {
+                      setCustomFilterMode('single');
+                      setCustomDate(tempDateInput);
+                      setSalesOption('custom');
+                      setShowCustomDateModal(false);
+                    }
+                  } else {
+                    if (tempStartDate && tempEndDate) {
+                      setCustomFilterMode('range');
+                      setCustomStartDate(tempStartDate);
+                      setCustomEndDate(tempEndDate);
+                      setSalesOption('custom');
+                      setShowCustomDateModal(false);
+                    }
                   }
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs cursor-pointer shadow-md"
+                className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs cursor-pointer shadow-md transition-transform active:scale-95"
               >
-                View Day Analytics
+                {tempFilterMode === 'single' ? 'View Day Analytics' : 'Apply Range Filter'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowCustomDateModal(false)}
-                className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-xs font-semibold cursor-pointer hover:bg-white/5"
               >
                 Cancel
               </button>

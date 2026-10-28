@@ -43,6 +43,7 @@ export interface ShopProfile {
   latitude?: number;
   longitude?: number;
   gpsAddress?: string;
+  createdAt?: string;
 }
 
 export interface ServiceItem {

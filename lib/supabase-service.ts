@@ -464,6 +464,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       latitude: social.latitude,
       longitude: social.longitude,
       gpsAddress: social.gps_address,
+      createdAt: shop.created_at || (shop as any).createdAt || undefined,
     };
 
     // 2. Fetch service categories

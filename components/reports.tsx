@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Bill, Expense } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
 
@@ -24,23 +24,101 @@ export function ReportsView() {
 
   const todayStr = useMemo(() => getTodayDateStr(), []);
 
-  // Report Slider: 'today' | 'week' | 'month' | 'custom'
-  const [sliderPeriod, setSliderPeriod] = useState<ReportSliderPeriod>('today');
-  const [customStartDate, setCustomStartDate] = useState<string>(todayStr);
-  const [customEndDate, setCustomEndDate] = useState<string>(todayStr);
-
   // Summary Selectors: Year & Month
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth(); // 0 = Jan, 9 = Oct
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonthIdx);
 
-  const monthNames = [
+  // Timestamp parser for a bill
+  const getBillTime = (b: Bill): number => {
+    if (b.isToday) return new Date().getTime();
+    if (b.createdAt) {
+      const t = new Date(b.createdAt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (b.dateStr) {
+      const t = new Date(b.dateStr).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return 0;
+  };
+
+  // Timestamp parser for an expense
+  const getExpenseTime = (exp: Expense): number => {
+    if (exp.date) {
+      const t = new Date(exp.date).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return 0;
+  };
+
+  // Salon registration date from shopProfile (or earliest transaction)
+  const regDateObj = useMemo(() => {
+    if (shopProfile?.createdAt) {
+      const parsed = new Date(shopProfile.createdAt);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    let earliest = Infinity;
+    bills.forEach((b) => {
+      const t = getBillTime(b);
+      if (t > 0 && t < earliest) earliest = t;
+    });
+    if (earliest !== Infinity) return new Date(earliest);
+    return new Date();
+  }, [shopProfile?.createdAt, bills]);
+
+  const regYear = regDateObj.getFullYear();
+  const regMonth = regDateObj.getMonth();
+  const regDateStr = useMemo(() => {
+    return `${regDateObj.getFullYear()}-${String(regDateObj.getMonth() + 1).padStart(2, '0')}-${String(regDateObj.getDate()).padStart(2, '0')}`;
+  }, [regDateObj]);
+
+  // Report Slider: 'today' | 'week' | 'month' | 'custom'
+  const [sliderPeriod, setSliderPeriod] = useState<ReportSliderPeriod>('today');
+  const [customStartDate, setCustomStartDate] = useState<string>(todayStr);
+  const [customEndDate, setCustomEndDate] = useState<string>(todayStr);
+
+  const monthNames = useMemo(() => [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  ], []);
 
-  const availableYears = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+  // Available Years: ONLY from salon registration year up to current year (never before registration!)
+  const availableYears = useMemo(() => {
+    const years: number[] = [];
+    const minYear = Math.min(regYear, currentYear);
+    for (let yr = currentYear; yr >= minYear; yr--) {
+      years.push(yr);
+    }
+    return years.length > 0 ? years : [currentYear];
+  }, [currentYear, regYear]);
+
+  // Available Months: for selected year, only from registration month onwards (and up to current month for this year)
+  const availableMonths = useMemo(() => {
+    const list: { idx: number; name: string }[] = [];
+    const startM = selectedYear === regYear ? regMonth : 0;
+    const endM = selectedYear === currentYear ? currentMonthIdx : 11;
+    for (let m = startM; m <= endM; m++) {
+      list.push({ idx: m, name: monthNames[m] });
+    }
+    return list.length > 0 ? list : [{ idx: currentMonthIdx, name: monthNames[currentMonthIdx] }];
+  }, [selectedYear, regYear, regMonth, currentYear, currentMonthIdx, monthNames]);
+
+  // Sync selectedYear if not in availableYears
+  useEffect(() => {
+    if (!availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
+
+  // Sync selectedMonth if not in availableMonths
+  useEffect(() => {
+    const isCurrentValid = availableMonths.some((m) => m.idx === selectedMonth);
+    if (!isCurrentValid && availableMonths.length > 0) {
+      setSelectedMonth(availableMonths[availableMonths.length - 1].idx);
+    }
+  }, [availableMonths, selectedMonth]);
 
   // Restrict Stylist Access if not granted by Owner
   if (!hasReportsAccess) {
@@ -65,29 +143,6 @@ export function ReportsView() {
     }
     return nonDeleted;
   }, [bills, role, hasFullReportsAccess, loggedInStaffName]);
-
-  // Timestamp parser for a bill
-  const getBillTime = (b: Bill): number => {
-    if (b.isToday) return new Date().getTime();
-    if (b.createdAt) {
-      const t = new Date(b.createdAt).getTime();
-      if (!isNaN(t)) return t;
-    }
-    if (b.dateStr) {
-      const t = new Date(b.dateStr).getTime();
-      if (!isNaN(t)) return t;
-    }
-    return 0;
-  };
-
-  // Timestamp parser for an expense
-  const getExpenseTime = (exp: Expense): number => {
-    if (exp.date) {
-      const t = new Date(exp.date).getTime();
-      if (!isNaN(t)) return t;
-    }
-    return 0;
-  };
 
   // ================= 1. REPORT TAB DATE RANGE & METRICS =================
   const reportDateRange = useMemo(() => {
@@ -502,9 +557,12 @@ export function ReportsView() {
     return selectedMonthBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0);
   }, [selectedMonthBills]);
 
-  // Days in selected month
+  // Days in selected month - bounded strictly between salon registration date and today (no empty 00 days!)
   const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const avgDailyRevenue = daysInMonth > 0 ? Math.round(monthlySales / daysInMonth) : 0;
+  const startDay = (selectedYear === regYear && selectedMonth === regMonth) ? regDateObj.getDate() : 1;
+  const endDay = (selectedYear === currentYear && selectedMonth === currentMonthIdx) ? new Date().getDate() : daysInMonth;
+  const activeDaysCount = Math.max(1, endDay - startDay + 1);
+  const avgDailyRevenue = activeDaysCount > 0 ? Math.round(monthlySales / activeDaysCount) : 0;
 
   // Top Stylist of the Month
   const topStylistOfMonth = useMemo(() => {
@@ -531,20 +589,20 @@ export function ReportsView() {
     return sorted.length > 0 ? { name: sorted[0][0], qty: sorted[0][1].qty, revenue: sorted[0][1].revenue } : null;
   }, [selectedMonthBills]);
 
-  // Day-by-Day comparison for selected month
+  // Day-by-Day comparison for selected month (strictly from registration day onwards)
   const monthlyDayBreakdown = useMemo(() => {
-    const days: Array<{ day: number; sales: number; expenses: number }> = [];
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, sales: 0, expenses: 0 });
+    const daysMap: Record<number, { day: number; sales: number; expenses: number }> = {};
+    for (let i = startDay; i <= endDay; i++) {
+      daysMap[i] = { day: i, sales: 0, expenses: 0 };
     }
 
     selectedMonthBills.forEach((b) => {
       const t = getBillTime(b);
       if (t) {
         const d = new Date(t);
-        const dayIdx = d.getDate() - 1;
-        if (days[dayIdx]) {
-          days[dayIdx].sales += b.paidAmount || b.total || 0;
+        const day = d.getDate();
+        if (daysMap[day]) {
+          daysMap[day].sales += b.paidAmount || b.total || 0;
         }
       }
     });
@@ -553,15 +611,15 @@ export function ReportsView() {
       const t = getExpenseTime(e);
       if (t) {
         const d = new Date(t);
-        const dayIdx = d.getDate() - 1;
-        if (days[dayIdx]) {
-          days[dayIdx].expenses += e.amount || 0;
+        const day = d.getDate();
+        if (daysMap[day]) {
+          daysMap[day].expenses += e.amount || 0;
         }
       }
     });
 
-    return days;
-  }, [daysInMonth, selectedMonthBills, selectedMonthExpenses]);
+    return Object.values(daysMap);
+  }, [startDay, endDay, selectedMonthBills, selectedMonthExpenses]);
 
   // Download Monthly Report Action
   const handleDownloadMonthlyReport = () => {
@@ -751,6 +809,7 @@ export function ReportsView() {
               <div className="flex items-center gap-2 text-xs flex-wrap">
                 <input
                   type="date"
+                  min={regDateStr}
                   max={todayStr}
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
@@ -761,6 +820,7 @@ export function ReportsView() {
                 <span className="text-slate-400 font-bold">to</span>
                 <input
                   type="date"
+                  min={customStartDate || regDateStr}
                   max={todayStr}
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
@@ -1175,9 +1235,9 @@ export function ReportsView() {
                     isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#D4AF37]' : 'bg-white border-slate-300 text-[#8C6239]'
                   }`}
                 >
-                  {monthNames.map((m, idx) => (
-                    <option key={m} value={idx}>
-                      {m}
+                  {availableMonths.map((m) => (
+                    <option key={m.idx} value={m.idx}>
+                      {m.name}
                     </option>
                   ))}
                 </select>
