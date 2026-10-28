@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Building2, 
@@ -15,10 +15,8 @@ import {
   ArrowRight, 
   ArrowLeft, 
   Sparkles, 
-  Sun, 
-  Moon,
-  Camera,
-  Check
+  Camera, 
+  Check 
 } from 'lucide-react';
 import { ShopProfile, StaffMember } from '@/components/SalonContext';
 import { registerNewSalonInDb } from '@/lib/supabase-service';
@@ -36,32 +34,16 @@ export function OwnerRegistrationView({
 }: OwnerRegistrationProps) {
   const router = useRouter();
 
-  // Theme Support (defaults to dark or reads from localStorage / html class)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('stylefleet_theme');
-      if (stored === 'light') return false;
-      return true;
-    }
-    return true;
-  });
+  // Strictly Dark Mode for Registration
+  const isDarkMode = true;
 
-  const toggleTheme = () => {
-    const nextMode = !isDarkMode;
-    setIsDarkMode(nextMode);
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('stylefleet_theme', nextMode ? 'dark' : 'light');
-      if (nextMode) {
-        document.documentElement.classList.remove('light');
-        document.documentElement.classList.add('dark');
-        document.body.classList.remove('light');
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.classList.add('light');
-        document.body.classList.add('light');
-      }
+      document.documentElement.classList.remove('light');
+      document.body.classList.remove('light');
+      document.documentElement.classList.add('dark');
     }
-  };
+  }, []);
 
   // Step 1: Salon Details | Step 2: Styling Team Setup
   const [step, setStep] = useState<1 | 2>(1);
@@ -374,30 +356,6 @@ export function OwnerRegistrationView({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Theme Toggle Button */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label="Toggle visual theme"
-              className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                isDarkMode
-                  ? 'border-white/10 bg-[#07152B] text-[#A7B0C3] hover:text-white'
-                  : 'border-slate-200 bg-slate-100 text-[#475569] hover:text-black'
-              }`}
-            >
-              {isDarkMode ? (
-                <>
-                  <Sun className="w-4 h-4 text-[#D4AF37]" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-sky-600" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
-            </button>
-
             {/* Back to Login */}
             {onBackToLogin && (
               <button

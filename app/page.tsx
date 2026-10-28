@@ -1159,7 +1159,7 @@ export default function HomePage() {
                       {isSendingOtp ? (
                         <>
                           <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                          <span>Dispatching verification SMS...</span>
+                          <span>Sending OTP...</span>
                         </>
                       ) : (
                         <>
@@ -1168,10 +1168,6 @@ export default function HomePage() {
                         </>
                       )}
                     </button>
-
-                    <p className="text-[11px] text-center text-[#5E697E] pt-2">
-                      Secure authentication via SMS verification code.
-                    </p>
                   </form>
                 )}
 
@@ -1245,7 +1241,7 @@ export default function HomePage() {
                       {isVerifyingOtp ? (
                         <>
                           <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                          <span>Verifying SMS with a two-step factor...</span>
+                          <span>Verifying OTP...</span>
                         </>
                       ) : (
                         <>
@@ -1254,10 +1250,6 @@ export default function HomePage() {
                         </>
                       )}
                     </button>
-
-                    <p className="text-[11px] text-center text-[#5E697E] pt-2">
-                      Secure authentication via SMS verification code.
-                    </p>
                   </form>
                 )}
 
