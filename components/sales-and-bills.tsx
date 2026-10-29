@@ -1525,9 +1525,14 @@ export function SalesAndBillsView({
                         Total: ₹{b.total}
                       </span>
                     </div>
-                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Deleted on: {b.deletedAt ? formatDateReadable(b.deletedAt.split('T')[0]) : 'Recently'} · Retained in 30-day cloud recovery bin
-                    </p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+                        Deleted by: {b.deletedBy || b.staff || 'Stylist'}
+                      </span>
+                      <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        on {b.deletedAt ? formatDateReadable(b.deletedAt.split('T')[0]) : 'Recently'} · 30-day recovery bin
+                      </span>
+                    </div>
                   </div>
 
                   <button

@@ -200,6 +200,7 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
     { id: 'reports', label: 'Reports', desc: 'Business revenue, profits & financial audits' },
     { id: 'team', label: 'Team', desc: 'Manage staff members & roles' },
     { id: 'profile', label: 'Shop Profile', desc: 'Salon details, logo, timings & branding' },
+    { id: 'clear_dues', label: 'Clear & Collect Dues', desc: 'Accept credit due payments & clear client debt' },
   ];
 
   const LIMITS_PERMISSIONS = [

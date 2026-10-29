@@ -792,6 +792,13 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                       <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-[#374151]'}`}>
                         {appt.service} · Stylist: <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>{appt.staff}</span>
                       </p>
+                      {appt.status === 'Cancelled' && (
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                            Deleted / Cancelled by: {appt.deletedBy || appt.staff || 'Stylist'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

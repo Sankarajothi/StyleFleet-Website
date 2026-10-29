@@ -114,6 +114,8 @@ export interface Appointment {
   date: string;
   amount: number;
   status: 'In chair' | 'Confirmed' | 'Done' | 'Cancelled';
+  deletedBy?: string;
+  deletedAt?: string;
 }
 
 export interface BillItem {
@@ -146,6 +148,7 @@ export interface Bill {
   tax?: number;
   tip?: number;
   deletedAt?: string;
+  deletedBy?: string;
   reminderStatus?: 'Not Sent' | 'Sent' | 'Pending';
   confirmationStatus?: 'Pending' | 'Confirmed';
 }
@@ -213,14 +216,14 @@ interface SalonContextType {
   addAppointment: (appt: Omit<Appointment, 'id'>) => void;
   updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
-  deleteAppointment: (id: string) => void;
+  deleteAppointment: (id: string, customDeletedBy?: string) => void;
   markArrivedAndBill: (appt: Appointment) => void;
 
   bills: Bill[];
   setBills: React.Dispatch<React.SetStateAction<Bill[]>>;
   createBill: (bill: Omit<Bill, 'id' | 'dateStr' | 'isDeleted' | 'isToday'>, customDateStr?: string, customIsToday?: boolean) => Bill;
   editBill: (id: string, updated: Partial<Bill>) => void;
-  deleteBill: (id: string) => void;
+  deleteBill: (id: string, customDeletedBy?: string) => void;
   restoreBill: (id: string) => void;
 
   expenses: Expense[];
@@ -759,6 +762,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         'past_expenses',
         'full_reports',
         'share_bills',
+        'clear_dues',
       ];
     }
     if (currentStylistMember && currentStylistMember.permissions && currentStylistMember.permissions.length > 0) {
@@ -867,12 +871,16 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('Appointment updated successfully!', 'success');
   };
 
-  const deleteAppointment = (id: string) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
+  const deleteAppointment = (id: string, customDeletedBy?: string) => {
+    const nowIso = new Date().toISOString();
+    const deletedByName = customDeletedBy || (role === 'stylist' && loggedInStaffName ? `${loggedInStaffName} (Stylist)` : (shopProfile?.ownerName || 'Owner'));
+    setAppointments((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'Cancelled', deletedAt: nowIso, deletedBy: deletedByName } : a))
+    );
     if (currentShopId) {
-      deleteAppointmentInDb(currentShopId, id);
+      deleteAppointmentInDb(currentShopId, id, deletedByName);
     }
-    showToast('Appointment deleted.', 'success');
+    showToast(`Appointment cancelled & deleted by ${deletedByName}.`, 'success');
   };
 
   const [bills, setBills] = useState<Bill[]>([]);
@@ -966,15 +974,16 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`Bill #${id} updated successfully.`);
   };
 
-  const deleteBill = (id: string) => {
+  const deleteBill = (id: string, customDeletedBy?: string) => {
     const nowIso = new Date().toISOString();
+    const deletedByName = customDeletedBy || (role === 'stylist' && loggedInStaffName ? `${loggedInStaffName} (Stylist)` : (shopProfile?.ownerName || 'Owner'));
     setBills((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, isDeleted: true, deletedAt: nowIso } : b))
+      prev.map((b) => (b.id === id ? { ...b, isDeleted: true, deletedAt: nowIso, deletedBy: deletedByName } : b))
     );
     if (currentShopId) {
-      deleteBillInDb(currentShopId, id);
+      deleteBillInDb(currentShopId, id, deletedByName);
     }
-    showToast(`Bill #${id} moved to Recently Deleted (kept for 30 days).`);
+    showToast(`Bill #${id} deleted by ${deletedByName} (moved to 30-day recovery bin).`);
   };
 
   const restoreBill = (id: string) => {
@@ -1171,62 +1180,35 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Real-time synchronization of stylist permissions from Supabase
+  // Real-time synchronization of salon state (bills, appointments, staff permissions) from Supabase
   useEffect(() => {
     if (!currentShopId) return;
 
-    const handleSyncStaff = async () => {
+    const handleSyncSalonState = async () => {
       try {
-        const { data: staffRows } = await supabase
-          .from('staff')
-          .select('*')
-          .eq('shop_id', currentShopId)
-          .order('created_at', { ascending: true });
-
-        if (staffRows && staffRows.length > 0) {
-          setStaff((prev) => {
-            return staffRows.map((st) => {
-              const perms: string[] = [];
-              if (st.permissions && typeof st.permissions === 'object') {
-                const p = st.permissions as Record<string, any>;
-                if (p.customers) perms.push('customers');
-                if (p.sales) perms.push('sales');
-                if (p.appointments) perms.push('appointments');
-                if (p.reminders) perms.push('reminders');
-                if (p.expenses) perms.push('expenses');
-                if (p.reports) perms.push('reports');
-                if (p.team) perms.push('team');
-                if (p.profile) perms.push('profile');
-                if (p.past_expenses || p.expensesHistory) perms.push('past_expenses');
-                if (p.full_reports || p.reportsHistory) perms.push('full_reports');
-                if (p.share_bills || p.shareBills) perms.push('share_bills');
-              }
-              const effectivePerms = perms.length > 0 ? perms : ['customers', 'sales', 'appointments', 'reminders'];
-              const existing = prev.find((s) => s.id === st.id);
-              return {
-                id: st.id,
-                name: st.name,
-                role: st.role || 'Stylist',
-                phone: st.phone,
-                rev: existing?.rev || 0,
-                count: existing?.count || 0,
-                rating: st.rating || '5.0',
-                chair: existing?.chair || 'Available',
-                status: st.is_active ? 'active' : 'inactive',
-                invited: st.invitation_status === 'accepted' || st.invitation_status === 'invited',
-                permissions: effectivePerms,
-              };
-            });
-          });
+        const dbData = await fetchSalonDataFromDb(currentShopId);
+        if (dbData) {
+          if (dbData.staff && dbData.staff.length > 0) {
+            setStaff(dbData.staff);
+          }
+          if (dbData.bills && dbData.bills.length > 0) {
+            setBills(dbData.bills);
+          }
+          if (dbData.appointments && dbData.appointments.length > 0) {
+            setAppointments(dbData.appointments);
+          }
+          if (dbData.customers && dbData.customers.length > 0) {
+            setCustomers(dbData.customers);
+          }
         }
       } catch {}
     };
 
-    window.addEventListener('focus', handleSyncStaff);
-    const syncInterval = setInterval(handleSyncStaff, 10000);
+    window.addEventListener('focus', handleSyncSalonState);
+    const syncInterval = setInterval(handleSyncSalonState, 8000);
 
     return () => {
-      window.removeEventListener('focus', handleSyncStaff);
+      window.removeEventListener('focus', handleSyncSalonState);
       clearInterval(syncInterval);
     };
   }, [currentShopId]);

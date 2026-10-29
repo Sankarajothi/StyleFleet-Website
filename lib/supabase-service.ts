@@ -566,6 +566,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         if (p.past_expenses || p.expensesHistory) perms.push('past_expenses');
         if (p.full_reports || p.reportsHistory) perms.push('full_reports');
         if (p.share_bills || p.shareBills) perms.push('share_bills');
+        if (p.clear_dues || p.clearDues) perms.push('clear_dues');
       }
       const effectivePerms = perms.length > 0 ? perms : ['customers', 'sales', 'appointments', 'reminders'];
 
@@ -598,8 +599,17 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       let staffName = a.staff?.name || 'Any Stylist';
       let amount = Math.round((a.services?.price_minor || 0) / 100);
       let isDeleted = false;
+      let deletedBy: string | undefined = undefined;
+      let deletedAt: string | undefined = undefined;
 
       if (a.notes) {
+        if (typeof a.notes === 'string') {
+          const parts = a.notes.split(';');
+          for (const p of parts) {
+            if (p.startsWith('deleted_by:')) deletedBy = p.replace('deleted_by:', '').trim();
+            if (p.startsWith('deleted_at:')) deletedAt = p.replace('deleted_at:', '').trim();
+          }
+        }
         try {
           const parsed = JSON.parse(a.notes);
           if (parsed.cust && custName === 'Client') custName = parsed.cust;
@@ -608,8 +618,10 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
           if (parsed.staff_name && parsed.staff_name.trim()) staffName = parsed.staff_name.trim();
           if (parsed.amount && amount === 0) amount = parsed.amount;
           if (parsed.is_deleted) isDeleted = true;
+          if (parsed.deleted_by) deletedBy = parsed.deleted_by;
+          if (parsed.deleted_at) deletedAt = parsed.deleted_at;
         } catch {
-          if (custName === 'Client') custName = a.notes;
+          if (custName === 'Client' && !a.notes.includes('deleted_by:')) custName = a.notes;
         }
       }
 
@@ -657,7 +669,9 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         startsAt: timeStr,
         date: dateStr,
         amount,
-        status: (isDeleted || a.status === 'Cancelled') ? 'Cancelled' : ((a.status as Appointment['status']) || 'Confirmed'),
+        status: (isDeleted || a.status === 'Cancelled' || a.status === 'cancelled') ? 'Cancelled' : ((a.status as Appointment['status']) || 'Confirmed'),
+        deletedBy,
+        deletedAt: deletedAt || (a.status === 'Cancelled' || a.status === 'cancelled' ? a.updated_at : undefined),
       };
     });
 
@@ -672,6 +686,8 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       let parsedStaff = b.staff?.name || 'Stylist';
       let parsedCust = b.customers?.name || 'Walk-in Client';
       let parsedPhone = b.customers?.phone || '';
+      let deletedBy: string | undefined = undefined;
+      let deletedAt: string | undefined = undefined;
 
       if (b.notes) {
         const parts = b.notes.split(';');
@@ -682,6 +698,8 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
           }
           if (p.startsWith('cust:') && parsedCust === 'Walk-in Client') parsedCust = p.replace('cust:', '');
           if (p.startsWith('phone:') && !parsedPhone) parsedPhone = p.replace('phone:', '');
+          if (p.startsWith('deleted_by:')) deletedBy = p.replace('deleted_by:', '').trim();
+          if (p.startsWith('deleted_at:')) deletedAt = p.replace('deleted_at:', '').trim();
         }
       }
 
@@ -725,6 +743,8 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         mode: paymentMode,
         status: (b.status as Bill['status']) || 'paid',
         isDeleted: b.status === 'deleted' || !!b.deleted_at,
+        deletedAt: deletedAt || (b.status === 'deleted' ? b.updated_at : undefined),
+        deletedBy: deletedBy || (b.status === 'deleted' ? parsedStaff : undefined),
         isToday,
         isYesterday,
         createdAt: b.created_at || b.issued_at,
@@ -1489,6 +1509,8 @@ export async function updateStaffMemberInDb(
         reportsHistory: permsArray.includes('full_reports'),
         share_bills: permsArray.includes('share_bills'),
         shareBills: permsArray.includes('share_bills'),
+        clear_dues: permsArray.includes('clear_dues'),
+        clearDues: permsArray.includes('clear_dues'),
       };
     }
     payload.updated_at = new Date().toISOString();
@@ -1633,15 +1655,24 @@ export async function updateShopProfileInDb(shopId: string, profile: Partial<Sho
 /**
  * Soft-delete a bill in Supabase (30-day restore bin).
  */
-export async function deleteBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
+export async function deleteBillInDb(
+  shopId: string,
+  invoiceNumberOrId: string,
+  deletedByName?: string
+): Promise<boolean> {
   try {
     const nowIso = new Date().toISOString();
+    const updatePayload: Record<string, any> = {
+      status: 'deleted',
+      updated_at: nowIso,
+    };
+    if (deletedByName) {
+      updatePayload.notes = `deleted_by:${deletedByName.trim()};deleted_at:${nowIso}`;
+    }
+
     let query = supabase
       .from('bills')
-      .update({
-        status: 'deleted',
-        updated_at: nowIso,
-      })
+      .update(updatePayload)
       .eq('shop_id', shopId);
 
     if (isValidUuid(invoiceNumberOrId)) {
@@ -2171,11 +2202,23 @@ export async function updateAppointmentInDb(
 /**
  * Delete an appointment in Supabase (or mark cancelled).
  */
-export async function deleteAppointmentInDb(shopId: string, appointmentId: string): Promise<boolean> {
+export async function deleteAppointmentInDb(
+  shopId: string,
+  appointmentId: string,
+  deletedByName?: string
+): Promise<boolean> {
   try {
+    const nowIso = new Date().toISOString();
+    const updater: Record<string, any> = {
+      status: 'cancelled',
+      updated_at: nowIso,
+    };
+    if (deletedByName) {
+      updater.notes = `deleted_by:${deletedByName.trim()};deleted_at:${nowIso}`;
+    }
     const { error } = await supabase
       .from('appointments')
-      .delete()
+      .update(updater)
       .eq('shop_id', shopId)
       .eq('id', appointmentId);
 
