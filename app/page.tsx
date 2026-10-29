@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
@@ -9,7 +9,11 @@ import {
   PhoneCall, 
   MessageCircle, 
   Instagram,
-  CheckCircle2
+  CheckCircle2,
+  Smartphone,
+  QrCode,
+  RefreshCw,
+  Laptop
 } from 'lucide-react';
 import { OwnerRegistrationView } from '@/components/owner-registration';
 import { findSalonByPhone } from '@/lib/supabase-service';
@@ -122,6 +126,18 @@ export default function HomePage() {
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Login Mode Slider State: 'otp' (Mobile OTP / Registration) vs 'qr' (Scan with App / Link to PC)
+  const [loginMode, setLoginMode] = useState<'otp' | 'qr'>('qr');
+  const [qrSessionId, setQrSessionId] = useState<string | null>(null);
+  const [qrPairCode, setQrPairCode] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [qrExpiresIn, setQrExpiresIn] = useState<number>(180);
+  const [isLoadingQr, setIsLoadingQr] = useState<boolean>(false);
+  const [isQrExpired, setIsQrExpired] = useState<boolean>(false);
+  const [showQrSim, setShowQrSim] = useState<boolean>(false);
+  const [simPhone, setSimPhone] = useState<string>('');
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+
   // Interactive Demo State
   const [activeServices, setActiveServices] = useState<number[]>([0, 1]);
   const [waSent, setWaSent] = useState(false);
@@ -173,6 +189,149 @@ export default function HomePage() {
   const returnHome = () => {
     setView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const clearLocalSalonCache = () => {
+    try {
+      localStorage.removeItem('stylefleet_bills_db');
+      localStorage.removeItem('stylefleet_appointments_db');
+      localStorage.removeItem('stylefleet_customers_db');
+      localStorage.removeItem('stylefleet_staff_team_db');
+      localStorage.removeItem('stylefleet_expenses_db');
+      localStorage.removeItem('stylefleet_shop_profile');
+    } catch {}
+  };
+
+  // Generate dynamic QR session for mobile-to-desktop linking
+  const generateQrSession = useCallback(async () => {
+    setIsLoadingQr(true);
+    setIsQrExpired(false);
+    try {
+      const res = await fetch('/api/auth/qr-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQrSessionId(data.sessionId);
+        setQrPairCode(data.pairCode);
+        setQrExpiresIn(data.expiresIn || 180);
+        const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+          data.qrData
+        )}&color=07152B&bgcolor=FFFFFF&qzone=2`;
+        setQrDataUrl(qrImg);
+      } else {
+        showToast('Unable to initialize QR code session', 'error');
+      }
+    } catch {
+      showToast('Error connecting to QR authentication service', 'error');
+    } finally {
+      setIsLoadingQr(false);
+    }
+  }, [role]);
+
+  // Trigger QR generation whenever view is login and loginMode is qr
+  useEffect(() => {
+    if (view === 'login' && loginMode === 'qr') {
+      generateQrSession();
+    }
+  }, [view, loginMode, role, generateQrSession]);
+
+  // QR expiration countdown
+  useEffect(() => {
+    if (view !== 'login' || loginMode !== 'qr' || isQrExpired || !qrSessionId) return;
+    const timer = setInterval(() => {
+      setQrExpiresIn((prev) => {
+        if (prev <= 1) {
+          setIsQrExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [view, loginMode, isQrExpired, qrSessionId]);
+
+  // Poll for QR scan authorization from mobile app
+  useEffect(() => {
+    if (view !== 'login' || loginMode !== 'qr' || isQrExpired || !qrSessionId) return;
+
+    let isPolling = true;
+    const interval = setInterval(async () => {
+      if (!isPolling) return;
+      try {
+        const res = await fetch(`/api/auth/qr-session?sessionId=${qrSessionId}`);
+        const data = await res.json();
+        if (!isPolling) return;
+
+        if (data.status === 'authenticated' && data.shopId) {
+          isPolling = false;
+          clearInterval(interval);
+
+          clearLocalSalonCache();
+
+          const shopName = data.shopName || 'StyleFleet Salon';
+          showToast(`⚡ Mobile Linked! Welcome to ${shopName}.`, 'success');
+
+          localStorage.setItem('stylefleet_shop_id', data.shopId);
+          localStorage.setItem(
+            'stylefleet_auth_session',
+            JSON.stringify(
+              data.authSession || {
+                isLoggedIn: true,
+                role: data.role || role,
+                phone: data.phone,
+                shopId: data.shopId,
+                shopName: shopName,
+                loginTime: new Date().toISOString(),
+              }
+            )
+          );
+
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 600);
+        } else if (data.status === 'expired') {
+          setIsQrExpired(true);
+        }
+      } catch {
+        // Retry silently on intermittent network drops
+      }
+    }, 2000);
+
+    return () => {
+      isPolling = false;
+      clearInterval(interval);
+    };
+  }, [view, loginMode, isQrExpired, qrSessionId, role, router]);
+
+  // Simulator helper to test mobile app scan confirmation directly on web
+  const handleSimulateAppScan = async () => {
+    if (!qrSessionId) return;
+    setIsSimulating(true);
+    try {
+      const res = await fetch('/api/auth/qr-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: qrSessionId,
+          pairCode: qrPairCode,
+          role,
+          phone: simPhone || '8870500106',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Mobile authorization confirmed! Linking desktop...', 'success');
+      } else {
+        showToast(data.error || 'Simulation failed', 'error');
+      }
+    } catch {
+      showToast('Error during simulator link', 'error');
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   // Timer for OTP resend countdown
@@ -329,17 +488,6 @@ export default function HomePage() {
 
     // Look up salon in cloud Supabase database
     const dbLookup = await findSalonByPhone(cleanPhone, role);
-
-    const clearLocalSalonCache = () => {
-      try {
-        localStorage.removeItem('stylefleet_bills_db');
-        localStorage.removeItem('stylefleet_appointments_db');
-        localStorage.removeItem('stylefleet_customers_db');
-        localStorage.removeItem('stylefleet_staff_team_db');
-        localStorage.removeItem('stylefleet_expenses_db');
-        localStorage.removeItem('stylefleet_shop_profile');
-      } catch {}
-    };
 
     if (role === 'stylist') {
       if (dbLookup.found && dbLookup.role === 'stylist' && dbLookup.shopId) {
@@ -1047,210 +1195,409 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                {/* Role Selection Tabs */}
-                <div className="grid grid-cols-2 gap-3 my-4">
+                {/* Interactive Slider Switcher: Link with App QR vs Mobile OTP */}
+                <div className="p-1.5 bg-[#07152B] border border-white/10 rounded-2xl flex items-center gap-1.5 my-4 shadow-inner">
                   <button
                     type="button"
                     onClick={() => {
-                      setRole('owner');
-                      setAuthStep('phone');
+                      setLoginMode('qr');
+                      generateQrSession();
                     }}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
-                      role === 'owner'
-                        ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
-                        : 'bg-[#07152B] border-white/5 hover:border-white/20'
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      loginMode === 'qr'
+                        ? 'bg-[#D4AF37] text-[#07152B] shadow-md shadow-[#D4AF37]/25 font-extrabold'
+                        : 'text-[#94A3B8] hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Crown className={`w-5 h-5 mb-1.5 ${role === 'owner' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
-                    <strong className="text-xs block font-bold text-white">Salon Owner</strong>
-                    <span className="text-[10px] text-[#94A3B8] block mt-0.5">Billing & Management</span>
+                    <QrCode className="w-4 h-4" />
+                    <span>Scan with App</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#07152B]/20 uppercase tracking-wider font-extrabold">
+                      Instant
+                    </span>
                   </button>
-
                   <button
                     type="button"
-                    onClick={() => {
-                      setRole('stylist');
-                      setAuthStep('phone');
-                    }}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
-                      role === 'stylist'
-                        ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
-                        : 'bg-[#07152B] border-white/5 hover:border-white/20'
+                    onClick={() => setLoginMode('otp')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      loginMode === 'otp'
+                        ? 'bg-[#D4AF37] text-[#07152B] shadow-md shadow-[#D4AF37]/25 font-extrabold'
+                        : 'text-[#94A3B8] hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Scissors className={`w-5 h-5 mb-1.5 ${role === 'stylist' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
-                    <strong className="text-xs block font-bold text-white">Stylist</strong>
-                    <span className="text-[10px] text-[#94A3B8] block mt-0.5">Queue & Daily Tips</span>
+                    <Smartphone className="w-4 h-4" />
+                    <span>Mobile OTP & Register</span>
                   </button>
                 </div>
 
-                {/* STEP 1: MOBILE INPUT */}
-                {authStep === 'phone' && (
-                  <form onSubmit={handlePhoneSubmit} className="space-y-4 pt-2">
-                    <div>
-                      <label htmlFor="mobile-input" className="block text-xs font-bold text-[#94A3B8] mb-2">
-                        Mobile Number
-                      </label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-4 text-sm font-bold text-[#F5A623] select-none">+91</span>
-                        <input
-                          id="mobile-input"
-                          type="tel"
-                          maxLength={10}
-                          inputMode="numeric"
-                          placeholder="Enter 10-digit mobile number"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          required
-                          className="w-full py-3.5 pl-14 pr-4 rounded-2xl bg-[#07152B] border border-white/10 focus:border-[#F5A623] outline-none text-white text-sm font-semibold transition-all placeholder:text-[#94A3B8]/50"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Terms and Policy Agreement */}
-                    <div
-                      className="flex items-center gap-2.5 pt-0.5 select-none cursor-pointer group"
-                      onClick={() => setAgreeToTerms(!agreeToTerms)}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                          agreeToTerms
-                            ? 'bg-[#D4AF37] border-[#D4AF37] text-[#07152B]'
-                            : 'bg-[#07152B] border-white/30 group-hover:border-[#D4AF37]/60'
-                        }`}
-                      >
-                        {agreeToTerms && (
-                          <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        )}
-                      </div>
-                      <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
-                        I agree to the{' '}
-                        <span
-                          className="text-[#D4AF37] font-semibold hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowTermsModal(true);
-                          }}
-                        >
-                          Terms of Service
-                        </span>{' '}
-                        &{' '}
-                        <span
-                          className="text-[#D4AF37] font-semibold hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowPrivacyModal(true);
-                          }}
-                        >
-                          Privacy Policy
-                        </span>
-                      </label>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSendingOtp}
-                      className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 ${
-                        isSendingOtp ? 'opacity-70 cursor-wait' : ''
-                      }`}
-                    >
-                      {isSendingOtp ? (
-                        <>
-                          <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                          <span>Sending OTP...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Continue with Mobile</span>
-                          <span>→</span>
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-
-                {/* STEP 2: SMS OTP VERIFICATION */}
-                {authStep === 'otp' && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      verifyOtp(otp.join(''));
-                    }}
-                    className="space-y-4 pt-2"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-bold text-[#94A3B8]">SMS Verification Code</label>
+                {/* ================= OPTION 1: SCAN WITH APP (LINK TO PC) ================= */}
+                {loginMode === 'qr' && (
+                  <div className="space-y-4 pt-1">
+                    {/* Role toggle */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-[#07152B] rounded-xl border border-white/5 text-xs">
+                      <span className="text-[#94A3B8]">Sign in workspace as:</span>
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => setAuthStep('phone')}
-                          className="text-xs text-[#F5A623] hover:underline font-semibold"
+                          onClick={() => setRole('owner')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            role === 'owner' ? 'bg-[#D4AF37] text-[#07152B]' : 'text-[#94A3B8] hover:text-white'
+                          }`}
                         >
-                          Change Number
+                          <Crown className="w-3.5 h-3.5" />
+                          <span>Owner</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRole('stylist')}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            role === 'stylist' ? 'bg-[#D4AF37] text-[#07152B]' : 'text-[#94A3B8] hover:text-white'
+                          }`}
+                        >
+                          <Scissors className="w-3.5 h-3.5" />
+                          <span>Stylist</span>
                         </button>
                       </div>
-                      <p className="text-xs text-[#94A3B8] mb-3">
-                        Enter the 6-digit code dispatched via SMS to <strong className="text-white">+91 {phone}</strong>
-                      </p>
+                    </div>
 
-                      <div className="grid grid-cols-6 gap-2">
-                        {otp.map((digit, idx) => (
-                          <input
-                            key={idx}
-                            ref={(el) => {
-                              otpRefs.current[idx] = el;
-                            }}
-                            type="text"
-                            maxLength={1}
-                            inputMode="numeric"
-                            value={digit}
-                            onChange={(e) => handleOtpChange(idx, e.target.value)}
-                            onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                            onPaste={handleOtpPaste}
-                            className="w-full h-11 sm:h-12 text-center text-lg sm:text-xl font-bold bg-[#07152B] border border-white/10 rounded-xl sm:rounded-2xl text-white outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all"
-                          />
-                        ))}
+                    {/* QR Code Container */}
+                    <div className="flex flex-col items-center justify-center p-5 bg-[#07152B] border border-white/10 rounded-2xl relative shadow-2xl">
+                      <div className="p-3 bg-white rounded-2xl shadow-xl border-2 border-[#D4AF37]/40 relative">
+                        {isLoadingQr ? (
+                          <div className="w-48 h-48 flex flex-col items-center justify-center gap-2 bg-white rounded-xl">
+                            <span className="w-7 h-7 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
+                            <span className="text-xs font-bold text-[#07152B]">Generating Secure QR...</span>
+                          </div>
+                        ) : isQrExpired ? (
+                          <div className="w-48 h-48 flex flex-col items-center justify-center gap-3 bg-[#07152B] text-white rounded-xl p-3 text-center">
+                            <span className="text-xs text-[#94A3B8]">Code expired</span>
+                            <button
+                              type="button"
+                              onClick={generateQrSession}
+                              className="px-3.5 py-2 bg-[#D4AF37] text-[#07152B] rounded-xl text-xs font-extrabold flex items-center gap-1.5 hover:bg-[#C59F2E] cursor-pointer"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Regenerate QR</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <img
+                              src={qrDataUrl}
+                              alt="StyleFleet Desktop Link QR Code"
+                              width={192}
+                              height={192}
+                              className="rounded-xl block"
+                            />
+                            {/* Center StyleFleet Logo Overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="w-10 h-10 rounded-xl bg-[#07152B] border border-[#D4AF37] p-1 flex items-center justify-center shadow-lg">
+                                <img src="/assets/stylefleet-logo.png" alt="SF" width={22} height={22} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 6-Digit Pair PIN Display */}
+                      <div className="mt-3.5 text-center">
+                        <div className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1">
+                          Or enter 6-digit PIN on App
+                        </div>
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#0F223D] border border-[#D4AF37]/40 rounded-xl">
+                          <span className="text-xs font-bold text-[#D4AF37]">PAIR CODE:</span>
+                          <span className="text-sm font-mono font-black text-white tracking-widest">
+                            {qrPairCode ? `${qrPairCode.slice(0, 3)} ${qrPairCode.slice(3)}` : '------'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Live Waiting Pulse & Expiry */}
+                      <div className="flex items-center justify-between w-full mt-4 pt-3 border-t border-white/5 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                          </span>
+                          <span className="text-slate-300 font-medium text-[11px]">Waiting for mobile app scan...</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[#94A3B8]">
+                          <span className="text-[11px] font-mono">
+                            {Math.floor(qrExpiresIn / 60)}:{(qrExpiresIn % 60).toString().padStart(2, '0')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={generateQrSession}
+                            title="Refresh QR Code"
+                            className="p-1 rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingQr ? 'animate-spin' : ''}`} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-[#94A3B8]">
-                      <span>
-                        {canResend ? (
-                          <button
-                            type="button"
-                            onClick={handleResend}
-                            className="text-[#F5A623] font-bold hover:underline"
-                          >
-                            Resend code
-                          </button>
-                        ) : (
-                          `Resend code in ${countdown}s`
-                        )}
-                      </span>
+                    {/* How to Link Instructions Card */}
+                    <div className="p-3.5 rounded-2xl bg-[#07152B] border border-white/5 text-left space-y-2">
+                      <div className="text-xs font-bold text-white flex items-center gap-2">
+                        <Laptop className="w-4 h-4 text-[#F5A623]" />
+                        <span>How to link with StyleFleet Mobile App:</span>
+                      </div>
+                      <ol className="text-[11px] text-[#94A3B8] space-y-1 list-decimal list-inside leading-relaxed pl-1">
+                        <li>Open the <strong className="text-white">StyleFleet App</strong> on your phone</li>
+                        <li>Go to <strong className="text-white">Settings / Account</strong> → Tap <strong className="text-[#F5A623]">Link to PC</strong></li>
+                        <li>Point your phone camera at this QR code or type the PIN</li>
+                      </ol>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={isVerifyingOtp}
-                      className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 ${
-                        isVerifyingOtp ? 'opacity-70 cursor-wait' : ''
-                      }`}
-                    >
-                      {isVerifyingOtp ? (
-                        <>
-                          <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
-                          <span>Verifying OTP...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Verify & Access Workspace</span>
-                          <span>↗</span>
-                        </>
+                    {/* Simulator Accordion for Instant Web Testing */}
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowQrSim(!showQrSim)}
+                        className="text-[11px] text-[#D4AF37] hover:underline font-semibold cursor-pointer"
+                      >
+                        {showQrSim ? '▼ Hide App Simulator' : '⚡ Test Link from Web (Mobile App Simulator)'}
+                      </button>
+
+                      {showQrSim && (
+                        <div className="mt-2 p-3 bg-[#07152B] border border-[#D4AF37]/30 rounded-xl space-y-2 text-left">
+                          <div className="text-[11px] font-bold text-white">Simulate Mobile App Confirmation</div>
+                          <p className="text-[10px] text-[#94A3B8]">
+                            Enter your registered salon mobile number to approve desktop login instantly:
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="tel"
+                              placeholder="Mobile (e.g. 8870500106)"
+                              value={simPhone}
+                              onChange={(e) => setSimPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              className="flex-1 py-1.5 px-3 rounded-lg bg-[#0F223D] border border-white/10 text-xs text-white outline-none focus:border-[#F5A623]"
+                            />
+                            <button
+                              type="button"
+                              disabled={isSimulating || !qrSessionId}
+                              onClick={handleSimulateAppScan}
+                              className="px-3 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] font-extrabold text-xs shrink-0 disabled:opacity-50 cursor-pointer"
+                            >
+                              {isSimulating ? 'Linking...' : 'Confirm Link'}
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </button>
-                  </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= OPTION 2: MOBILE OTP & REGISTER ================= */}
+                {loginMode === 'otp' && (
+                  <div className="space-y-4 pt-1">
+                    {/* Role Selection Tabs */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRole('owner');
+                          setAuthStep('phone');
+                        }}
+                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                          role === 'owner'
+                            ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
+                            : 'bg-[#07152B] border-white/5 hover:border-white/20'
+                        }`}
+                      >
+                        <Crown className={`w-5 h-5 mb-1.5 ${role === 'owner' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
+                        <strong className="text-xs block font-bold text-white">Salon Owner</strong>
+                        <span className="text-[10px] text-[#94A3B8] block mt-0.5">Billing & Management</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRole('stylist');
+                          setAuthStep('phone');
+                        }}
+                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                          role === 'stylist'
+                            ? 'bg-[#D4AF37]/15 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/15 -translate-y-0.5'
+                            : 'bg-[#07152B] border-white/5 hover:border-white/20'
+                        }`}
+                      >
+                        <Scissors className={`w-5 h-5 mb-1.5 ${role === 'stylist' ? 'text-[#F5A623]' : 'text-[#94A3B8]'}`} />
+                        <strong className="text-xs block font-bold text-white">Stylist</strong>
+                        <span className="text-[10px] text-[#94A3B8] block mt-0.5">Queue & Daily Tips</span>
+                      </button>
+                    </div>
+
+                    {/* STEP 1: MOBILE INPUT */}
+                    {authStep === 'phone' && (
+                      <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                        <div>
+                          <label htmlFor="mobile-input" className="block text-xs font-bold text-[#94A3B8] mb-2">
+                            Mobile Number
+                          </label>
+                          <div className="relative flex items-center">
+                            <span className="absolute left-4 text-sm font-bold text-[#F5A623] select-none">+91</span>
+                            <input
+                              id="mobile-input"
+                              type="tel"
+                              maxLength={10}
+                              inputMode="numeric"
+                              placeholder="Enter 10-digit mobile number"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              required
+                              className="w-full py-3.5 pl-14 pr-4 rounded-2xl bg-[#07152B] border border-white/10 focus:border-[#F5A623] outline-none text-white text-sm font-semibold transition-all placeholder:text-[#94A3B8]/50"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Terms and Policy Agreement */}
+                        <div
+                          className="flex items-center gap-2.5 pt-0.5 select-none cursor-pointer group"
+                          onClick={() => setAgreeToTerms(!agreeToTerms)}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                              agreeToTerms
+                                ? 'bg-[#D4AF37] border-[#D4AF37] text-[#07152B]'
+                                : 'bg-[#07152B] border-white/30 group-hover:border-[#D4AF37]/60'
+                            }`}
+                          >
+                            {agreeToTerms && (
+                              <svg className="w-3 h-3 stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                          </div>
+                          <label className="text-[11px] text-[#94A3B8] cursor-pointer leading-tight group-hover:text-slate-300">
+                            I agree to the{' '}
+                            <span
+                              className="text-[#D4AF37] font-semibold hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowTermsModal(true);
+                              }}
+                            >
+                              Terms of Service
+                            </span>{' '}
+                            &{' '}
+                            <span
+                              className="text-[#D4AF37] font-semibold hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowPrivacyModal(true);
+                              }}
+                            >
+                              Privacy Policy
+                            </span>
+                          </label>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isSendingOtp}
+                          className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 cursor-pointer ${
+                            isSendingOtp ? 'opacity-70 cursor-wait' : ''
+                          }`}
+                        >
+                          {isSendingOtp ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
+                              <span>Sending OTP...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Continue with Mobile</span>
+                              <span>→</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+
+                    {/* STEP 2: SMS OTP VERIFICATION */}
+                    {authStep === 'otp' && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          verifyOtp(otp.join(''));
+                        }}
+                        className="space-y-4"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-[#94A3B8]">SMS Verification Code</label>
+                            <button
+                              type="button"
+                              onClick={() => setAuthStep('phone')}
+                              className="text-xs text-[#F5A623] hover:underline font-semibold cursor-pointer"
+                            >
+                              Change Number
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#94A3B8] mb-3">
+                            Enter the 6-digit code dispatched via SMS to <strong className="text-white">+91 {phone}</strong>
+                          </p>
+
+                          <div className="grid grid-cols-6 gap-2">
+                            {otp.map((digit, idx) => (
+                              <input
+                                key={idx}
+                                ref={(el) => {
+                                  otpRefs.current[idx] = el;
+                                }}
+                                type="text"
+                                maxLength={1}
+                                inputMode="numeric"
+                                value={digit}
+                                onChange={(e) => handleOtpChange(idx, e.target.value)}
+                                onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                                onPaste={handleOtpPaste}
+                                className="w-full h-11 sm:h-12 text-center text-lg sm:text-xl font-bold bg-[#07152B] border border-white/10 rounded-xl sm:rounded-2xl text-white outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-[#94A3B8]">
+                          <span>
+                            {canResend ? (
+                              <button
+                                type="button"
+                                onClick={handleResend}
+                                className="text-[#F5A623] font-bold hover:underline cursor-pointer"
+                              >
+                                Resend code
+                              </button>
+                            ) : (
+                              `Resend code in ${countdown}s`
+                            )}
+                          </span>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isVerifyingOtp}
+                          className={`py-3.5 px-4 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] text-sm font-extrabold shadow-lg shadow-[#D4AF37]/25 active:scale-[0.98] transition-all w-full flex items-center justify-center gap-2 cursor-pointer ${
+                            isVerifyingOtp ? 'opacity-70 cursor-wait' : ''
+                          }`}
+                        >
+                          {isVerifyingOtp ? (
+                            <>
+                              <span className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
+                              <span>Verifying OTP...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Verify & Access Workspace</span>
+                              <span>↗</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 )}
 
               </div>
