@@ -467,6 +467,47 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       createdAt: shop.created_at || (shop as any).createdAt || undefined,
     };
 
+    // 1b. Fetch subscription from Supabase 'subscriptions' table
+    try {
+      const { data: subRows } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('shop_id', shopId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (subRows && subRows.length > 0) {
+        const sub = subRows[0];
+        const rawPlan = String(sub.plan || sub.tier || sub.plan_type || sub.name || '').toLowerCase();
+        const rawStatus = String(sub.status || '').toLowerCase();
+        const isPro = rawPlan.includes('pro') || rawStatus === 'active' || rawStatus === 'pro';
+
+        shopProfile.subscription = {
+          plan: sub.plan || (isPro ? 'Pro Active' : 'Free Starter Plan'),
+          status: isPro ? 'active' : (rawStatus as any) || 'trial',
+          validUntil: sub.valid_until || sub.current_period_end || sub.ends_at || undefined,
+        };
+      } else {
+        // Also check if shop object itself has subscription data or plan_tier
+        if ((shop as any).subscription && typeof (shop as any).subscription === 'object') {
+          const s = (shop as any).subscription;
+          shopProfile.subscription = {
+            plan: s.plan || 'Free Starter Plan',
+            status: s.status || 'trial',
+            validUntil: s.validUntil || s.valid_until,
+          };
+        } else if ((shop as any).plan_tier || (shop as any).subscription_status) {
+          const isPro = String((shop as any).plan_tier || '').toLowerCase().includes('pro') || (shop as any).subscription_status === 'active';
+          shopProfile.subscription = {
+            plan: (shop as any).plan_tier || (isPro ? 'Pro Active' : 'Free Starter Plan'),
+            status: isPro ? 'active' : 'trial',
+          };
+        }
+      }
+    } catch (subErr) {
+      console.warn('[Supabase] Note querying subscriptions table:', subErr);
+    }
+
     // 2. Fetch service categories
     const { data: catRows } = await supabase
       .from('service_categories')

@@ -34,6 +34,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
     showToast,
     role,
     loggedInStaffName,
+    t,
   } = useSalon();
 
   const isStylist = role === 'stylist';
@@ -297,7 +298,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-300'}`}>
           <div>
             <h2 className={`text-base font-extrabold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-              <span>Appointment Calendar</span>
+              <span>{t.appointments || 'Appointment Calendar'}</span>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 font-bold">
                 October 2026
               </span>
@@ -324,7 +325,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>{viewMode === 'history' ? 'Today\'s Schedule' : 'History'}</span>
+                <span>{viewMode === 'history' ? (t.today ? `${t.today}'s Schedule` : "Today's Schedule") : (t.history || 'History')}</span>
               </button>
             )}
 
@@ -338,7 +339,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
               <svg className="w-4 h-4 text-[#0B1F44] shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm9.64-9.64L22 4V3h-3l-5 5 1.64 1.64v.72z" />
               </svg>
-              <span>New Booking</span>
+              <span>{t.newAppointment || 'New Booking'}</span>
             </button>
           </div>
         </div>

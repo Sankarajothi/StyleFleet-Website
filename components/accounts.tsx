@@ -11,7 +11,7 @@ interface AccountsViewProps {
 type PeriodFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 export const AccountsView: React.FC<AccountsViewProps> = () => {
-  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast, role, hasPermission, shopProfile } = useSalon();
+  const { isDarkMode, expenses, addExpense, updateExpense, deleteExpense, bills, staff, showToast, role, hasPermission, shopProfile, t } = useSalon();
   const canViewPastExpenses = role === 'owner' || hasPermission('past_expenses');
 
   // Time filter state
@@ -356,11 +356,11 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
   };
 
   const periodOptions: { id: PeriodFilter; label: string; badge: string }[] = [
-    { id: 'today', label: 'Today', badge: 'Day' },
-    { id: 'week', label: 'Week', badge: '7 Days' },
-    { id: 'month', label: 'Month', badge: '30 Days' },
-    { id: 'year', label: 'Year', badge: '365 Days' },
-    { id: 'custom', label: 'Custom Range', badge: 'Calendar' },
+    { id: 'today', label: t.today || 'Today', badge: 'Day' },
+    { id: 'week', label: t.week || 'Week', badge: '7 Days' },
+    { id: 'month', label: t.month || 'Month', badge: '30 Days' },
+    { id: 'year', label: t.year || 'Year', badge: '365 Days' },
+    { id: 'custom', label: t.customRange || 'Custom Range', badge: 'Calendar' },
   ];
 
   const categoryOptions = [
@@ -390,7 +390,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
           </div>
           <div>
             <h2 className={`text-xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-              Expenses & Dues Ledger
+              {t.expensesReport || 'Expenses & Dues Ledger'}
             </h2>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#475569]'}`}>
               Track salon payouts, stock replenishment, staff links, and live net profit calculation
@@ -441,7 +441,7 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>Add Expense</span>
+            <span>{t.addExpense || 'Add Expense'}</span>
           </button>
         </div>
       </div>

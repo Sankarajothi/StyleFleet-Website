@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { Language } from '@/lib/translations';
+import { Language, TranslationDictionary, useTranslationHelper } from '@/lib/translations';
 import { getShopPrefixFromShopName, formatInvoiceNumber } from '@/lib/salon-helpers';
 import {
   fetchSalonDataFromDb,
@@ -173,6 +173,7 @@ interface SalonContextType {
   setMobileMenuOpen: (open: boolean) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  t: TranslationDictionary;
   
   shopProfile: ShopProfile;
   updateShopProfile: (profile: Partial<ShopProfile>) => void;
@@ -284,7 +285,25 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('stylefleet_app_language');
+        if (saved && ['en', 'hi', 'ta', 'te', 'kn', 'ml'].includes(saved)) {
+          return saved as Language;
+        }
+      } catch {}
+    }
+    return 'en';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('stylefleet_app_language', language);
+    } catch {}
+  }, [language]);
+
+  const t = useMemo(() => useTranslationHelper(language), [language]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isLoadingSalonData, setIsLoadingSalonData] = useState(true);
@@ -1360,6 +1379,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setMobileMenuOpen,
         language,
         setLanguage,
+        t,
         shopProfile,
         updateShopProfile,
         categories,

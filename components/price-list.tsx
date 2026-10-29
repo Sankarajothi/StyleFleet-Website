@@ -20,7 +20,63 @@ export interface DiscountOffer {
   notes?: string;
 }
 
-const DEFAULT_OFFERS: DiscountOffer[] = [];
+const DEFAULT_OFFERS: DiscountOffer[] = [
+  {
+    id: 'off-welcome-50',
+    title: 'First Visit Special',
+    code: 'WELCOME50',
+    type: 'percentage',
+    value: 50,
+    minBill: 500,
+    validUntil: '2026-12-31',
+    active: true,
+    notes: '50% off for first-time clients',
+  },
+  {
+    id: 'off-festive-20',
+    title: 'Hair Spa & Keratin',
+    code: 'FESTIVE20',
+    type: 'percentage',
+    value: 20,
+    minBill: 800,
+    validUntil: '2026-12-31',
+    active: true,
+    notes: '20% off luxury hair treatments',
+  },
+  {
+    id: 'off-bridal-1000',
+    title: 'Bridal Makeover',
+    code: 'BRIDAL1000',
+    type: 'flat',
+    value: 1000,
+    minBill: 4000,
+    validUntil: '2026-12-31',
+    active: true,
+    notes: 'Flat ₹1000 off bridal packages',
+  },
+  {
+    id: 'off-combo-15',
+    title: 'Hair + Beard Combo',
+    code: 'COMBO15',
+    type: 'percentage',
+    value: 15,
+    minBill: 600,
+    validUntil: '2026-12-31',
+    active: true,
+    notes: '15% discount on combo package',
+  },
+  {
+    id: 'off-glow-30',
+    title: '24K Gold Facial',
+    code: 'GLOW30',
+    type: 'percentage',
+    value: 30,
+    minBill: 1200,
+    validUntil: '2026-12-31',
+    active: true,
+    notes: '30% off gold glow facials',
+  },
+];
 
 export const PriceListView: React.FC<PriceListViewProps> = ({
   onOpenAddCategory,
@@ -69,17 +125,24 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('stylefleet_discount_offers_db');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       } catch {}
     }
-    return [];
+    return DEFAULT_OFFERS;
   });
 
   useEffect(() => {
     try {
       localStorage.setItem('stylefleet_discount_offers_db', JSON.stringify(offers));
+      const shopId = shopProfile?.id || (typeof window !== 'undefined' ? localStorage.getItem('stylefleet_shop_id') : '');
+      if (shopId) {
+        localStorage.setItem(`stylefleet_discount_offers_db_${shopId}`, JSON.stringify(offers));
+      }
     } catch {}
-  }, [offers]);
+  }, [offers, shopProfile?.id]);
 
   // Create Offer Modal state
   const [showCreateOfferModal, setShowCreateOfferModal] = useState(false);
@@ -1349,123 +1412,100 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
             </button>
           </div>
 
-          {/* Offers Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Offers Cards Grid: Compact 5 per row on desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {offers.map((offer) => {
               const isExpired = new Date(offer.validUntil).getTime() < Date.now();
               return (
                 <div
                   key={offer.id}
-                  className={`p-6 rounded-3xl border transition-all shadow-lg relative flex flex-col justify-between gap-4 ${
+                  className={`p-3.5 rounded-2xl border transition-all shadow-md relative flex flex-col justify-between gap-2.5 ${
                     isDarkMode ? 'bg-[#121B33]' : 'bg-white'
                   } ${
                     offer.active && !isExpired
                       ? isDarkMode
-                        ? 'border-[#2A3858] hover:border-[#D4AF37]/50'
+                        ? 'border-[#2A3858] hover:border-[#D4AF37]/60'
                         : 'border-slate-200 hover:border-[#D4AF37]/60'
                       : 'border-white/5 opacity-60'
                   }`}
                 >
-                  {/* Top Bar: Title, Coupon Pill & Toggle */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] font-mono tracking-wider">
-                          {offer.code}
-                        </span>
-                        {offer.active && !isExpired ? (
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30">
-                            {isExpired ? 'Expired' : 'Paused'}
-                          </span>
-                        )}
-                      </div>
-
-                      <strong className={`text-base font-bold block ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                        {offer.title}
-                      </strong>
-                      {offer.notes && (
-                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                          {offer.notes}
-                        </p>
-                      )}
-                    </div>
+                  {/* Top Bar: Coupon Code Pill & Mini Toggle */}
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[11px] font-black px-2 py-0.5 rounded-lg bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] font-mono tracking-wider truncate">
+                      {offer.code}
+                    </span>
 
                     {/* Active ON / OFF Toggle */}
                     <button
                       type="button"
                       onClick={() => handleToggleOffer(offer.id)}
-                      className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                      className={`w-7 h-4 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                         offer.active ? 'bg-[#D4AF37]' : isDarkMode ? 'bg-white/20' : 'bg-slate-300'
                       }`}
                       title={offer.active ? 'Active Offer' : 'Paused Offer'}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full bg-white absolute top-0.5 shadow-sm transition-transform ${
+                        className={`w-3 h-3 rounded-full bg-white absolute top-0.5 shadow-sm transition-transform ${
                           offer.active ? 'right-0.5' : 'left-0.5'
                         }`}
                       />
                     </button>
                   </div>
 
-                  {/* Middle Stats: Value, Min Bill, Validity */}
-                  <div
-                    className={`grid grid-cols-3 gap-2 p-3 rounded-2xl border text-center ${
-                      isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <span className={`text-[10px] block font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                        Discount
+                  {/* Title & Discount Highlight */}
+                  <div>
+                    <strong
+                      className={`text-xs font-bold block truncate leading-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}
+                      title={offer.title}
+                    >
+                      {offer.title}
+                    </strong>
+                    <div className="mt-1 flex items-baseline gap-1">
+                      <span className="text-base font-black text-emerald-400 font-mono">
+                        {offer.type === 'percentage' ? `${offer.value}% OFF` : `₹${offer.value} OFF`}
                       </span>
-                      <strong className="text-sm font-black text-emerald-400">
-                        {offer.type === 'percentage' ? `${offer.value}%` : `₹${offer.value}`}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span className={`text-[10px] block font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                        Min Bill
-                      </span>
-                      <strong className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        ₹{offer.minBill}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span className={`text-[10px] block font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                        Valid Till
-                      </span>
-                      <strong className={`text-xs font-mono font-bold ${isExpired ? 'text-red-400' : isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        {offer.validUntil}
-                      </strong>
                     </div>
                   </div>
 
-                  {/* Actions Row: WhatsApp Share & Delete */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10">
+                  {/* Compact Details: Min Bill & Valid Until */}
+                  <div
+                    className={`p-2 rounded-xl text-[10px] space-y-0.5 border ${
+                      isDarkMode ? 'bg-[#0B1528] border-white/5 text-[#A7B0C3]' : 'bg-slate-50 border-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span>Min Bill:</span>
+                      <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>₹{offer.minBill}</strong>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Valid:</span>
+                      <span className={`font-mono font-bold ${isExpired ? 'text-rose-400' : isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+                        {offer.validUntil.slice(5)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons: WhatsApp Share & Delete */}
+                  <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/5">
                     <button
                       type="button"
                       onClick={() => handleShareOfferWhatsApp(offer)}
-                      className="px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-                      title="Broadcast offer to clients on WhatsApp"
+                      className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      title="Share Offer via WhatsApp"
                     >
-                      <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 fill-emerald-400" viewBox="0 0 24 24">
                         <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.587 1.961.954 2.802.955 3.178 0 5.766-2.587 5.767-5.766.001-3.181-2.586-5.77-5.773-5.772zm3.393 8.243c-.145.407-.743.774-1.026.822-.27.046-.62.067-1.004-.056-.251-.08-.574-.199-1.005-.386-1.821-.789-2.997-2.64-3.088-2.761-.091-.121-.743-.99-.743-1.888 0-.898.468-1.339.635-1.521.168-.182.366-.228.488-.228.122 0 .244.001.35.006.113.006.264-.043.413.315.152.366.518 1.267.564 1.359.046.091.076.198.015.32-.061.122-.091.198-.183.305-.091.107-.193.239-.275.321-.091.091-.187.19-.08.374.107.183.475.784 1.019 1.269.702.625 1.294.819 1.477.91.183.091.29-.076.397-.198.107-.122.457-.534.579-.717.122-.183.244-.153.412-.091.168.061 1.066.503 1.249.594.183.091.305.137.35.214.045.076.045.442-.1 1.248z" />
                       </svg>
-                      <span>Share Offer</span>
+                      <span>Share</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteOffer(offer.id)}
-                      className="px-2.5 py-1.5 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-bold cursor-pointer transition-colors"
+                      className="p-1 rounded-lg hover:bg-rose-500/10 text-rose-400 text-[10px] cursor-pointer transition-colors"
                       title="Delete Offer"
                     >
-                      Delete
+                      🗑️
                     </button>
                   </div>
                 </div>

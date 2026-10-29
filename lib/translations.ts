@@ -115,6 +115,22 @@ export interface TranslationDictionary {
   privacyPolicy: string;
   faq: string;
   deleteAccount: string;
+
+  // Global Multi-page keys
+  salesRevenue: string;
+  salonIntelligence: string;
+  allClients: string;
+  addClient: string;
+  expensesReport: string;
+  offers: string;
+  accountSecurity: string;
+  rateAndReview: string;
+  helpDesk: string;
+  quickBilling: string;
+  billHistory: string;
+  bulkEdit: string;
+  importContacts: string;
+  unlimitedWhatsApp: string;
 }
 
 export const translations: Record<Language, TranslationDictionary> = {
@@ -223,6 +239,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'Privacy Policy',
     faq: 'Salon FAQ',
     deleteAccount: 'Permanently Delete Account',
+
+    salesRevenue: 'Sales & Revenue Analytics',
+    salonIntelligence: 'Salon Intelligence',
+    allClients: 'All Clients',
+    addClient: '+ Add Client',
+    expensesReport: 'Expenses & Outflow',
+    offers: 'Discount Offers',
+    accountSecurity: 'Account Management & Security',
+    rateAndReview: 'Rate & Review StyleFleet',
+    helpDesk: 'Help Desk & VIP Support',
+    quickBilling: 'Quick Billing',
+    billHistory: 'Bill History',
+    bulkEdit: 'Bulk Edit',
+    importContacts: 'Import from Contacts',
+    unlimitedWhatsApp: 'Unlimited WhatsApp Billing',
   },
 
   hi: {
@@ -330,6 +361,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'गोपनीयता नीति',
     faq: 'सैलून सवाल-जवाब',
     deleteAccount: 'खाता स्थायी रूप से हटाएं',
+
+    salesRevenue: 'बिक्री और राजस्व विश्लेषण',
+    salonIntelligence: 'सैलून इंटेलिजेंस',
+    allClients: 'सभी ग्राहक',
+    addClient: '+ नया ग्राहक जोड़ें',
+    expensesReport: 'सैलून खर्च व व्यय',
+    offers: 'छूट और ऑफर्स',
+    accountSecurity: 'खाता प्रबंधन और सुरक्षा',
+    rateAndReview: 'रेट और समीक्षा करें',
+    helpDesk: 'सहायता केंद्र और वीआईपी सपोर्ट',
+    quickBilling: 'त्वरित बिलिंग',
+    billHistory: 'बिल इतिहास',
+    bulkEdit: 'एक साथ संपादन',
+    importContacts: 'संपर्कों से आयात करें',
+    unlimitedWhatsApp: 'असीमित व्हाट्सएप बिलिंग',
   },
 
   ta: {
@@ -437,6 +483,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'தனியுரிமைக் கொள்கை',
     faq: 'அடிக்கடி கேட்கப்படும் கேள்விகள்',
     deleteAccount: 'கணக்கை நிரந்தரமாக நீக்கு',
+
+    salesRevenue: 'விற்பனை மற்றும் வருவாய் பகுப்பாய்வு',
+    salonIntelligence: 'சலூன் நுண்ணறிவு',
+    allClients: 'அனைத்து வாடிக்கையாளர்கள்',
+    addClient: '+ புதிய வாடிக்கையாளர்',
+    expensesReport: 'சலூன் செலவுகள் மற்றும் செலவு அறிக்கை',
+    offers: 'தள்ளுபடி சலுகைகள்',
+    accountSecurity: 'கணக்கு மேலாண்மை மற்றும் பாதுகாப்பு',
+    rateAndReview: 'மதிப்பீடு மற்றும் விமர்சனம்',
+    helpDesk: 'உதவி மையம் மற்றும் விஐபி ஆதரவு',
+    quickBilling: 'விரைவு பில்லிங்',
+    billHistory: 'பில் வரலாறு',
+    bulkEdit: 'மொத்தமாக திருத்து',
+    importContacts: 'தொடர்புகளிலிருந்து இறக்குமதி',
+    unlimitedWhatsApp: 'வரம்பற்ற வாட்ஸ்அப் பில்லிங்',
   },
   te: {
     dashboard: 'డ్యాష్‌బోర్డ్',
@@ -543,6 +604,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'గోప్యతా విధానం',
     faq: 'తరచుగా అడిగే ప్రశ్నలు',
     deleteAccount: 'ఖాతాను తొలగించండి',
+
+    salesRevenue: 'అమ్మకాలు & రాబడి విశ్లేషణ',
+    salonIntelligence: 'సలూన్ ఇంటెలిజెన్స్',
+    allClients: 'అందరు క్లయింట్లు',
+    addClient: '+ క్లయింట్‌ను జోడించండి',
+    expensesReport: 'ఖర్చులు & వ్యయ నివేదిక',
+    offers: 'డిస్కౌంట్ ఆఫర్లు',
+    accountSecurity: 'ఖాతా నిర్వహణ & భద్రత',
+    rateAndReview: 'రేటింగ్ & సమీక్ష',
+    helpDesk: 'సహాయ కేంద్రం & విఐపి సపోర్ట్',
+    quickBilling: 'త్వరిత బిల్లింగ్',
+    billHistory: 'బిల్ చరిత్ర',
+    bulkEdit: 'బల్క్ ఎడిట్',
+    importContacts: 'కాంటాక్ట్‌ల నుండి దిగుమతి',
+    unlimitedWhatsApp: 'అపరిమిత వాట్సాప్ బిల్లింగ్',
   },
   kn: {
     dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
@@ -649,6 +725,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'ಗೌಪ್ಯತಾ ನೀತಿ',
     faq: 'ಪದೇ ಪದೇ ಕೇಳಲಾಗುವ ಪ್ರಶ್ನೆಗಳು',
     deleteAccount: 'ಖಾತೆ ಅಳಿಸಿ',
+
+    salesRevenue: 'ಮಾರಾಟ ಮತ್ತು ಆದಾಯ ವಿಶ್ಲೇಷಣೆ',
+    salonIntelligence: 'ಸಲೂನ್ ಇಂಟೆಲಿಜೆನ್ಸ್',
+    allClients: 'ಎಲ್ಲ ಗ್ರಾಹಕರು',
+    addClient: '+ ಗ್ರಾಹಕರನ್ನು ಸೇರಿಸಿ',
+    expensesReport: 'ವೆಚ್ಚಗಳು ಮತ್ತು ಖರ್ಚು ವರದಿ',
+    offers: 'ರಿಯಾಯಿತಿ ಆಫರ್‌ಗಳು',
+    accountSecurity: 'ಖಾತೆ ನಿರ್ವಹಣೆ ಮತ್ತು ಭದ್ರತೆ',
+    rateAndReview: 'ರೇಟಿಂಗ್ ಮತ್ತು ವಿಮರ್ಶೆ',
+    helpDesk: 'ಸಹಾಯ ಕೇಂದ್ರ ಮತ್ತು ವಿಐಪಿ ಬೆಂಬಲ',
+    quickBilling: 'ತ್ವರಿತ ಬಿಲ್ಲಿಂಗ್',
+    billHistory: 'ಬಿಲ್ ಇತಿಹಾಸ',
+    bulkEdit: 'ಬೃಹತ್ ಸಂಪಾದನೆ',
+    importContacts: 'ಸಂಪರ್ಕಗಳಿಂದ ಆಮದು ಮಾಡಿ',
+    unlimitedWhatsApp: 'ಅನಿಯಮಿತ ವಾಟ್ಸಾಪ್ ಬಿಲ್ಲಿಂಗ್',
   },
   ml: {
     dashboard: 'ഡാഷ്‌ബോർഡ്',
@@ -755,6 +846,21 @@ export const translations: Record<Language, TranslationDictionary> = {
     privacyPolicy: 'സ്വകാര്യതാ നയം',
     faq: 'പതിവുചോദ്യങ്ങൾ',
     deleteAccount: 'അക്കൗണ്ട് ഇല്ലാതാക്കുക',
+
+    salesRevenue: 'വിൽപ്പനയും വരുമാന വിശകലനവും',
+    salonIntelligence: 'സലൂൺ ഇന്റലിജൻസ്',
+    allClients: 'എല്ലാ ഉപഭോക്താക്കളും',
+    addClient: '+ ഉപഭോക്താവിനെ ചേർക്കുക',
+    expensesReport: 'ചെലവുകളും കണക്കുകളും',
+    offers: 'ഡിസ്കൗണ്ട് ഓഫറുകൾ',
+    accountSecurity: 'അക്കൗണ്ട് മാനേജ്‌മെന്റും സുരക്ഷയും',
+    rateAndReview: 'റേറ്റിംഗും അവലോകനവും',
+    helpDesk: 'സഹായ കേന്ദ്രവും വിഐപി പിന്തുണയും',
+    quickBilling: 'ക്വിക്ക് ബില്ലിംഗ്',
+    billHistory: 'ബിൽ ചരിത്രം',
+    bulkEdit: 'ബൾക്ക് എഡിറ്റ്',
+    importContacts: 'കോൺടാക്റ്റുകളിൽ നിന്ന് ഇമ്പോർട്ട് ചെയ്യുക',
+    unlimitedWhatsApp: 'പരിധിയില്ലാത്ത വാട്ട്‌സ്ആപ്പ് ബില്ലിംഗ്',
   },
 };
 

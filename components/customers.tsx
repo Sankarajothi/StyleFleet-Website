@@ -28,6 +28,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
     showToast,
     isDarkMode,
     role,
+    t,
   } = useSalon();
 
   const isStylist = role === 'stylist';
@@ -400,7 +401,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <span className={`text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-                Total Registered Clients
+                {t.allClients || 'Total Registered Clients'}
               </span>
               <div className="flex items-baseline gap-2">
                 <span className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
@@ -551,7 +552,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 : 'bg-[#F7F9FC] text-[#374151] hover:text-[#1F2937] border border-[#E2E8F0]'
             }`}
           >
-            All Clients ({totalClients})
+            {t.allClients || 'All Clients'} ({totalClients})
           </button>
           <button
             onClick={() => setActiveTab('vip')}
@@ -610,7 +611,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
             <svg className="w-4 h-4 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
-            <span className="tracking-wide text-[11px] font-black">Add Client</span>
+            <span className="tracking-wide text-[11px] font-black">{t.addClient || 'Add Client'}</span>
             <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
@@ -657,7 +658,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 </div>
                 <div>
                   <strong className={`text-xs font-bold block group-hover:text-emerald-500 transition-colors ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                    Import from Contacts
+                    {t.importContacts || 'Import from Contacts'}
                   </strong>
                   <span className={`text-[10px] block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
                     Device contacts app (single or multiple)

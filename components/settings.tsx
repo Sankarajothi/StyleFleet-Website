@@ -23,6 +23,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
     bills,
     showToast,
     setCurrentScreen,
+    t,
   } = useSalon();
 
   // Active Tab
@@ -77,6 +78,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
   // Rating State
   const [ratingStars, setRatingStars] = useState(5);
   const [ratingFeedback, setRatingFeedback] = useState('');
+  const [hasRated, setHasRated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('stylefleet_reviews_completed') === 'true';
+    }
+    return false;
+  });
+
+  // Accordion Dropdown state for Account Management & Security
+  const [isAccountSecurityOpen, setIsAccountSecurityOpen] = useState(false);
 
   // Delete Account Confirmation & Reason
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -86,6 +96,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
   // Shop Billing Progress (100 Free Bills)
   const billsFinished = (bills || []).filter((b) => !b.isDeleted).length;
   const billsUsagePct = Math.min((billsFinished / 100) * 100, 100);
+  const shouldShowReviews = !hasRated && billsFinished < 10;
 
   // Open Edit Profile
   const handleOpenEditProfile = () => {
@@ -307,6 +318,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
     e.preventDefault();
     setShowRateModal(false);
     setRatingFeedback('');
+    setHasRated(true);
+    try {
+      localStorage.setItem('stylefleet_reviews_completed', 'true');
+    } catch {}
     showToast(`Thank you for rating StyleFleet ${ratingStars} Stars! ⭐`);
   };
 
@@ -498,10 +513,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
         {/* Tab Navigation Switcher */}
         <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-black/20 border border-white/10 shrink-0 self-start sm:self-auto">
           {[
-            { id: 'profile', label: 'Shop Profile' },
-            { id: 'invoicing', label: 'Invoice Settings' },
-            { id: 'billing', label: 'Subscription & Billing' },
-            { id: 'help', label: 'Settings & Help' },
+            { id: 'profile', label: t.shopProfile || 'Shop Profile' },
+            { id: 'invoicing', label: t.invoiceSettings || 'Invoice Settings' },
+            { id: 'billing', label: t.subscriptionBilling || 'Subscription & Billing' },
+            { id: 'help', label: t.settingsHelp || 'Settings & Help' },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -1132,11 +1147,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                           <h5 className="text-base font-black text-[#D4AF37] mt-0.5">3 Months</h5>
                           <div className="text-xl font-black mt-2 font-mono">₹2,999</div>
                           <span className="text-[10px] text-slate-400 block">₹999/month + 18% GST</span>
-                          <ul className="text-xs space-y-1.5 mt-3 text-slate-300">
-                            <li>✓ Unlimited WhatsApp billing</li>
-                            <li>✓ Multi-stylist workspace</li>
-                            <li>✓ Live chair matrix</li>
-                            <li>✓ Daily profit audit</li>
+                          <ul className="text-xs space-y-2 mt-3">
+                            <li className="font-extrabold flex items-center gap-1.5 bg-[#D4AF37]/20 border border-[#D4AF37]/60 px-2.5 py-1.5 rounded-xl text-white shadow-sm">
+                              <span className="text-emerald-400 font-black text-sm">✓</span>
+                              <span className="text-[#D4AF37] font-black tracking-wide">Unlimited WhatsApp Billing</span>
+                            </li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Multi-stylist workspace</li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Live chair matrix</li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Daily profit audit</li>
                           </ul>
                         </div>
                         <a
@@ -1161,12 +1179,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                             ₹9,999 <s className="text-xs text-slate-400 font-normal">₹11,999</s>
                           </div>
                           <span className="text-[10px] text-slate-400 block">About ₹833/month + 18% GST</span>
-                          <ul className="text-xs space-y-1.5 mt-3 text-slate-200">
-                            <li>★ Everything in 6 months</li>
-                            <li>★ 365 days cloud database access</li>
-                            <li>★ Salon Intelligence 360° analytics</li>
-                            <li>★ VIP onboarding & staff training</li>
-                            <li>★ Dedicated support manager</li>
+                          <ul className="text-xs space-y-2 mt-3">
+                            <li className="font-extrabold flex items-center gap-1.5 bg-[#D4AF37]/25 border-2 border-[#D4AF37] px-2.5 py-1.5 rounded-xl text-white shadow-sm">
+                              <span className="text-emerald-400 font-black text-sm">★</span>
+                              <span className="text-white font-black tracking-wide">Unlimited WhatsApp Billing & Invoices</span>
+                            </li>
+                            <li className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>★ Everything in 6 months</li>
+                            <li className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>★ 365 days cloud database access</li>
+                            <li className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>★ Salon Intelligence analytics</li>
+                            <li className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>★ VIP onboarding & staff training</li>
+                            <li className={isDarkMode ? 'text-slate-200' : 'text-slate-800'}>★ Dedicated support manager</li>
                           </ul>
                         </div>
                         <a
@@ -1186,11 +1208,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                           <h5 className="text-base font-black text-[#D4AF37] mt-0.5">6 Months</h5>
                           <div className="text-xl font-black mt-2 font-mono">₹5,499</div>
                           <span className="text-[10px] text-slate-400 block">Save ₹500 on renewal</span>
-                          <ul className="text-xs space-y-1.5 mt-3 text-slate-300">
-                            <li>✓ Full multi-stylist access</li>
-                            <li>✓ WhatsApp receipt automation</li>
-                            <li>✓ Automated SMS / reminder engine</li>
-                            <li>✓ Daily profit and expense audit</li>
+                          <ul className="text-xs space-y-2 mt-3">
+                            <li className="font-extrabold flex items-center gap-1.5 bg-[#D4AF37]/20 border border-[#D4AF37]/60 px-2.5 py-1.5 rounded-xl text-white shadow-sm">
+                              <span className="text-emerald-400 font-black text-sm">✓</span>
+                              <span className="text-[#D4AF37] font-black tracking-wide">Unlimited WhatsApp Billing</span>
+                            </li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Full multi-stylist access</li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Automated SMS / reminder engine</li>
+                            <li className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>✓ Daily profit and expense audit</li>
                           </ul>
                         </div>
                         <a
@@ -1354,53 +1379,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
           </div>
 
           {/* 2. Rate & Review StyleFleet & Help Desk Support */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Rate & Reviews StyleFleet */}
-            <div
-              className={`p-6 rounded-3xl border space-y-4 shadow-lg ${
-                isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
-              }`}
-            >
-              <div>
-                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Rate & Review StyleFleet
-                </h3>
-                <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Your feedback helps us continuously assist salon owners
-                </p>
-              </div>
-
-              <div className="flex items-center gap-1.5 py-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRatingStars(star)}
-                    className="p-1 hover:scale-110 transition-transform cursor-pointer"
-                  >
-                    <svg
-                      className={`w-5 h-5 ${star <= ratingStars ? 'text-[#D4AF37] fill-[#D4AF37]' : isDarkMode ? 'text-slate-600' : 'text-slate-300'}`}
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  </button>
-                ))}
-                <span className="text-xs font-bold text-[#D4AF37] ml-2">
-                  {ratingStars} of 5 Stars
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowRateModal(true)}
-                className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all cursor-pointer"
+          <div className={`grid grid-cols-1 ${shouldShowReviews ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6`}>
+            {/* Rate & Reviews StyleFleet - Only displayed if < 10 bills completed and not yet rated */}
+            {shouldShowReviews && (
+              <div
+                className={`p-6 rounded-3xl border space-y-4 shadow-lg ${
+                  isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
+                }`}
               >
-                Write Feedback / Review
-              </button>
-            </div>
+                <div>
+                  <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Rate & Review StyleFleet
+                  </h3>
+                  <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Your feedback helps us continuously assist salon owners
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 py-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => {
+                        setRatingStars(star);
+                        setHasRated(true);
+                        try {
+                          localStorage.setItem('stylefleet_reviews_completed', 'true');
+                        } catch {}
+                        showToast(`Thank you for rating StyleFleet ${star} Stars! ⭐`);
+                      }}
+                      className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <svg
+                        className={`w-5 h-5 ${star <= ratingStars ? 'text-[#D4AF37] fill-[#D4AF37]' : isDarkMode ? 'text-slate-600' : 'text-slate-300'}`}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </button>
+                  ))}
+                  <span className="text-xs font-bold text-[#D4AF37] ml-2">
+                    {ratingStars} of 5 Stars
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRateModal(true)}
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all cursor-pointer"
+                >
+                  Write Feedback / Review
+                </button>
+              </div>
+            )}
 
             {/* Help Desk Support */}
             <div
@@ -1424,7 +1458,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
 
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <a
-                  href="https://wa.me/919876543210?text=Hi%20StyleFleet%20Support,%20I%20need%20assistance%20with%20my%20salon%20software"
+                  href="https://wa.me/918870500106?text=Hi%20StyleFleet%20Support,%20I%20need%20assistance%20with%20my%20salon%20software"
                   target="_blank"
                   rel="noreferrer"
                   className="p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-center text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-all"
@@ -1433,7 +1467,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
                 </a>
 
                 <a
-                  href="tel:+919876543210"
+                  href="tel:+918870500106"
                   className={`p-3 rounded-2xl border text-center text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                     isDarkMode ? 'bg-[#0B172E] border-white/10 text-white hover:bg-white/5' : 'bg-slate-50 border-slate-300 text-slate-800'
                   }`}
@@ -1447,126 +1481,160 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
             </div>
           </div>
 
-          {/* 3. Account Management Module (Privacy Policy, FAQ, Change Phone, Sign Out, Delete Account) */}
+          {/* 3. Account Management & Security (Interactive Dropdown Accordion) */}
           <div
-            className={`p-6 rounded-3xl border space-y-4 shadow-lg ${
+            className={`rounded-3xl border shadow-lg transition-all overflow-hidden ${
               isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
             }`}
           >
-            <div>
-              <h3 className={`text-sm font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Account Management & Security
-              </h3>
-              <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                Privacy guidelines, frequently asked questions, session control, and data retention
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-              {/* Privacy Policy */}
-              <button
-                type="button"
-                onClick={() => setShowPrivacyPolicyModal(true)}
-                className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
-                  isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="w-8 h-8 mx-auto rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* Clickable Dropdown Trigger Header */}
+            <button
+              type="button"
+              onClick={() => setIsAccountSecurityOpen(!isAccountSecurityOpen)}
+              className="w-full p-5 sm:p-6 flex items-center justify-between text-left cursor-pointer transition-colors hover:bg-white/[0.02]"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Privacy Policy
-                </strong>
-                <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                  Data encryption terms
-                </span>
-              </button>
+                <div>
+                  <h3 className={`text-sm font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Account Management & Security
+                  </h3>
+                  <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                    Privacy guidelines, FAQ, owner phone change, session logout, and deletion
+                  </p>
+                </div>
+              </div>
 
-              {/* FAQ */}
-              <button
-                type="button"
-                onClick={() => setShowFaqModal(true)}
-                className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
-                  isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="w-8 h-8 mx-auto rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[#D4AF37]">
+                  {isAccountSecurityOpen ? 'Hide Options' : 'View Options (5)'}
+                </span>
+                <div
+                  className={`w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center transition-transform duration-200 ${
+                    isAccountSecurityOpen ? 'rotate-180 bg-[#D4AF37] text-[#07152B]' : 'text-slate-400'
+                  }`}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Salon FAQ
-                </strong>
-                <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                  Common questions
-                </span>
-              </button>
+              </div>
+            </button>
 
-              {/* Change Phone Number */}
-              <button
-                type="button"
-                onClick={() => setShowChangePhoneModal(true)}
-                className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
-                  isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="w-8 h-8 mx-auto rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Change Phone
-                </strong>
-                <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-                  Update owner mobile
-                </span>
-              </button>
+            {/* Dropdown Content */}
+            {isAccountSecurityOpen && (
+              <div className="p-5 sm:p-6 pt-0 border-t border-white/5 animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4">
+                  {/* Privacy Policy */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacyPolicyModal(true)}
+                    className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Privacy Policy
+                    </strong>
+                    <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                      Data encryption terms
+                    </span>
+                  </button>
 
-              {/* Sign Out */}
-              <button
-                type="button"
-                onClick={onOpenSignOutModal}
-                className="p-3.5 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center transition-all cursor-pointer"
-              >
-                <div className="w-8 h-8 mx-auto rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </div>
-                <strong className="text-xs font-bold block mt-2 text-red-400">
-                  Sign Out
-                </strong>
-                <span className="text-[10px] block text-red-400/80">
-                  End current session
-                </span>
-              </button>
+                  {/* FAQ */}
+                  <button
+                    type="button"
+                    onClick={() => setShowFaqModal(true)}
+                    className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Salon FAQ
+                    </strong>
+                    <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                      Common questions
+                    </span>
+                  </button>
 
-              {/* Permanently Delete Account */}
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmText('');
-                  setShowDeleteAccountModal(true);
-                }}
-                className="p-3.5 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center transition-all cursor-pointer"
-              >
-                <div className="w-8 h-8 mx-auto rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+                  {/* Change Phone Number */}
+                  <button
+                    type="button"
+                    onClick={() => setShowChangePhoneModal(true)}
+                    className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-[#0B172E] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <strong className={`text-xs font-bold block mt-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Change Phone
+                    </strong>
+                    <span className={`text-[10px] block ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
+                      Update owner mobile
+                    </span>
+                  </button>
+
+                  {/* Sign Out */}
+                  <button
+                    type="button"
+                    onClick={onOpenSignOutModal}
+                    className="p-3.5 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center transition-all cursor-pointer"
+                  >
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                    </div>
+                    <strong className="text-xs font-bold block mt-2 text-red-400">
+                      Sign Out
+                    </strong>
+                    <span className="text-[10px] block text-red-400/80">
+                      End current session
+                    </span>
+                  </button>
+
+                  {/* Permanently Delete Account */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmText('');
+                      setShowDeleteAccountModal(true);
+                    }}
+                    className="p-3.5 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center transition-all cursor-pointer"
+                  >
+                    <div className="w-8 h-8 mx-auto rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <strong className="text-xs font-bold block mt-2 text-red-400">
+                      Delete Account
+                    </strong>
+                    <span className="text-[10px] block text-red-400/80">
+                      Wipe all records
+                    </span>
+                  </button>
                 </div>
-                <strong className="text-xs font-bold block mt-2 text-red-400">
-                  Delete Account
-                </strong>
-                <span className="text-[10px] block text-red-400/80">
-                  Wipe all records
-                </span>
-              </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

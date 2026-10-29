@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
         },
         {
           id: 'sales',
-          label: 'Sales',
+          label: t.billing,
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
       items: [
         {
           id: 'accounts',
-          label: 'Expenses',
+          label: t.accounts,
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -166,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
         },
         {
           id: 'analytics',
-          label: 'Salon Intelligence',
+          label: t.salonIntelligence || 'Salon Intelligence',
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -175,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSignOutModal }) => {
         },
         {
           id: 'reports',
-          label: 'Reports',
+          label: t.reports,
           icon: (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

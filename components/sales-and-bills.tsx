@@ -59,6 +59,7 @@ export function SalesAndBillsView({
     updateCartItemQty,
     clearCart,
     createBill,
+    t,
   } = useSalon();
 
   const isStylist = role === 'stylist';
@@ -261,7 +262,11 @@ export function SalesAndBillsView({
   const handleCompleteBill = () => {
     // 100 Free Bills Limit Check for unsubscribed salons
     const nonDeletedBillsCount = bills.filter((b) => !b.isDeleted).length;
-    const isSubscribed = Boolean((shopProfile as any)?.subscription?.status === 'active');
+    const isSubscribed = Boolean(
+      (shopProfile as any)?.subscription?.status === 'active' ||
+      (shopProfile as any)?.subscription?.status === 'pro' ||
+      ((shopProfile as any)?.subscription?.plan && (shopProfile as any).subscription.plan.toLowerCase().includes('pro'))
+    );
     if (!isSubscribed && nonDeletedBillsCount >= 100) {
       setShowPlanLimitModal(true);
       return;
@@ -811,7 +816,7 @@ export function SalesAndBillsView({
           <div>
             <div className="flex items-center gap-2">
               <h2 className={`text-xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-                Sales & Revenue Analytics
+                {t.salesRevenue || 'Sales & Revenue Analytics'}
               </h2>
               <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
                 Live Audit
@@ -835,7 +840,7 @@ export function SalesAndBillsView({
             <path d="M8 11h8" />
             <path d="M8 15h5" />
           </svg>
-          <span>New Bill</span>
+          <span>{t.createBill || 'New Bill'}</span>
         </button>
       </div>
 
@@ -862,7 +867,7 @@ export function SalesAndBillsView({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Today</span>
+                <span>{t.today || 'Today'}</span>
               </button>
 
               <button
@@ -876,7 +881,7 @@ export function SalesAndBillsView({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Week</span>
+                <span>{t.week || 'Week'}</span>
               </button>
 
               <button
@@ -890,7 +895,7 @@ export function SalesAndBillsView({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Month</span>
+                <span>{t.month || 'Month'}</span>
               </button>
             </div>
           ) : (
