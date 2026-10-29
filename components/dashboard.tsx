@@ -1,16 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useSalon, Bill, Appointment } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { matchStaffName } from '@/lib/salon-helpers';
 
 interface DashboardProps {
   onOpenNewBooking: () => void;
+  onBookAgain?: (client: { cust: string; phone: string; service?: string; amount?: number; staff?: string }) => void;
   onViewInvoice: (bill: Bill) => void;
 }
 
-export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProps) {
+export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: DashboardProps) {
   const {
     role,
     loggedInStaffName,
@@ -155,18 +156,128 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
     : effectiveBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0) + customers.reduce((acc, c) => acc + (c.due || 0), 0);
   const confirmedAppointments = effectiveAppointments.filter((a) => a.status === 'Confirmed');
 
-  // Curated repeat clients dynamically derived from real customer database
-  const recentBookAgainList = customers
-    .filter((c) => c.status !== 'inactive' && (c.visits > 0 || c.lastVisit))
-    .slice(0, 4)
-    .map((c) => ({
-      cust: c.name,
-      phone: c.phone,
-      service: 'Salon Styling & Care',
-      staff: isStylist && loggedInStaffName ? loggedInStaffName : 'Specialist',
-      amount: c.spend > 0 ? Math.round(c.spend / Math.max(1, c.visits)) : 0,
-      lastVisit: c.lastVisit || 'Recent',
-    }));
+  // Curated repeat clients dynamically derived from real customer database:
+  // Strictly filter for REPEAT clients (>= 2 visits/bookings), ranked by who booked more & higher amount,
+  // showing only recently booked members (not all contacts).
+  const recentBookAgainList = useMemo(() => {
+    const clientStatsMap = new Map<
+      string,
+      {
+        billsCount: number;
+        apptsCount: number;
+        totalSpend: number;
+        lastDate: string;
+        latestService: string;
+        latestStaff: string;
+      }
+    >();
+
+    // Index non-deleted bills
+    bills
+      .filter((b) => !b.isDeleted)
+      .forEach((b) => {
+        const phoneClean = (b.phone || '').replace(/\D/g, '').slice(-10);
+        const nameKey = (b.cust || '').trim().toLowerCase();
+        const keys = [phoneClean, nameKey].filter(Boolean);
+        const bDate = b.createdAt ? b.createdAt.slice(0, 10) : b.dateStr;
+
+        keys.forEach((k) => {
+          const existing = clientStatsMap.get(k) || {
+            billsCount: 0,
+            apptsCount: 0,
+            totalSpend: 0,
+            lastDate: '',
+            latestService: '',
+            latestStaff: '',
+          };
+          existing.billsCount += 1;
+          existing.totalSpend += b.paidAmount || b.total || 0;
+          if (bDate && (!existing.lastDate || bDate > existing.lastDate)) {
+            existing.lastDate = bDate;
+            if (b.items && b.items.length > 0) {
+              existing.latestService = b.items[0].name;
+            }
+            if (b.staff) existing.latestStaff = b.staff;
+          }
+          clientStatsMap.set(k, existing);
+        });
+      });
+
+    // Index active appointments
+    appointments
+      .filter((a) => a.status !== 'Cancelled')
+      .forEach((a) => {
+        const phoneClean = (a.phone || '').replace(/\D/g, '').slice(-10);
+        const nameKey = (a.cust || '').trim().toLowerCase();
+        const keys = [phoneClean, nameKey].filter(Boolean);
+
+        keys.forEach((k) => {
+          const existing = clientStatsMap.get(k) || {
+            billsCount: 0,
+            apptsCount: 0,
+            totalSpend: 0,
+            lastDate: '',
+            latestService: '',
+            latestStaff: '',
+          };
+          existing.apptsCount += 1;
+          if (a.amount) existing.totalSpend += a.amount;
+          if (a.date && (!existing.lastDate || a.date > existing.lastDate)) {
+            existing.lastDate = a.date;
+            if (a.service) existing.latestService = a.service;
+            if (a.staff) existing.latestStaff = a.staff;
+          }
+          clientStatsMap.set(k, existing);
+        });
+      });
+
+    return customers
+      .filter((c) => c.status !== 'inactive')
+      .map((c) => {
+        const phoneClean = (c.phone || '').replace(/\D/g, '').slice(-10);
+        const nameKey = (c.name || '').trim().toLowerCase();
+        const stats =
+          (phoneClean && clientStatsMap.get(phoneClean)) ||
+          (nameKey && clientStatsMap.get(nameKey)) || {
+            billsCount: 0,
+            apptsCount: 0,
+            totalSpend: 0,
+            lastDate: '',
+            latestService: '',
+            latestStaff: '',
+          };
+
+        const totalVisits = Math.max(c.visits || 0, stats.billsCount, stats.apptsCount);
+        const totalSpend = Math.max(c.spend || 0, stats.totalSpend);
+        const lastVisitDate = stats.lastDate || c.lastVisit || '';
+
+        return {
+          cust: c.name,
+          phone: c.phone,
+          visits: totalVisits,
+          spend: totalSpend,
+          service: stats.latestService || 'Salon Styling & Care',
+          staff: isStylist && loggedInStaffName ? loggedInStaffName : stats.latestStaff || 'Specialist',
+          amount: totalVisits > 0 ? Math.round(totalSpend / totalVisits) : totalSpend,
+          lastVisit: lastVisitDate || 'Recent',
+          lastDateSortKey: lastVisitDate,
+          // CRITICAL: Must be a REPEAT client (booked more than once)
+          isRepeat: totalVisits >= 2,
+        };
+      })
+      // Strictly only repeat clients who have booked more than once AND have recent booking activity
+      .filter((c) => c.isRepeat && c.lastDateSortKey)
+      // Rank by:
+      // 1) Who are booked more (visits descending)
+      // 2) Who have more amount booked (spend descending)
+      // 3) Only recently booked members (latest booking date descending)
+      .sort((a, b) => {
+        if (b.visits !== a.visits) return b.visits - a.visits; // Booked more
+        if (b.spend !== a.spend) return b.spend - a.spend; // More amount booked
+        return b.lastDateSortKey.localeCompare(a.lastDateSortKey); // Recently booked
+      })
+      .slice(0, 4);
+  }, [customers, bills, appointments, isStylist, loggedInStaffName]);
 
   return (
     <section className="space-y-6 animate-fadeIn select-none">
@@ -384,12 +495,12 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
 
         {recentBookAgainList.length === 0 ? (
           <div
-            className={`p-6 rounded-xl border text-center ${
+            className={`p-6 rounded-2xl border text-center ${
               isDarkMode ? 'bg-[#0B172E] border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
             <p className="text-xs">
-              No repeat clients yet. As clients visit and appointments are completed, they will automatically appear here for instant 1-click rebooking.
+              No repeat clients yet. Clients who have completed 2+ bookings and have recent visits will automatically appear here ranked by booking volume and service spend.
             </p>
           </div>
         ) : (
@@ -397,50 +508,92 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
             {recentBookAgainList.map((client, idx) => (
               <div
                 key={idx}
-                className={`p-3.5 rounded-xl border flex flex-col justify-between space-y-3 ${
+                className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-3 transition-all ${
                   isDarkMode
-                    ? 'bg-[#0B172E] border-white/5 hover:border-[#D4AF37]/30'
-                    : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
+                    ? 'bg-[#0B172E] border-white/5 hover:border-[#D4AF37]/40 shadow-xs'
+                    : 'bg-slate-50/70 border-slate-200 hover:border-[#D4AF37]/50 shadow-2xs'
                 }`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg border text-xs font-bold flex items-center justify-center shrink-0 ${
-                      isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#D4AF37]' : 'bg-white border-slate-200 text-[#0B1F44]'
-                    }`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl border text-xs font-black flex items-center justify-center shrink-0 ${
+                        isDarkMode
+                          ? 'bg-[#121B33] border-[#2A3858] text-[#D4AF37]'
+                          : 'bg-white border-slate-200 text-[#0B1F44]'
+                      }`}
+                    >
                       {client.cust.slice(0, 1)}
                     </div>
-                    <div>
-                      <strong className={`text-xs block font-bold truncate max-w-[110px] ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <div className="min-w-0">
+                      <strong
+                        className={`text-xs block font-bold truncate ${
+                          isDarkMode ? 'text-white' : 'text-slate-900'
+                        }`}
+                      >
                         {client.cust}
                       </strong>
-                      <span className={`text-[11px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {client.phone ? `+91 ${client.phone}` : 'Walk-in'}
+                      <span
+                        className={`text-[10px] block font-mono truncate ${
+                          isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        {client.phone ? `+91 ${client.phone.slice(-10)}` : 'Walk-in'}
                       </span>
                     </div>
                   </div>
 
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                    isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
-                  }`}>
-                    {client.lastVisit}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/35 text-[#D4AF37]">
+                      ⭐ {client.visits} Bookings
+                    </span>
+                    <span
+                      className={`text-[10px] font-semibold ${
+                        isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {client.lastVisit}
+                    </span>
+                  </div>
                 </div>
 
-                <div className={`pt-2.5 border-t flex items-center justify-between text-xs ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>
-                  <div className="overflow-hidden pr-2">
-                    <span className={`text-xs font-semibold block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                <div
+                  className={`pt-2.5 border-t flex items-center justify-between text-xs ${
+                    isDarkMode ? 'border-white/5' : 'border-slate-200'
+                  }`}
+                >
+                  <div className="overflow-hidden pr-2 min-w-0">
+                    <span
+                      className={`text-xs font-semibold block truncate ${
+                        isDarkMode ? 'text-white' : 'text-slate-900'
+                      }`}
+                    >
                       {client.service}
                     </span>
-                    <span className={`text-[11px] block truncate tabular-nums ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      ₹{client.amount} · {client.staff}
+                    <span
+                      className={`text-[11px] block truncate font-mono ${
+                        isDarkMode ? 'text-[#D4AF37]' : 'text-amber-800'
+                      }`}
+                    >
+                      ₹{client.spend} Total · {client.staff}
                     </span>
                   </div>
 
                   <button
                     type="button"
-                    onClick={onOpenNewBooking}
-                    className="px-3 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-bold transition-colors shrink-0 cursor-pointer active:scale-95"
+                    onClick={() =>
+                      onBookAgain
+                        ? onBookAgain({
+                            cust: client.cust,
+                            phone: client.phone,
+                            service: client.service,
+                            amount: client.amount,
+                            staff: client.staff,
+                          })
+                        : onOpenNewBooking()
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black transition-all shrink-0 cursor-pointer active:scale-95 shadow-xs"
+                    title="1-Click Rebooking"
                   >
                     Book ↗
                   </button>

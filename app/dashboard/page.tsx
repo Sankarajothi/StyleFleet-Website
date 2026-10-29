@@ -351,6 +351,7 @@ function DashboardContent() {
             {currentScreen === 'home' && (
               <DashboardView
                 onOpenNewBooking={handleOpenNewBooking}
+                onBookAgain={handleBookAgain}
                 onViewInvoice={(bill) => {
                   setActiveInvoice(bill);
                   setIsWhatsAppShared(false);
