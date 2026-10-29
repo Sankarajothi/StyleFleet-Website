@@ -781,7 +781,12 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       const liveStats = statsByCustomer.get(key);
       const liveVisits = liveStats ? liveStats.visits : 0;
       const liveSpend = liveStats ? liveStats.spend : 0;
-      const liveDue = liveStats ? liveStats.dues : Math.round((c.outstanding_due_minor || 0) / 100);
+      const dbDue = (c.outstanding_due_minor !== undefined && c.outstanding_due_minor !== null)
+        ? Math.round(Number(c.outstanding_due_minor) / 100)
+        : null;
+      // If customer record in Supabase has an explicit outstanding_due_minor set (via mobile or web settlement),
+      // that is the authoritative source of truth. Otherwise, fallback to live bill dues.
+      const liveDue = dbDue !== null ? dbDue : (liveStats ? liveStats.dues : 0);
       const lastVisit = (liveStats && liveStats.visits > 0) ? liveStats.lastVisit : 'Never';
 
       return {
@@ -796,6 +801,24 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         lastVisit,
         status: c.is_active ? 'active' : 'inactive',
       };
+    });
+
+    // Reconcile bills if customer due has been fully cleared in Supabase (by mobile or web settlement)
+    const reconciledBills = bills.map((b) => {
+      if (!b.dueAmount || b.dueAmount <= 0) return b;
+      const cleanPhone = (b.phone || '').replace(/\D/g, '').slice(-10);
+      const custMatch = custRows?.find((c: any) => {
+        const cPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
+        return (cleanPhone && cPhone === cleanPhone) || (b.cust && c.name?.toLowerCase() === b.cust.toLowerCase());
+      });
+      if (custMatch && custMatch.outstanding_due_minor === 0) {
+        return {
+          ...b,
+          dueAmount: 0,
+          status: 'paid' as const,
+        };
+      }
+      return b;
     });
 
     // 8. Fetch expenses
@@ -823,7 +846,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       staff,
       customers,
       appointments,
-      bills,
+      bills: reconciledBills,
       expenses,
     };
   } catch (err) {
@@ -1026,7 +1049,9 @@ export async function updateCustomerInDb(
   updated: Partial<Customer>
 ): Promise<boolean> {
   try {
-    const payload: Record<string, any> = {};
+    const payload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
     if (updated.name !== undefined) payload.name = updated.name.trim();
     if (updated.phone !== undefined) payload.phone = updated.phone.trim();
     if (updated.vip !== undefined) payload.is_starred = !!updated.vip;
@@ -1038,8 +1063,16 @@ export async function updateCustomerInDb(
     if (isValidUuid(customerIdOrPhone)) {
       query = query.eq('id', customerIdOrPhone);
     } else {
-      const cleanPhone = customerIdOrPhone.replace(/\D/g, '').slice(-10);
-      query = query.eq('phone', cleanPhone || customerIdOrPhone);
+      const rawDigits = customerIdOrPhone.replace(/\D/g, '');
+      const cleanPhone = (updated.phone ? updated.phone.replace(/\D/g, '').slice(-10) : '') ||
+        (!customerIdOrPhone.startsWith('c-') && rawDigits.length >= 7 ? rawDigits.slice(-10) : '');
+      if (cleanPhone && cleanPhone.length >= 7) {
+        query = query.eq('phone', cleanPhone);
+      } else if (updated.name) {
+        query = query.ilike('name', updated.name.trim());
+      } else {
+        query = query.eq('id', customerIdOrPhone);
+      }
     }
 
     const { error } = await query;
@@ -1308,6 +1341,25 @@ export async function saveBillToDb(
           });
           customerId = newCustId;
         }
+      } catch {}
+    }
+
+    // Immediately synchronize customer's outstanding_due_minor in Supabase
+    if (customerId && dueMinor > 0) {
+      try {
+        const { data: cRow } = await supabase
+          .from('customers')
+          .select('outstanding_due_minor')
+          .eq('id', customerId)
+          .single();
+        const prevDueMinor = cRow?.outstanding_due_minor || 0;
+        await supabase
+          .from('customers')
+          .update({
+            outstanding_due_minor: prevDueMinor + dueMinor,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', customerId);
       } catch {}
     }
 

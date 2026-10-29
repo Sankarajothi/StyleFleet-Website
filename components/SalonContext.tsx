@@ -591,11 +591,19 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateCustomer = (id: string, updated: Partial<Customer>) => {
+    const existing = customers.find((c) => c.id === id);
     setCustomers((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
     );
     if (currentShopId) {
-      updateCustomerInDb(currentShopId, id, updated);
+      const identifier = (existing && isValidUuid(existing.id))
+        ? existing.id
+        : (existing?.phone || updated.phone || existing?.name || id);
+      updateCustomerInDb(currentShopId, identifier, {
+        ...updated,
+        phone: updated.phone || existing?.phone,
+        name: updated.name || existing?.name,
+      });
     }
     showToast('Client details updated');
   };
@@ -929,12 +937,23 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCustomers((prev) => {
       const exists = prev.find((c) => (billData.phone && c.phone === billData.phone) || (billData.cust && c.name.toLowerCase() === billData.cust.toLowerCase()));
       if (exists) {
+        const newDue = (exists.due || 0) + billData.dueAmount;
+        const newSpend = (exists.spend || 0) + billData.paidAmount;
+        if (currentShopId) {
+          const identifier = (exists.id && isValidUuid(exists.id)) ? exists.id : (exists.phone || billData.phone || exists.name);
+          updateCustomerInDb(currentShopId, identifier, {
+            due: newDue,
+            spend: newSpend,
+            phone: exists.phone || billData.phone,
+            name: exists.name,
+          });
+        }
         return prev.map((c) => {
           if (c.id === exists.id) {
             return {
               ...c,
-              spend: (c.spend || 0) + billData.paidAmount,
-              due: (c.due || 0) + billData.dueAmount,
+              spend: newSpend,
+              due: newDue,
               visits: (c.visits || 0) + 1,
               lastVisit: 'Today',
             };
@@ -1180,7 +1199,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Real-time synchronization of salon state (bills, appointments, staff permissions) from Supabase
+  // Real-time synchronization of salon state (customers, dues, bills, appointments, staff permissions) from Supabase
   useEffect(() => {
     if (!currentShopId) return;
 
@@ -1204,10 +1223,37 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch {}
     };
 
+    // Sub-second push synchronization via Supabase Realtime for instant mobile ⇄ web due sync
+    const realtimeChannel = supabase
+      .channel(`realtime_salon_${currentShopId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customers', filter: `shop_id=eq.${currentShopId}` },
+        () => {
+          handleSyncSalonState();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bills', filter: `shop_id=eq.${currentShopId}` },
+        () => {
+          handleSyncSalonState();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'staff', filter: `shop_id=eq.${currentShopId}` },
+        () => {
+          handleSyncSalonState();
+        }
+      )
+      .subscribe();
+
     window.addEventListener('focus', handleSyncSalonState);
     const syncInterval = setInterval(handleSyncSalonState, 8000);
 
     return () => {
+      supabase.removeChannel(realtimeChannel);
       window.removeEventListener('focus', handleSyncSalonState);
       clearInterval(syncInterval);
     };
