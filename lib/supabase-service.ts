@@ -830,6 +830,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         isToday,
         isYesterday,
         createdAt: b.created_at || b.issued_at,
+        customerId: b.customer_id || b.customers?.id || undefined,
       };
     });
 
@@ -885,20 +886,32 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       };
     });
 
-    // Reconcile bills if customer due has been fully cleared in Supabase (by mobile or web settlement)
+    // Reconcile bills if customer due has been settled or partially cleared in Supabase
     const reconciledBills = bills.map((b) => {
       if (!b.dueAmount || b.dueAmount <= 0) return b;
       const cleanPhone = (b.phone || '').replace(/\D/g, '').slice(-10);
       const custMatch = custRows?.find((c: any) => {
+        if (b.customerId && c.id === b.customerId) return true;
         const cPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
-        return (cleanPhone && cPhone === cleanPhone) || (b.cust && c.name?.toLowerCase() === b.cust.toLowerCase());
+        return (cleanPhone && cPhone && cleanPhone === cPhone) || (b.cust && c.name?.toLowerCase().trim() === b.cust.toLowerCase().trim());
       });
-      if (custMatch && custMatch.outstanding_due_minor === 0) {
-        return {
-          ...b,
-          dueAmount: 0,
-          status: 'paid' as const,
-        };
+      if (custMatch && custMatch.outstanding_due_minor !== undefined && custMatch.outstanding_due_minor !== null) {
+        const custDueRupees = Math.round((custMatch.outstanding_due_minor || 0) / 100);
+        if (custDueRupees <= 0) {
+          return {
+            ...b,
+            dueAmount: 0,
+            paidAmount: b.total,
+            status: 'paid' as const,
+          };
+        } else if (b.dueAmount > custDueRupees) {
+          return {
+            ...b,
+            dueAmount: custDueRupees,
+            paidAmount: Math.max(0, b.total - custDueRupees),
+            status: 'partially_paid' as const,
+          };
+        }
       }
       return b;
     });
@@ -1992,6 +2005,135 @@ export async function updateBillInDb(
     return !error;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Transactionally settle a customer due in Supabase:
+ * 1. Updates customers.outstanding_due_minor
+ * 2. Directly updates all unpaid bills for this customer in the bills table (due_amount_minor, paid_amount_minor, status)
+ * 3. Records a clearance receipt bill and payment entry in Supabase so Today's revenue and ledger match
+ */
+export async function settleCustomerDueInDb(
+  shopId: string,
+  customer: { id: string; name: string; phone: string; currentDue: number },
+  paymentAmount: number,
+  paymentMode: 'Cash' | 'UPI' | 'Card',
+  collectorName: string
+): Promise<{ success: boolean; newDue: number }> {
+  try {
+    const payment = Math.max(0, paymentAmount);
+    if (payment <= 0) return { success: false, newDue: customer.currentDue };
+
+    const cleanPhone = (customer.phone || '').replace(/\D/g, '').slice(-10);
+    const newDue = Math.max(0, (customer.currentDue || 0) - payment);
+    const newDueMinor = Math.round(newDue * 100);
+    const paymentMinor = Math.round(payment * 100);
+    const nowIso = new Date().toISOString();
+
+    // 1. Update customers table
+    let custQuery = supabase
+      .from('customers')
+      .update({
+        outstanding_due_minor: newDueMinor,
+        updated_at: nowIso,
+      })
+      .eq('shop_id', shopId);
+
+    if (isValidUuid(customer.id)) {
+      custQuery = custQuery.eq('id', customer.id);
+    } else if (cleanPhone) {
+      custQuery = custQuery.eq('phone', cleanPhone);
+    } else {
+      custQuery = custQuery.ilike('name', customer.name.trim());
+    }
+    await custQuery;
+
+    // 2. Query all unpaid bills for this customer in Supabase
+    let candidateBillsQuery = supabase
+      .from('bills')
+      .select('id, invoice_number, total_minor, paid_amount_minor, due_amount_minor, status, notes')
+      .eq('shop_id', shopId)
+      .gt('due_amount_minor', 0)
+      .order('created_at', { ascending: true });
+
+    if (isValidUuid(customer.id)) {
+      candidateBillsQuery = candidateBillsQuery.or(`customer_id.eq.${customer.id},notes.ilike.%${cleanPhone}%`);
+    } else if (cleanPhone) {
+      candidateBillsQuery = candidateBillsQuery.ilike('notes', `%${cleanPhone}%`);
+    }
+
+    const { data: unpaidBills } = await candidateBillsQuery;
+
+    // Deduct payment paies across all unpaid bills
+    let remainingToDeductMinor = paymentMinor;
+    if (unpaidBills && unpaidBills.length > 0) {
+      for (const b of unpaidBills) {
+        if (remainingToDeductMinor <= 0) break;
+        const currentBillDueMinor = b.due_amount_minor || 0;
+        const currentBillPaidMinor = b.paid_amount_minor || 0;
+        const deductMinor = Math.min(currentBillDueMinor, remainingToDeductMinor);
+        remainingToDeductMinor -= deductMinor;
+
+        const updatedBillDueMinor = currentBillDueMinor - deductMinor;
+        const updatedBillPaidMinor = currentBillPaidMinor + deductMinor;
+        const updatedStatus = updatedBillDueMinor <= 0 ? 'paid' : 'partially_paid';
+
+        await supabase
+          .from('bills')
+          .update({
+            due_amount_minor: updatedBillDueMinor,
+            paid_amount_minor: updatedBillPaidMinor,
+            status: updatedStatus,
+            updated_at: nowIso,
+          })
+          .eq('id', b.id);
+      }
+    }
+
+    // 3. Insert clearance receipt bill into bills table
+    const clearanceBillId = generateUuid();
+    const shortId = clearanceBillId.slice(0, 4);
+    const invoiceNumber = `DUE-CLR-${Date.now().toString().slice(-4)}`;
+    const officialPdfKey = `${invoiceNumber}_${shortId}.pdf`;
+    const officialPdfUrl = `https://stylefleet.tecstellar.com/b/${officialPdfKey}`;
+    const notesStr = `staff_name:${collectorName};cust:${customer.name};phone:${cleanPhone};mode:${paymentMode};date_str:${new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    await supabase.from('bills').insert({
+      id: clearanceBillId,
+      shop_id: shopId,
+      customer_id: isValidUuid(customer.id) ? customer.id : null,
+      invoice_number: invoiceNumber,
+      status: 'paid',
+      subtotal_minor: paymentMinor,
+      discount_minor: 0,
+      tax_minor: 0,
+      tip_minor: 0,
+      total_minor: paymentMinor,
+      paid_amount_minor: paymentMinor,
+      due_amount_minor: 0,
+      notes: notesStr,
+      issued_at: nowIso,
+      pdf_url: officialPdfUrl,
+    });
+
+    // 4. Insert into payments table
+    try {
+      await supabase.from('payments').insert({
+        id: generateUuid(),
+        shop_id: shopId,
+        bill_id: clearanceBillId,
+        amount_minor: paymentMinor,
+        method: paymentMode,
+        status: 'Completed',
+        paid_at: nowIso,
+      });
+    } catch {}
+
+    return { success: true, newDue };
+  } catch (err) {
+    console.error('[Supabase] Error settling due:', err);
+    return { success: false, newDue: customer.currentDue };
   }
 }
 

@@ -19,6 +19,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
     markCustomerInactive,
     reactivateCustomer,
     importCustomers,
+    settleCustomerDue,
     bills,
     setBills,
     createBill,
@@ -373,7 +374,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   };
 
   // Handle Due Settle
-  const handleSettleDue = () => {
+  const handleSettleDue = async () => {
     if (!settlingDueCust) return;
     if (!canClearDues) {
       showToast('Stylists do not have permission to clear client dues. Contact the salon owner or supervisor.', 'error');
@@ -385,51 +386,8 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       showToast('Please enter a valid payment amount.', 'error');
       return;
     }
-    const newDue = currentDue - payment;
 
-    // 1. Update customer record in state and DB
-    updateCustomer(settlingDueCust.id, {
-      due: newDue,
-      spend: (settlingDueCust.spend || 0) + payment,
-    });
-
-    // 2. Reduce unpaid bills' dueAmount for this customer and sync to DB
-    let remainingToDeduct = payment;
-    bills.forEach((b) => {
-      const matchesCust =
-        (settlingDueCust.phone && b.phone === settlingDueCust.phone) ||
-        b.cust.toLowerCase() === settlingDueCust.name.toLowerCase();
-      if (matchesCust && (b.dueAmount || 0) > 0 && remainingToDeduct > 0) {
-        const deduct = Math.min(b.dueAmount || 0, remainingToDeduct);
-        remainingToDeduct -= deduct;
-        const updatedDue = (b.dueAmount || 0) - deduct;
-        const updatedPaid = (b.paidAmount || 0) + deduct;
-        editBill(b.id, {
-          dueAmount: updatedDue,
-          paidAmount: updatedPaid,
-          status: updatedDue <= 0 ? 'paid' : 'partially_paid',
-        });
-      }
-    });
-
-    // 3. Create a today revenue record so it strictly reflects in Today's Revenue and Accounts
-    const collectorName = role === 'stylist' && loggedInStaffName ? `${loggedInStaffName} (Supervisor)` : (shopProfile?.ownerName || 'Owner');
-    createBill({
-      cust: settlingDueCust.name,
-      phone: settlingDueCust.phone || '',
-      items: [{ name: `Due Payment Clearance (${settlingDueCust.name})`, price: payment, qty: 1 }],
-      staff: collectorName,
-      total: payment,
-      paidAmount: payment,
-      dueAmount: 0,
-      mode: settleMode as any,
-      status: 'paid',
-      discount: 0,
-      tax: 0,
-      tip: 0,
-    });
-
-    showToast(`Received ₹${payment} payment via ${settleMode} (cleared by ${collectorName}). Remaining: ₹${newDue}`);
+    await settleCustomerDue(settlingDueCust, payment, settleMode);
     setSettlingDueCust(null);
   };
 

@@ -230,7 +230,7 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
     }
     const customerDues = customers.reduce((acc, c) => acc + Math.max(0, c.due || 0), 0);
     const billDues = effectiveBills.filter((b) => !b.isDeleted).reduce((acc, b) => acc + Math.max(0, b.dueAmount || 0), 0);
-    return Math.max(customerDues, billDues);
+    return customerDues > 0 ? customerDues : billDues;
   }, [isStylist, todayBills, effectiveBills, customers]);
   const confirmedAppointments = effectiveAppointments.filter((a) => a.status === 'Confirmed');
 
