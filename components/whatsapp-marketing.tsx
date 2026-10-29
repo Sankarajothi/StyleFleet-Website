@@ -460,15 +460,15 @@ export const WhatsAppMarketingView: React.FC = () => {
               }`}
             >
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                       WhatsApp Live Message Preview
                     </h3>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-semibold">
-                    Client: {sampleCustomerName}
+                  <span className="text-xs font-black text-[#D4AF37] bg-[#D4AF37]/15 px-2.5 py-1 rounded-xl border border-[#D4AF37]/40 shadow-xs">
+                    Client: <strong className="text-[#D4AF37] font-black">{sampleCustomerName}</strong>
                   </span>
                 </div>
 
@@ -479,15 +479,24 @@ export const WhatsAppMarketingView: React.FC = () => {
                       SF
                     </div>
                     <div>
-                      <strong className="text-xs font-bold block">{shopProfile.shopName || 'StyleFleet Salon'}</strong>
+                      <strong className="text-xs font-bold block text-white">{shopProfile.shopName || 'StyleFleet Salon'}</strong>
                       <span className="text-[10px] text-emerald-400">Verified Business Account</span>
                     </div>
                   </div>
 
                   {/* Message Bubble */}
                   <div className="bg-[#005c4b] p-3.5 rounded-2xl rounded-tl-none max-w-sm text-xs leading-relaxed shadow-sm">
-                    <p className="whitespace-pre-line text-slate-100">
-                      {livePreviewText}
+                    <p className="whitespace-pre-line text-white font-medium">
+                      {livePreviewText.split(sampleCustomerName).map((part, i, arr) => (
+                        <span key={i}>
+                          {part}
+                          {i < arr.length - 1 && (
+                            <strong className="text-amber-300 font-black bg-amber-400/20 px-1 py-0.5 rounded border border-amber-400/30">
+                              {sampleCustomerName}
+                            </strong>
+                          )}
+                        </span>
+                      ))}
                     </p>
                     <div className="flex justify-end items-center gap-1 mt-1 text-[9px] text-emerald-200/70">
                       <span>12:00 PM</span>

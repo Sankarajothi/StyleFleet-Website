@@ -448,8 +448,8 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
             </div>
           </div>
 
-          {/* Appointments Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Appointments Compact Square Grid (6 Per Row) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
             {dailyAppointments.length === 0 ? (
               <div
                 className={`col-span-full py-16 text-center rounded-2xl border space-y-3 ${
@@ -468,84 +468,153 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 <button
                   type="button"
                   onClick={handleOpenBookingModal}
-                  className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs inline-flex items-center gap-2"
+                  className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs inline-flex items-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
                 >
                   <span>Book Appointment Now</span>
                 </button>
               </div>
             ) : (
-              dailyAppointments.map((appt) => (
-                <div
-                  key={appt.id}
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all shadow-md flex flex-col justify-between gap-3 ${
-                    isDarkMode
-                      ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/40'
-                      : 'bg-white border-[#E2E8F0] hover:border-[#D4AF37]/60 shadow-sm'
-                  }`}
-                >
-                  {/* Top: Client Identity + Time Slot Badge + Status Badge */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-xl border text-xs font-black flex items-center justify-center shrink-0 ${
-                          appt.status === 'In chair'
-                            ? isDarkMode ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]' : 'bg-[#FEF3C7] border-[#D4AF37] text-[#5B2500]'
-                            : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3]' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151]'
-                        }`}
-                      >
-                        {appt.cust.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <strong className={`text-sm font-extrabold block tracking-tight ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
-                          {appt.cust}
-                        </strong>
-                        <span className={`text-xs block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-                          +91 {appt.phone}
-                        </span>
-                        <p className="text-xs text-[#D4AF37] font-bold mt-1 leading-snug">
-                          {appt.service} · <span className={`font-mono font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>₹{appt.amount}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right space-y-1 shrink-0">
-                      <span className={`text-xs font-black px-2.5 py-1 rounded-xl block font-mono ${isDarkMode ? 'text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30' : 'text-[#5B2500] bg-[#FEF3C7] border border-[#D4AF37]/40'}`}>
+              <>
+                {dailyAppointments.map((appt) => (
+                  <div
+                    key={appt.id}
+                    className={`p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-col justify-between select-none relative group min-h-[140px] sm:min-h-[150px] ${
+                      isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:border-[#D4AF37]/60 shadow-2xs'
+                    }`}
+                  >
+                    {/* Top Row: Time Slot Badge on Left, Status Pill & 3-Dot Menu on Right */}
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg font-mono ${
+                        isDarkMode ? 'text-[#D4AF37] bg-[#D4AF37]/15 border border-[#D4AF37]/30' : 'text-[#5B2500] bg-amber-50 border border-amber-300'
+                      }`}>
                         {appt.startsAt}
                       </span>
-                      <span
-                        className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider block text-center ${
-                          appt.status === 'In chair'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-                            : appt.status === 'Confirmed'
-                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                        }`}
-                      >
-                        {appt.status}
-                      </span>
+
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                            appt.status === 'In chair'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                              : appt.status === 'Confirmed'
+                              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                          }`}
+                        >
+                          {appt.status}
+                        </span>
+
+                        {/* 3 VERTICAL DOTS MENU */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            title="Appointment actions"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuApptId((prev) => (prev === appt.id ? null : appt.id));
+                            }}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors cursor-pointer ${
+                              activeMenuApptId === appt.id
+                                ? isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-200 border-slate-300 text-slate-900'
+                                : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3] hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                              <circle cx="12" cy="5" r="2" />
+                              <circle cx="12" cy="12" r="2" />
+                              <circle cx="12" cy="19" r="2" />
+                            </svg>
+                          </button>
+
+                          {activeMenuApptId === appt.id && (
+                            <div
+                              className={`absolute right-0 mt-1 w-32 rounded-xl border shadow-xl p-1 z-30 animate-fadeIn ${
+                                isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-white border-[#E2E8F0]'
+                              }`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuApptId(null);
+                                  setEditingAppt(appt);
+                                  setEditStartsAt(appt.startsAt);
+                                  setEditService(appt.service);
+                                  setEditStaff(appt.staff || defaultStaff);
+                                }}
+                                className={`w-full px-2 py-1 rounded-lg text-left text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                                  isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-slate-700 hover:bg-slate-100 hover:text-[#B8863B]'
+                                }`}
+                              >
+                                <svg className="w-3.5 h-3.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuApptId(null);
+                                  if (confirm(`Delete appointment for ${appt.cust}?`)) {
+                                    deleteAppointment(appt.id);
+                                  }
+                                }}
+                                className="w-full px-2 py-1 rounded-lg hover:bg-rose-500/15 text-left text-[11px] font-bold text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Bottom: Stylist details + Action buttons */}
-                  <div className={`pt-2 border-t flex items-center justify-between text-xs ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
-                    <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-                      Stylist: <strong className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-[#1F2937]'}`}>{appt.staff}</strong>
-                    </span>
+                    {/* Middle Content: Initials + Client Name + Service + Price + Stylist */}
+                    <div className="my-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <div
+                          className={`w-5 h-5 rounded-md border text-[9px] font-black flex items-center justify-center shrink-0 ${
+                            appt.status === 'In chair'
+                              ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]'
+                              : isDarkMode
+                              ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3]'
+                              : 'bg-slate-100 border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {appt.cust.slice(0, 2).toUpperCase()}
+                        </div>
+                        <strong className={`text-xs font-bold truncate block ${isDarkMode ? 'text-white' : 'text-slate-900'} group-hover:text-[#D4AF37] transition-colors`}>
+                          {appt.cust}
+                        </strong>
+                      </div>
 
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {/* 1. CONFIRMED STATUS: REMIND & MARK ARRIVED */}
+                      <p className="text-[10px] text-[#D4AF37] font-bold truncate">
+                        {appt.service} · <span className={`font-mono ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>₹{appt.amount}</span>
+                      </p>
+
+                      <div className="flex items-center justify-between text-[9px] text-slate-400 mt-0.5">
+                        <span className="truncate">Stylist: <strong className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{appt.staff}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Quick Action buttons */}
+                    <div className={`pt-1.5 border-t flex items-center justify-between gap-1 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
                       {appt.status === 'Confirmed' && (
                         <>
                           <button
                             type="button"
                             onClick={() => sendAppointmentReminder(appt)}
-                            className="px-2.5 py-1.5 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                            className="p-1 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold transition-all flex items-center justify-center cursor-pointer shrink-0"
                             title="Send WhatsApp appointment reminder"
                           >
                             <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                               <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
                             </svg>
-                            <span>Remind</span>
                           </button>
 
                           <button
@@ -554,21 +623,20 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                               updateAppointmentStatus(appt.id, 'In chair');
                               showToast(`${appt.cust} marked In Chair!`, 'success');
                             }}
-                            className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-black transition-all flex items-center gap-1 cursor-pointer"
+                            className="flex-1 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-black transition-all text-center cursor-pointer"
                           >
-                            <span>Mark Arrived</span>
+                            Arrived
                           </button>
                         </>
                       )}
 
-                      {/* 2. IN CHAIR STATUS: BILL & CLOSE */}
                       {appt.status === 'In chair' && (
                         <button
                           type="button"
                           onClick={() => markArrivedAndBill(appt)}
-                          className="px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black active:scale-95 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                          className="w-full py-1 rounded-lg bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-[10px] font-black active:scale-95 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                         >
-                          <svg className="w-3.5 h-3.5 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <svg className="w-3 h-3 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
                           </svg>
                           <span>Bill & Close</span>
@@ -576,81 +644,34 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                       )}
 
                       {appt.status === 'Done' && (
-                        <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/25">
-                          Completed
+                        <span className="w-full text-center text-[10px] font-bold text-emerald-400 bg-emerald-500/10 py-0.5 rounded-lg border border-emerald-500/20">
+                          Completed ✓
                         </span>
                       )}
-
-                      {/* 3 VERTICAL DOTS MENU: EDIT & DELETE */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          title="Appointment actions"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuApptId((prev) => (prev === appt.id ? null : appt.id));
-                          }}
-                          className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
-                            activeMenuApptId === appt.id
-                              ? isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-200 border-slate-300 text-slate-900'
-                              : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3] hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                            <circle cx="12" cy="5" r="2" />
-                            <circle cx="12" cy="12" r="2" />
-                            <circle cx="12" cy="19" r="2" />
-                          </svg>
-                        </button>
-
-                        {activeMenuApptId === appt.id && (
-                          <div
-                            className={`absolute right-0 mt-1.5 w-36 rounded-xl border shadow-xl p-1 z-30 animate-fadeIn ${
-                              isDarkMode ? 'bg-[#1A2746] border-[#2A3858]' : 'bg-white border-[#E2E8F0]'
-                            }`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveMenuApptId(null);
-                                setEditingAppt(appt);
-                                setEditStartsAt(appt.startsAt);
-                                setEditService(appt.service);
-                                setEditStaff(appt.staff || defaultStaff);
-                              }}
-                              className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${
-                                isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-slate-700 hover:bg-slate-100 hover:text-[#B8863B]'
-                              }`}
-                            >
-                              <svg className="w-3.5 h-3.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                              </svg>
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveMenuApptId(null);
-                                if (confirm(`Delete appointment for ${appt.cust}?`)) {
-                                  deleteAppointment(appt.id);
-                                }
-                              }}
-                              className="w-full px-2.5 py-1.5 rounded-lg hover:bg-rose-500/15 text-left text-xs font-semibold text-rose-400 flex items-center gap-2 transition-colors cursor-pointer"
-                            >
-                              <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+
+                {/* + Book Appointment Dashed Box */}
+                <button
+                  type="button"
+                  onClick={handleOpenBookingModal}
+                  className={`p-2.5 sm:p-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-1 text-center cursor-pointer min-h-[140px] sm:min-h-[150px] group select-none ${
+                    isDarkMode
+                      ? 'border-[#2A3858] hover:border-[#D4AF37] hover:bg-white/[0.02] text-slate-400 hover:text-white'
+                      : 'border-slate-300 hover:border-amber-400 hover:bg-amber-50/40 text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-black tracking-tight">+ Book Slot</span>
+                  <span className="text-[9px] opacity-70">Schedule appointment</span>
+                </button>
+              </>
             )}
           </div>
         </div>

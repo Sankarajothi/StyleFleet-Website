@@ -973,22 +973,22 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className={`text-[10px] block uppercase font-bold tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] block uppercase font-black tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                     Access Scope
                   </span>
                   <span className="text-sm font-black text-[#D4AF37]">
                     {stylistPerms.length} of {ALL_PERMISSIONS.length} allowed
                   </span>
                 </div>
-                <span className="text-xs font-mono font-bold text-slate-400">
+                <span className="text-xs font-mono font-black text-yellow-400">
                   {Math.round((stylistPerms.length / ALL_PERMISSIONS.length) * 100)}%
                 </span>
               </div>
 
-              {/* Visual Progress Bar */}
-              <div className="w-full h-2 rounded-full bg-black/25 overflow-hidden">
+              {/* Visual Progress Bar (Solid Yellow Bar - No Gradient) */}
+              <div className="w-full h-2.5 rounded-full bg-black/25 overflow-hidden p-0.5 border border-white/5">
                 <div
-                  className="h-full rounded-full transition-all duration-300 bg-gradient-to-r from-[#D4AF37] to-emerald-400"
+                  className="h-full rounded-full transition-all duration-300 bg-yellow-400"
                   style={{ width: `${Math.round((stylistPerms.length / ALL_PERMISSIONS.length) * 100)}%` }}
                 />
               </div>
@@ -1022,11 +1022,11 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
             {/* Division 1: Daily Work (Default Allowed) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
                   Daily Work
                 </span>
-                <span className="text-[10px] text-emerald-400/80 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="text-[10px] text-emerald-400 font-black bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                   Default Allowed
                 </span>
               </div>
@@ -1055,10 +1055,10 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                       }`}
                     >
                       <div className="pr-3">
-                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <span className={`text-xs font-black block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {perm.label}
                         </span>
-                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] block mt-0.5 font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                           {perm.desc}
                         </span>
                       </div>
@@ -1083,11 +1083,11 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
             {/* Division 2: Money, Team, and Settings (Default Off / Sensitive) */}
             <div className="space-y-2 pt-2 border-t border-white/10">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
                   Money, Team, and Settings
                 </span>
-                <span className="text-[10px] text-amber-400/80 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                <span className="text-[10px] text-amber-400 font-black bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                   Default Off
                 </span>
               </div>
@@ -1116,10 +1116,10 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                       }`}
                     >
                       <div className="pr-3">
-                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <span className={`text-xs font-black block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {perm.label}
                         </span>
-                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] block mt-0.5 font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                           {perm.desc}
                         </span>
                       </div>
@@ -1144,11 +1144,11 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
             {/* Division 3: Limits (Default Off / Sensitive) */}
             <div className="space-y-2 pt-2 border-t border-white/10">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                <span className="text-xs font-black text-sky-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-sky-400" />
                   Limits
                 </span>
-                <span className="text-[10px] text-sky-400/80 font-semibold bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
+                <span className="text-[10px] text-sky-400 font-black bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
                   Default Off
                 </span>
               </div>
@@ -1177,10 +1177,10 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
                       }`}
                     >
                       <div className="pr-3">
-                        <span className={`text-xs font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        <span className={`text-xs font-black block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           {perm.label}
                         </span>
-                        <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] block mt-0.5 font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                           {perm.desc}
                         </span>
                       </div>

@@ -124,6 +124,27 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const [bulkDurMode, setBulkDurMode] = useState<'none' | 'set'>('none');
   const [bulkDurValue, setBulkDurValue] = useState<number>(30);
   const [bulkStatusMode, setBulkStatusMode] = useState<'none' | 'active' | 'inactive'>('none');
+  const [bulkEditedServices, setBulkEditedServices] = useState<Record<string, { name: string; price: number; cat: string; dur: number; active: boolean }>>({});
+
+  // Sync selected services into editable state whenever Bulk Edit Modal is opened
+  useEffect(() => {
+    if (showBulkEditModal) {
+      const initial: Record<string, { name: string; price: number; cat: string; dur: number; active: boolean }> = {};
+      selectedServiceIds.forEach((id) => {
+        const found = services.find((s) => s.id === id);
+        if (found) {
+          initial[id] = {
+            name: found.name,
+            price: found.price,
+            cat: found.cat,
+            dur: found.dur || 30,
+            active: found.active !== false,
+          };
+        }
+      });
+      setBulkEditedServices(initial);
+    }
+  }, [showBulkEditModal, selectedServiceIds, services]);
 
   // Category Edit / Delete State
   const [editingCategory, setEditingCategory] = useState<{ oldName: string; newName: string } | null>(null);
@@ -264,52 +285,73 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     setShowBulkDeleteConfirm(false);
   };
 
-  // Bulk Edit
+  // Quick Batch Adjustment on the displayed services
+  const handleApplyBatchAdjustment = () => {
+    setBulkEditedServices((prev) => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach((id) => {
+        const curr = updated[id];
+        let newPrice = curr.price;
+        if (bulkPriceMode === 'fixed' && bulkPriceValue >= 0) {
+          newPrice = Number(bulkPriceValue);
+        } else if (bulkPriceMode === 'increase_fixed') {
+          newPrice = Math.max(0, curr.price + Number(bulkPriceValue));
+        } else if (bulkPriceMode === 'decrease_fixed') {
+          newPrice = Math.max(0, curr.price - Number(bulkPriceValue));
+        } else if (bulkPriceMode === 'increase_percent') {
+          newPrice = Math.round(curr.price * (1 + Number(bulkPriceValue) / 100));
+        } else if (bulkPriceMode === 'decrease_percent') {
+          newPrice = Math.max(0, Math.round(curr.price * (1 - Number(bulkPriceValue) / 100)));
+        }
+
+        let newCat = curr.cat;
+        if (bulkCategory) {
+          newCat = bulkCategory;
+        }
+
+        let newDur = curr.dur;
+        if (bulkDurMode === 'set' && bulkDurValue > 0) {
+          newDur = bulkDurValue;
+        }
+
+        let newActive = curr.active;
+        if (bulkStatusMode === 'active') newActive = true;
+        if (bulkStatusMode === 'inactive') newActive = false;
+
+        updated[id] = {
+          ...curr,
+          price: newPrice,
+          cat: newCat,
+          dur: newDur,
+          active: newActive,
+        };
+      });
+      return updated;
+    });
+    showToast('Batch values applied to all services below!');
+  };
+
+  // Bulk Edit Save
   const handleApplyBulkEdit = () => {
     const ids = Array.from(selectedServiceIds);
     if (ids.length === 0) return;
 
     ids.forEach((id) => {
-      const current = services.find((s) => s.id === id);
-      if (!current) return;
-
-      const updates: Partial<ServiceItem> = {};
-
-      if (bulkCategory.trim()) {
-        updates.cat = bulkCategory.trim();
-      }
-
-      if (bulkDurMode === 'set' && bulkDurValue > 0) {
-        updates.dur = Number(bulkDurValue);
-      }
-
-      if (bulkStatusMode === 'active') {
-        updates.active = true;
-      } else if (bulkStatusMode === 'inactive') {
-        updates.active = false;
-      }
-
-      if (bulkPriceMode === 'fixed' && bulkPriceValue >= 0) {
-        updates.price = Number(bulkPriceValue);
-      } else if (bulkPriceMode === 'increase_fixed') {
-        updates.price = Math.max(0, current.price + Number(bulkPriceValue));
-      } else if (bulkPriceMode === 'decrease_fixed') {
-        updates.price = Math.max(0, current.price - Number(bulkPriceValue));
-      } else if (bulkPriceMode === 'increase_percent') {
-        updates.price = Math.round(current.price * (1 + Number(bulkPriceValue) / 100));
-      } else if (bulkPriceMode === 'decrease_percent') {
-        updates.price = Math.max(0, Math.round(current.price * (1 - Number(bulkPriceValue) / 100)));
-      }
-
-      if (Object.keys(updates).length > 0) {
-        updateService(id, updates);
+      const item = bulkEditedServices[id];
+      if (item) {
+        updateService(id, {
+          name: item.name,
+          price: Number(item.price) || 0,
+          cat: item.cat,
+          dur: Number(item.dur) || 30,
+          active: item.active,
+        });
       }
     });
 
     showToast(`Bulk updated ${ids.length} services!`);
     setShowBulkEditModal(false);
     setSelectedServiceIds(new Set());
-    // Reset bulk edit states
     setBulkCategory('');
     setBulkPriceMode('none');
     setBulkPriceValue(0);
@@ -2033,17 +2075,18 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
       {showBulkEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div
-            className={`p-5 sm:p-6 rounded-2xl border max-w-md w-full space-y-4 shadow-2xl relative ${
+            className={`p-5 sm:p-6 rounded-3xl border max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4 shadow-2xl relative ${
               isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
             }`}
           >
-            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+            {/* Modal Header */}
+            <div className={`flex items-center justify-between pb-2 border-b shrink-0 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
               <div>
                 <h3 className={`text-sm sm:text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                   Bulk Edit Services
                 </h3>
                 <span className="text-[11px] text-[#D4AF37] font-bold">
-                  Updating {selectedServiceIds.size} selected services
+                  Editing {selectedServiceIds.size} selected {selectedServiceIds.size === 1 ? 'service' : 'services'}
                 </span>
               </div>
               <button
@@ -2060,133 +2103,266 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3.5 text-xs">
-              {/* Change Category */}
-              <div>
-                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                  Change Category (Optional)
-                </label>
-                <select
-                  value={bulkCategory}
-                  onChange={(e) => setBulkCategory(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode
-                      ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                  }`}
-                >
-                  <option value="">Keep current category</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      Move to {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Price Adjustment */}
-              <div>
-                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                  Price Adjustment
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <select
-                    value={bulkPriceMode}
-                    onChange={(e) => setBulkPriceMode(e.target.value as any)}
-                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none transition-all ${
-                      isDarkMode
-                        ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                        : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                    }`}
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto space-y-4 pr-1 text-xs flex-1">
+              {/* Batch Quick Adjuster Box */}
+              <div
+                className={`p-3.5 rounded-2xl border space-y-2.5 ${
+                  isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#D4AF37]">
+                    ⚡ Quick Batch Adjust All
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleApplyBatchAdjustment}
+                    className="px-2.5 py-1 rounded-lg bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-[11px] font-black cursor-pointer shadow-xs active:scale-95 transition-all"
                   >
-                    <option value="none">No price change</option>
-                    <option value="fixed">Set exact price (₹)</option>
-                    <option value="increase_fixed">Increase by fixed ₹</option>
-                    <option value="decrease_fixed">Decrease by fixed ₹</option>
-                    <option value="increase_percent">Increase by %</option>
-                    <option value="decrease_percent">Decrease by %</option>
-                  </select>
-
-                  {bulkPriceMode !== 'none' && (
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder={bulkPriceMode.includes('percent') ? 'e.g. 10%' : 'e.g. ₹50'}
-                      value={bulkPriceValue}
-                      onChange={(e) => setBulkPriceValue(Number(e.target.value))}
-                      className={`w-full px-2.5 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${
-                        isDarkMode
-                          ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                          : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                      }`}
-                    />
-                  )}
+                    Apply to All Below
+                  </button>
                 </div>
-              </div>
 
-              {/* Duration Adjustment */}
-              <div>
-                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                  Duration (Minutes)
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={bulkDurMode}
-                    onChange={(e) => setBulkDurMode(e.target.value as any)}
-                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none transition-all ${
-                      isDarkMode
-                        ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                        : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                    }`}
-                  >
-                    <option value="none">No duration change</option>
-                    <option value="set">Set duration to:</option>
-                  </select>
-
-                  {bulkDurMode === 'set' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Category */}
+                  <div>
+                    <label className={`text-[10px] font-bold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Move Category
+                    </label>
                     <select
-                      value={bulkDurValue}
-                      onChange={(e) => setBulkDurValue(Number(e.target.value))}
-                      className={`w-full px-2.5 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${
+                      value={bulkCategory}
+                      onChange={(e) => setBulkCategory(e.target.value)}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs outline-none transition-all ${
                         isDarkMode
-                          ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                          ? 'bg-[#0B1528] border-[#2A3858] text-white focus:border-[#D4AF37]'
                           : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
                       }`}
                     >
+                      <option value="">Keep current</option>
+                      {categories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Price Mode */}
+                  <div>
+                    <label className={`text-[10px] font-bold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Price Adjust
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={bulkPriceMode}
+                        onChange={(e) => setBulkPriceMode(e.target.value as any)}
+                        className={`flex-1 px-2 py-1.5 rounded-xl border text-[11px] outline-none transition-all ${
+                          isDarkMode
+                            ? 'bg-[#0B1528] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                        }`}
+                      >
+                        <option value="none">No change</option>
+                        <option value="fixed">Set ₹</option>
+                        <option value="increase_fixed">+ ₹</option>
+                        <option value="decrease_fixed">- ₹</option>
+                        <option value="increase_percent">+ %</option>
+                        <option value="decrease_percent">- %</option>
+                      </select>
+                      {bulkPriceMode !== 'none' && (
+                        <input
+                          type="number"
+                          min="0"
+                          value={bulkPriceValue}
+                          onChange={(e) => setBulkPriceValue(Number(e.target.value))}
+                          placeholder="Amount"
+                          className={`w-16 px-2 py-1.5 rounded-xl border text-xs font-bold outline-none ${
+                            isDarkMode
+                              ? 'bg-[#0B1528] border-[#2A3858] text-white'
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Duration */}
+                  <div>
+                    <label className={`text-[10px] font-bold block mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Duration (Mins)
+                    </label>
+                    <select
+                      value={bulkDurMode === 'set' ? bulkDurValue : 'none'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'none') {
+                          setBulkDurMode('none');
+                        } else {
+                          setBulkDurMode('set');
+                          setBulkDurValue(Number(val));
+                        }
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-xl border text-xs outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#0B1528] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                      }`}
+                    >
+                      <option value="none">Keep current</option>
                       <option value={15}>15 mins</option>
                       <option value={20}>20 mins</option>
                       <option value={30}>30 mins</option>
                       <option value={45}>45 mins</option>
                       <option value={60}>60 mins</option>
                       <option value={90}>90 mins</option>
-                      <option value={120}>120 mins</option>
                     </select>
-                  )}
+                  </div>
                 </div>
               </div>
 
-              {/* Status Toggle */}
-              <div>
-                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                  Active Status
-                </label>
-                <select
-                  value={bulkStatusMode}
-                  onChange={(e) => setBulkStatusMode(e.target.value as any)}
-                  className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-all ${
-                    isDarkMode
-                      ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
-                  }`}
-                >
-                  <option value="none">Keep current status</option>
-                  <option value="active">Make all selected Active</option>
-                  <option value="inactive">Make all selected Paused</option>
-                </select>
+              {/* Displayed Selected Services with direct individual editing */}
+              <div className="space-y-2">
+                <span className={`text-[11px] font-black uppercase tracking-wider block ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Selected Services ({Array.from(selectedServiceIds).length}) — Edit Amount & Details Below:
+                </span>
+
+                <div className="space-y-2">
+                  {Array.from(selectedServiceIds).map((id) => {
+                    const item = bulkEditedServices[id];
+                    if (!item) return null;
+
+                    return (
+                      <div
+                        key={id}
+                        className={`p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
+                          isDarkMode
+                            ? 'bg-[#121B33] border-[#2A3858]'
+                            : 'bg-white border-slate-200 shadow-2xs'
+                        }`}
+                      >
+                        {/* Service Title */}
+                        <div className="min-w-0 flex-1">
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setBulkEditedServices((prev) => ({
+                                ...prev,
+                                [id]: { ...prev[id], name: val },
+                              }));
+                            }}
+                            className={`w-full font-bold text-xs bg-transparent border-b outline-none transition-colors ${
+                              isDarkMode
+                                ? 'text-white border-transparent focus:border-[#D4AF37]'
+                                : 'text-slate-900 border-transparent focus:border-amber-400'
+                            }`}
+                          />
+                          <span className={`text-[10px] block mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Current: {item.cat} · {item.dur}m
+                          </span>
+                        </div>
+
+                        {/* Editable Fields: Category, Amount, Duration, Active */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Category select */}
+                          <select
+                            value={item.cat}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setBulkEditedServices((prev) => ({
+                                ...prev,
+                                [id]: { ...prev[id], cat: val },
+                              }));
+                            }}
+                            className={`px-2 py-1 rounded-lg border text-xs outline-none ${
+                              isDarkMode
+                                ? 'bg-[#0B1528] border-[#2A3858] text-white'
+                                : 'bg-slate-50 border-slate-300 text-slate-800'
+                            }`}
+                          >
+                            {categories.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Price input (₹) */}
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-black text-[#D4AF37]">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.price}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setBulkEditedServices((prev) => ({
+                                  ...prev,
+                                  [id]: { ...prev[id], price: val },
+                                }));
+                              }}
+                              className={`w-20 px-2 py-1 rounded-lg border text-xs font-black outline-none ${
+                                isDarkMode
+                                  ? 'bg-[#0B1528] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                                  : 'bg-white border-slate-300 text-slate-900 focus:border-amber-400'
+                              }`}
+                            />
+                          </div>
+
+                          {/* Duration select */}
+                          <select
+                            value={item.dur}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setBulkEditedServices((prev) => ({
+                                ...prev,
+                                [id]: { ...prev[id], dur: val },
+                              }));
+                            }}
+                            className={`px-1.5 py-1 rounded-lg border text-xs outline-none ${
+                              isDarkMode
+                                ? 'bg-[#0B1528] border-[#2A3858] text-white'
+                                : 'bg-slate-50 border-slate-300 text-slate-800'
+                            }`}
+                          >
+                            <option value={15}>15m</option>
+                            <option value={20}>20m</option>
+                            <option value={30}>30m</option>
+                            <option value={45}>45m</option>
+                            <option value={60}>60m</option>
+                            <option value={90}>90m</option>
+                            <option value={120}>120m</option>
+                          </select>
+
+                          {/* Active toggle */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBulkEditedServices((prev) => ({
+                                ...prev,
+                                [id]: { ...prev[id], active: !prev[id].active },
+                              }));
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-black border transition-colors cursor-pointer ${
+                              item.active
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                : 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+                            }`}
+                          >
+                            {item.active ? 'Active' : 'Paused'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+            {/* Bottom Actions */}
+            <div className={`flex gap-2.5 pt-3 border-t shrink-0 ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
               <button
                 type="button"
                 onClick={() => setShowBulkEditModal(false)}
@@ -2201,9 +2377,9 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               <button
                 type="button"
                 onClick={handleApplyBulkEdit}
-                className="flex-1 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black cursor-pointer shadow-md shadow-[#D4AF37]/25"
+                className="flex-1 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black cursor-pointer shadow-md shadow-[#D4AF37]/25 active:scale-95 transition-all"
               >
-                Apply Bulk Changes
+                Save & Apply Changes ({selectedServiceIds.size})
               </button>
             </div>
           </div>

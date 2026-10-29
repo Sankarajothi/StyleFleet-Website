@@ -258,7 +258,7 @@ export const RemindersView: React.FC = () => {
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -350,7 +350,7 @@ export const RemindersView: React.FC = () => {
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
@@ -399,10 +399,12 @@ export const RemindersView: React.FC = () => {
                       <strong className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         {client.name}
                       </strong>
-                      <span className="text-[11px] font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">
+                      <span className={`text-[11px] font-mono px-2 py-0.5 rounded-lg border ${
+                        isDarkMode ? 'text-slate-300 bg-slate-800 border-slate-700' : 'text-slate-700 bg-slate-100 border-slate-300'
+                      }`}>
                         +91 {client.phone}
                       </span>
-                      <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20">
+                      <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
                         3-Day Cycle Due
                       </span>
                     </div>
@@ -413,8 +415,8 @@ export const RemindersView: React.FC = () => {
 
                   <div className="flex items-center gap-3 self-start sm:self-auto">
                     <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-red-400 block">Pending Due</span>
-                      <strong className="text-base text-red-400 font-black block">
+                      <span className={`text-[10px] uppercase font-bold block ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>Pending Due</span>
+                      <strong className={`text-base font-black block ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
                         ₹ {client.due.toLocaleString()}
                       </strong>
                     </div>
@@ -448,7 +450,7 @@ export const RemindersView: React.FC = () => {
             : 'bg-[#FFFDF7] border-[#D4AF37]/50 shadow-md'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
           <div>
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

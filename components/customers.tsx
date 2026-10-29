@@ -600,25 +600,8 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
           </button>
         </div>
 
-        {/* Action Buttons: Import Contacts + Add Client */}
-        <div className="flex items-center gap-2 relative">
-          <button
-            type="button"
-            onClick={handleTriggerImportContacts}
-            className={`px-3 sm:px-4 py-2.5 rounded-2xl border font-black text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              isDarkMode
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
-                : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-            }`}
-            title="Import from phone contacts directly into Supabase"
-          >
-            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            <span className="hidden sm:inline">Import Contacts</span>
-            <span className="sm:hidden">Import</span>
-          </button>
-
+        {/* Action Button: Add Client (With Manual & Import options) */}
+        <div className="relative">
           <button
             type="button"
             onClick={() => setShowAddChoiceModal(!showAddChoiceModal)}
