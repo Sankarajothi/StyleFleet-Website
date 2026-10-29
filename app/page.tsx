@@ -1299,19 +1299,6 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* 6-Digit Pair PIN Display */}
-                      <div className="mt-3.5 text-center">
-                        <div className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1">
-                          Or enter 6-digit PIN on App
-                        </div>
-                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#0F223D] border border-[#D4AF37]/40 rounded-xl">
-                          <span className="text-xs font-bold text-[#D4AF37]">PAIR CODE:</span>
-                          <span className="text-sm font-mono font-black text-white tracking-widest">
-                            {qrPairCode ? `${qrPairCode.slice(0, 3)} ${qrPairCode.slice(3)}` : '------'}
-                          </span>
-                        </div>
-                      </div>
-
                       {/* Live Waiting Pulse & Expiry */}
                       <div className="flex items-center justify-between w-full mt-4 pt-3 border-t border-white/5 text-xs">
                         <div className="flex items-center gap-2">
@@ -1344,10 +1331,10 @@ export default function HomePage() {
                         <Laptop className="w-4 h-4 text-[#F5A623]" />
                         <span>How to link with StyleFleet Mobile App:</span>
                       </div>
-                      <ol className="text-[11px] text-[#94A3B8] space-y-1 list-decimal list-inside leading-relaxed pl-1">
+                      <ol className="text-[11px] text-[#94A3B8] space-y-1.5 list-decimal list-inside leading-relaxed pl-1">
                         <li>Open the <strong className="text-white">StyleFleet App</strong> on your phone</li>
                         <li>Go to <strong className="text-white">Settings / Account</strong> → Tap <strong className="text-[#F5A623]">Link to PC</strong></li>
-                        <li>Point your phone camera at this QR code or type the PIN</li>
+                        <li>Scan this QR code with the app scanner to log in instantly</li>
                       </ol>
                     </div>
 

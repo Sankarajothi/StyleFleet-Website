@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const session = createQrSession(role);
 
     // Deep link format for Mobile App scanner
-    const qrData = `stylefleet://link?session_id=${session.sessionId}&pin=${session.pairCode}&role=${role}`;
+    const qrData = `stylefleet://link?session_id=${session.sessionId}&role=${role}`;
 
     return NextResponse.json({
       success: true,
