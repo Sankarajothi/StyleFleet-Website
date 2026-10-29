@@ -46,7 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
       case 'accounts': return 'Expenses';
       case 'expenses': return 'Expenses';
       case 'reports': return 'Reports';
-      case 'analytics': return 'Deep Analytics 360°';
+      case 'analytics': return 'Salon Intelligence';
       case 'settings': return t.settings;
       default: return t.dashboard;
     }
@@ -108,12 +108,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
                 ? 'text-slate-300 hover:text-[#D4AF37]'
                 : 'text-slate-700 hover:text-amber-800'
             }`}
-            title="Open Deep Analytics 360"
+            title="Open Salon Intelligence"
           >
             <svg className="w-3.5 h-3.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
-            <span className="hidden sm:inline">View Analytics</span>
+            <span className="hidden sm:inline">Salon Intelligence</span>
           </button>
         )}
 

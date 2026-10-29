@@ -337,7 +337,7 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
 
           {/* Quick Action CTAs */}
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0 pt-2 lg:pt-0">
-            {/* Small background-free "View Analytics" text button for Owner */}
+            {/* Small background-free "Salon Intelligence" text button for Owner */}
             {!isStylist && (
               <button
                 type="button"
@@ -347,12 +347,12 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
                     ? 'text-[#D4AF37] hover:text-white'
                     : 'text-amber-800 hover:text-amber-950'
                 }`}
-                title="Open Deep Analytics 360"
+                title="Open Salon Intelligence"
               >
                 <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                <span>View Analytics</span>
+                <span>Salon Intelligence</span>
               </button>
             )}
 
