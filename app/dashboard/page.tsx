@@ -152,7 +152,18 @@ function DashboardContent() {
   const [bookingCustName, setBookingCustName] = useState('');
   const [bookingCustPhone, setBookingCustPhone] = useState('');
   const [bookingService, setBookingService] = useState('Classic Haircut');
-  const [bookingStaff, setBookingStaff] = useState('Karthik');
+  const [bookingStaff, setBookingStaff] = useState(() => {
+    return staff[0]?.name || shopProfile?.ownerName || 'Stylist';
+  });
+
+  // Ensure booking staff is always strictly synchronized to registered staff or owner
+  useEffect(() => {
+    if (staff.length > 0 && (!bookingStaff || bookingStaff === 'Karthik' || bookingStaff === 'Stylist')) {
+      setBookingStaff(staff[0].name);
+    } else if (staff.length === 0 && (!bookingStaff || bookingStaff === 'Karthik')) {
+      setBookingStaff(shopProfile?.ownerName || 'Owner');
+    }
+  }, [staff, shopProfile?.ownerName, bookingStaff]);
   const [bookingDate, setBookingDate] = useState(getTodayDateStr());
   const [bookingTime, setBookingTime] = useState('11:30 AM');
   const [bookingAmount, setBookingAmount] = useState<number>(350);
@@ -280,7 +291,12 @@ function DashboardContent() {
     setBookingCustPhone(client.phone);
     if (client.service) setBookingService(client.service);
     if (client.amount) setBookingAmount(client.amount);
-    if (client.staff) setBookingStaff(client.staff);
+    if (client.staff && client.staff !== 'Karthik') {
+      const matchStaff = staff.find((s) => s.name.toLowerCase() === client.staff?.toLowerCase());
+      setBookingStaff(matchStaff ? matchStaff.name : (staff[0]?.name || shopProfile?.ownerName || 'Stylist'));
+    } else {
+      setBookingStaff(staff[0]?.name || shopProfile?.ownerName || 'Stylist');
+    }
     setBookingDate(getTodayDateStr());
     setBookingTime('03:30 PM');
     setBookingNotes('Repeat client rebooking');
@@ -294,18 +310,21 @@ function DashboardContent() {
       return;
     }
     const isQueue = bookingType === 'queue';
+    const resolvedStaff = (bookingStaff && bookingStaff !== 'Karthik')
+      ? bookingStaff
+      : (staff[0]?.name || shopProfile?.ownerName || 'Stylist');
     addAppointment({
       cust: bookingCustName.trim(),
       phone: bookingCustPhone.trim(),
       service: bookingService,
-      staff: bookingStaff,
+      staff: resolvedStaff,
       startsAt: isQueue ? 'Now (In Chair)' : bookingTime,
       date: isQueue ? getTodayDateStr() : bookingDate,
       amount: Number(bookingAmount) || 500,
       status: isQueue ? 'In chair' : 'Confirmed',
     });
     if (isQueue) {
-      showToast(`Client ${bookingCustName} seated in chair for ${bookingStaff}!`);
+      showToast(`Client ${bookingCustName} seated in chair for ${resolvedStaff}!`);
     } else {
       showToast(`Appointment confirmed for ${bookingCustName} on ${bookingDate} at ${bookingTime}!`);
     }

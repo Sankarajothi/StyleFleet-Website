@@ -789,8 +789,13 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addAppointment = (newAppt: Omit<Appointment, 'id'>) => {
     const apptId = generateUuid();
+    let apptStaff = (newAppt.staff || '').trim();
+    if (apptStaff === 'Karthik' || !apptStaff) {
+      apptStaff = staff.length > 0 ? staff[0].name : (shopProfile?.ownerName || 'Stylist');
+    }
     const a: Appointment = {
       ...newAppt,
+      staff: apptStaff,
       id: apptId,
     };
     setAppointments((prev) => [a, ...prev]);
@@ -854,8 +859,14 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       now
     );
 
+    let billStaff = (billData.staff || '').trim();
+    if (billStaff === 'Karthik' || !billStaff) {
+      billStaff = staff.length > 0 ? staff[0].name : (shopProfile?.ownerName || 'Stylist');
+    }
+
     const newBill: Bill = {
       ...billData,
+      staff: billStaff,
       id: billId,
       dateStr,
       isDeleted: false,
@@ -966,17 +977,48 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (storedCust) {
         setCustomers(JSON.parse(storedCust));
       }
+      let initialStaff: StaffMember[] = [];
       const storedStaff = localStorage.getItem('stylefleet_staff_team_db');
       if (storedStaff) {
-        setStaff(JSON.parse(storedStaff));
+        try {
+          initialStaff = JSON.parse(storedStaff);
+          setStaff(initialStaff);
+        } catch {}
       }
+      const singleStaff = initialStaff.length === 1 ? initialStaff[0].name.trim() : null;
+      const owner = shopProfile?.ownerName?.trim() || 'Owner';
+
       const storedAppts = localStorage.getItem('stylefleet_appointments_db');
       if (storedAppts) {
-        setAppointments(JSON.parse(storedAppts));
+        try {
+          const parsedAppts: Appointment[] = JSON.parse(storedAppts);
+          const cleanAppts = parsedAppts.map((a) => {
+            if (a.staff === 'Karthik' || (singleStaff && (!a.staff || a.staff === 'Staff' || a.staff === 'Stylist'))) {
+              return { ...a, staff: singleStaff || owner };
+            }
+            if (a.staff && a.staff.includes('Karthik')) {
+              return { ...a, staff: a.staff.replace(/Karthik/gi, singleStaff || owner) };
+            }
+            return a;
+          });
+          setAppointments(cleanAppts);
+        } catch {}
       }
       const storedBills = localStorage.getItem('stylefleet_bills_db');
       if (storedBills) {
-        setBills(JSON.parse(storedBills));
+        try {
+          const parsedBills: Bill[] = JSON.parse(storedBills);
+          const cleanBills = parsedBills.map((b) => {
+            if (b.staff === 'Karthik' || (singleStaff && (!b.staff || b.staff === 'Staff' || b.staff === 'Stylist'))) {
+              return { ...b, staff: singleStaff || owner };
+            }
+            if (b.staff && b.staff.includes('Karthik')) {
+              return { ...b, staff: b.staff.replace(/Karthik/gi, singleStaff || owner) };
+            }
+            return b;
+          });
+          setBills(cleanBills);
+        } catch {}
       }
       const storedExpenses = localStorage.getItem('stylefleet_expenses_db');
       if (storedExpenses) {
@@ -1044,8 +1086,33 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setServices(dbData.services);
             setStaff(dbData.staff);
             setCustomers(dbData.customers);
-            setAppointments(dbData.appointments);
-            setBills(dbData.bills);
+
+            const activeStaffList = dbData.staff || [];
+            const singleStaffMember = activeStaffList.length === 1 ? activeStaffList[0].name.trim() : null;
+            const shopOwnerName = dbData.shop?.ownerName?.trim() || 'Owner';
+
+            const cleanDbBills = (dbData.bills || []).map((b: Bill) => {
+              if (b.staff === 'Karthik' || (singleStaffMember && (!b.staff || b.staff === 'Staff' || b.staff === 'Stylist'))) {
+                return { ...b, staff: singleStaffMember || shopOwnerName };
+              }
+              if (b.staff && b.staff.includes('Karthik')) {
+                return { ...b, staff: b.staff.replace(/Karthik/gi, singleStaffMember || shopOwnerName) };
+              }
+              return b;
+            });
+
+            const cleanDbAppts = (dbData.appointments || []).map((a: Appointment) => {
+              if (a.staff === 'Karthik' || (singleStaffMember && (!a.staff || a.staff === 'Staff' || a.staff === 'Stylist'))) {
+                return { ...a, staff: singleStaffMember || shopOwnerName };
+              }
+              if (a.staff && a.staff.includes('Karthik')) {
+                return { ...a, staff: a.staff.replace(/Karthik/gi, singleStaffMember || shopOwnerName) };
+              }
+              return a;
+            });
+
+            setAppointments(cleanDbAppts);
+            setBills(cleanDbBills);
             setExpenses(dbData.expenses);
           })
           .catch((err) => {
@@ -1063,6 +1130,47 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsHydrated(true);
     }
   }, []);
+
+  // Continuous integrity: Synchronize bills and appointments strictly with registered salon stylists
+  useEffect(() => {
+    if (!isHydrated || staff.length === 0) return;
+    const singleStaffName = staff.length === 1 ? staff[0].name.trim() : null;
+    const ownerName = (shopProfile?.ownerName || 'Owner').trim();
+
+    setBills((prev) => {
+      let changed = false;
+      const sanitized = prev.map((b) => {
+        const s = (b.staff || '').trim();
+        if (s === 'Karthik' || (singleStaffName && (!s || s === 'Staff' || s === 'Stylist'))) {
+          changed = true;
+          return { ...b, staff: singleStaffName || ownerName };
+        }
+        if (s.includes('Karthik')) {
+          changed = true;
+          return { ...b, staff: s.replace(/Karthik/gi, singleStaffName || ownerName) };
+        }
+        return b;
+      });
+      return changed ? sanitized : prev;
+    });
+
+    setAppointments((prev) => {
+      let changed = false;
+      const sanitized = prev.map((a) => {
+        const s = (a.staff || '').trim();
+        if (s === 'Karthik' || (singleStaffName && (!s || s === 'Staff' || s === 'Stylist'))) {
+          changed = true;
+          return { ...a, staff: singleStaffName || ownerName };
+        }
+        if (s.includes('Karthik')) {
+          changed = true;
+          return { ...a, staff: s.replace(/Karthik/gi, singleStaffName || ownerName) };
+        }
+        return a;
+      });
+      return changed ? sanitized : prev;
+    });
+  }, [staff, isHydrated, shopProfile?.ownerName]);
 
   // Continuous verification: Immediately log out user if their account or salon was deleted from Supabase
   useEffect(() => {
@@ -1177,7 +1285,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setBillStaffSelect(loggedInStaffName);
     } else if (role === 'owner') {
       const owner = shopProfile?.ownerName?.trim() || 'Owner';
-      setBillStaffSelect((prev) => (!prev || prev === 'Stylist' || prev === 'Staff' ? owner : prev));
+      setBillStaffSelect((prev) => (!prev || prev === 'Stylist' || prev === 'Staff' || prev === 'Karthik' ? (staff.length === 1 ? staff[0].name : owner) : prev));
     }
   }, [role, loggedInStaffName, shopProfile?.ownerName]);
 

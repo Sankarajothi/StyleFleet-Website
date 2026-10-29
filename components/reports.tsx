@@ -276,13 +276,16 @@ export function ReportsView() {
     return Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
   }, [reportBills, reportExpenses]);
 
-  // Stylist Performance
+  // Stylist Performance - Strictly synchronized with registered staff team
   const stylistPerformance = useMemo(() => {
     const map: Record<string, { name: string; role: string; servicesDone: number; billsCount: number; grossSales: number; commissionRate: number; commissionEarned: number }> = {};
 
+    // 1. Strictly register only staff members that exist in the shop's staff team
     staff.forEach((s) => {
-      map[s.name] = {
-        name: s.name,
+      if (!s.name) return;
+      const cleanName = s.name.trim();
+      map[cleanName] = {
+        name: cleanName,
         role: s.role || 'Stylist',
         servicesDone: 0,
         billsCount: 0,
@@ -292,28 +295,68 @@ export function ReportsView() {
       };
     });
 
+    const registeredStaffList = staff.filter((s) => Boolean(s.name && s.name.trim()));
+    const singleRegisteredStaff = registeredStaffList.length === 1 ? registeredStaffList[0].name.trim() : null;
+    const ownerName = (shopProfile?.ownerName || 'Owner').trim();
+
     reportBills.forEach((b) => {
       const assignedStylists = parseSelectedStylists(b.staff);
-      const stylistsToCredit = assignedStylists.length > 0 ? assignedStylists : ['Staff'];
+      let stylistsToCredit: string[] = [];
+
+      if (singleRegisteredStaff) {
+        // Salon has exactly one stylist hired (e.g. Priya) - all shop styling bills belong to this stylist
+        stylistsToCredit = [singleRegisteredStaff];
+      } else if (registeredStaffList.length > 1) {
+        // Multi-stylist shop: match strictly against registered staff names
+        assignedStylists.forEach((name) => {
+          const match = registeredStaffList.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+          if (match && !stylistsToCredit.includes(match.name.trim())) {
+            stylistsToCredit.push(match.name.trim());
+          }
+        });
+        // If bill was explicitly assigned to Owner and owner is taking services
+        if (stylistsToCredit.length === 0 && assignedStylists.some((n) => n.trim().toLowerCase() === ownerName.toLowerCase())) {
+          if (!map[ownerName]) {
+            map[ownerName] = {
+              name: ownerName,
+              role: 'Owner',
+              servicesDone: 0,
+              billsCount: 0,
+              grossSales: 0,
+              commissionRate: 0,
+              commissionEarned: 0,
+            };
+          }
+          stylistsToCredit = [ownerName];
+        }
+      } else {
+        // 0 registered staff: salon is operated by owner directly
+        if (!map[ownerName]) {
+          map[ownerName] = {
+            name: ownerName,
+            role: 'Owner',
+            servicesDone: 0,
+            billsCount: 0,
+            grossSales: 0,
+            commissionRate: 0,
+            commissionEarned: 0,
+          };
+        }
+        stylistsToCredit = [ownerName];
+      }
+
+      if (stylistsToCredit.length === 0) return; // Absolutely no unregistered phantom staff allowed!
+
       const splitFactor = stylistsToCredit.length;
       const billRev = Math.round((b.paidAmount || b.total || 0) / splitFactor);
       const itemsCount = Math.round((b.items || []).reduce((acc, it) => acc + (it.qty || 1), 0) / splitFactor);
 
       stylistsToCredit.forEach((stylistName) => {
-        if (!map[stylistName]) {
-          map[stylistName] = {
-            name: stylistName,
-            role: stylistName.toLowerCase() === (shopProfile?.ownerName || 'Owner').toLowerCase() ? 'Owner' : 'Stylist',
-            servicesDone: 0,
-            billsCount: 0,
-            grossSales: 0,
-            commissionRate: 10,
-            commissionEarned: 0,
-          };
+        if (map[stylistName]) {
+          map[stylistName].billsCount += 1;
+          map[stylistName].grossSales += billRev;
+          map[stylistName].servicesDone += Math.max(1, itemsCount);
         }
-        map[stylistName].billsCount += 1;
-        map[stylistName].grossSales += billRev;
-        map[stylistName].servicesDone += Math.max(1, itemsCount);
       });
     });
 
@@ -322,7 +365,7 @@ export function ReportsView() {
     });
 
     return Object.values(map).sort((a, b) => b.grossSales - a.grossSales);
-  }, [staff, reportBills]);
+  }, [staff, reportBills, shopProfile?.ownerName]);
 
   // Service Performance
   const servicePerformance = useMemo(() => {
@@ -577,22 +620,50 @@ export function ReportsView() {
   const activeDaysCount = Math.max(1, endDay - startDay + 1);
   const avgDailyRevenue = activeDaysCount > 0 ? Math.round(monthlySales / activeDaysCount) : 0;
 
-  // Top Stylist of the Month
+  // Top Stylist of the Month - strictly registered staff only
   const topStylistOfMonth = useMemo(() => {
     const map: Record<string, number> = {};
+    const registeredStaffList = staff.filter((s) => Boolean(s.name && s.name.trim()));
+    const singleRegisteredStaff = registeredStaffList.length === 1 ? registeredStaffList[0].name.trim() : null;
+    const ownerName = (shopProfile?.ownerName || 'Owner').trim();
+
+    registeredStaffList.forEach((s) => {
+      map[s.name.trim()] = 0;
+    });
+
     selectedMonthBills
       .filter((b) => b.confirmationStatus !== 'Pending')
       .forEach((b) => {
         const assignedStylists = parseSelectedStylists(b.staff);
-        const stylistsToCredit = assignedStylists.length > 0 ? assignedStylists : ['Staff'];
+        let stylistsToCredit: string[] = [];
+
+        if (singleRegisteredStaff) {
+          stylistsToCredit = [singleRegisteredStaff];
+        } else if (registeredStaffList.length > 1) {
+          assignedStylists.forEach((name) => {
+            const match = registeredStaffList.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+            if (match && !stylistsToCredit.includes(match.name.trim())) {
+              stylistsToCredit.push(match.name.trim());
+            }
+          });
+        } else {
+          stylistsToCredit = [ownerName];
+          if (map[ownerName] === undefined) map[ownerName] = 0;
+        }
+
+        if (stylistsToCredit.length === 0) return;
+
         const share = Math.round((b.paidAmount || b.total || 0) / stylistsToCredit.length);
         stylistsToCredit.forEach((name) => {
-          map[name] = (map[name] || 0) + share;
+          if (map[name] !== undefined) {
+            map[name] += share;
+          }
         });
       });
+
     const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? { name: sorted[0][0], revenue: sorted[0][1] } : null;
-  }, [selectedMonthBills]);
+  }, [selectedMonthBills, staff, shopProfile?.ownerName]);
 
   // Top Service of the Month
   const topServiceOfMonth = useMemo(() => {

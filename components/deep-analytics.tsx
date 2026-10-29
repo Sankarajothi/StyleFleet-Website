@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSalon, Bill, StaffMember, Customer, Expense } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
+import { matchStaffName } from '@/lib/salon-helpers';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all';
 type LedgerTab = 'expenses' | 'bills' | 'pending';
@@ -174,8 +175,9 @@ export function DeepAnalyticsView() {
 
       // Stylist Slicer filter
       if (selectedStylist !== 'all') {
-        const staffName = (b.staff || '').trim().toLowerCase();
-        if (staffName !== selectedStylist.trim().toLowerCase()) return false;
+        const matchesSelected = matchStaffName(b.staff, selectedStylist) ||
+          (staff.length === 1 && staff[0].name.toLowerCase() === selectedStylist.toLowerCase());
+        if (!matchesSelected) return false;
       }
 
       // Payment Mode Slicer filter
@@ -436,10 +438,17 @@ export function DeepAnalyticsView() {
       ? staff.filter((st) => st.name.toLowerCase() === selectedStylist.toLowerCase())
       : staff;
 
+    const singleRegisteredStaff = staff.length === 1 ? staff[0].name.trim() : null;
+
     return targetStaff.map((st) => {
-      const stylistBills = filteredBills.filter(
-        (b) => b.staff && b.staff.toLowerCase() === st.name.toLowerCase()
-      );
+      const stylistBills = filteredBills.filter((b) => {
+        if (!b.staff) return singleRegisteredStaff === st.name;
+        if (singleRegisteredStaff && singleRegisteredStaff.toLowerCase() === st.name.toLowerCase()) {
+          // If only 1 registered stylist in shop, any salon bill belongs to this stylist
+          return true;
+        }
+        return matchStaffName(b.staff, st.name);
+      });
 
       const revenue = stylistBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
       const servicesBilled = stylistBills.reduce((acc, b) => acc + (b.items?.length || 1), 0);

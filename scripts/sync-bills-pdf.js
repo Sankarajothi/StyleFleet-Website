@@ -79,7 +79,7 @@ async function generatePdf(bill, shop) {
     }
     page.drawLine({ start: { x: 45, y: curY }, end: { x: width - 45, y: curY }, color: lineCol, thickness: 0.8 });
     page.drawText(item.service_name_snapshot || 'Salon Service', { x: 60, y: curY + 8, size: 9, font: customFontBold, color: navy });
-    page.drawText('Karthik', { x: 230, y: curY + 8, size: 9, font: customFont, color: grayText });
+    page.drawText(item.staff_snapshot || 'Stylist', { x: 230, y: curY + 8, size: 9, font: customFont, color: grayText });
     page.drawText(String(item.quantity || 1), { x: 348, y: curY + 8, size: 9, font: customFont, color: navy });
     const pStr = '₹' + Math.round((item.unit_price_minor || 0) / 100).toLocaleString('en-IN');
     page.drawText(pStr, { x: 410, y: curY + 8, size: 9, font: customFont, color: navy });
