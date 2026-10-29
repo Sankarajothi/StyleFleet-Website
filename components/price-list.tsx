@@ -52,8 +52,10 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   // Search query for services
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 3-Dots Menu state
+  // 3-Dots Menu states
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [activeCategoryMenu, setActiveCategoryMenu] = useState<string | null>(null);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   // Edit Service Modal state
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -127,12 +129,18 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const [editingCategory, setEditingCategory] = useState<{ oldName: string; newName: string } | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
-  // Close 3-dots menu on outside click
+  // Close all 3-dots menus on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('.service-menu-container')) {
         setActiveMenuId(null);
+      }
+      if (!target.closest('.category-menu-container')) {
+        setActiveCategoryMenu(null);
+      }
+      if (!target.closest('.header-menu-container')) {
+        setShowHeaderMenu(false);
       }
     };
     document.addEventListener('click', handleOutsideClick);
@@ -505,13 +513,153 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <div>
-            <h2 className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-              Salon Menu & Price Catalog
-            </h2>
-            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-              Manage services, prices, categories, bulk edits and promotional discounts
-            </p>
+          <div className="flex items-center gap-2.5">
+            <div>
+              <h2 className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                Salon Menu & Price Catalog
+              </h2>
+              <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+                Manage services, prices, categories, bulk edits and promotional discounts
+              </p>
+            </div>
+
+            {/* Master 3-Dots Action Menu for Catalog & Bulk Editing */}
+            <div className="relative header-menu-container">
+              <button
+                type="button"
+                onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                  isDarkMode
+                    ? 'border-white/10 hover:border-[#D4AF37] text-[#A7B0C3] hover:text-white bg-white/5'
+                    : 'border-slate-300 hover:border-amber-400 text-slate-700 hover:text-black bg-slate-50'
+                }`}
+                title="Catalog & Bulk Actions"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="5" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="19" r="1.5" />
+                </svg>
+              </button>
+
+              {/* Master Dropdown Popover */}
+              {showHeaderMenu && (
+                <div
+                  className={`absolute left-0 sm:left-auto sm:right-0 top-9 w-56 rounded-2xl border shadow-2xl py-1.5 z-50 animate-scaleUp text-left ${
+                    isDarkMode
+                      ? 'bg-[#0E1830] border-[#2A3858] text-white shadow-black/60'
+                      : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80 ring-1 ring-black/5'
+                  }`}
+                >
+                  <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">
+                    Bulk Service Actions
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      if (selectedServiceIds.size === 0) {
+                        setSelectedServiceIds(new Set(filteredServices.map((s) => s.id)));
+                      }
+                      setShowBulkEditModal(true);
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-amber-50 text-slate-900'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span>Bulk Edit Services {selectedServiceIds.size > 0 ? `(${selectedServiceIds.size})` : ''}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      if (selectedServiceIds.size === 0) {
+                        showToast('Please tap on any services to select them first.');
+                        return;
+                      }
+                      setShowBulkDeleteConfirm(true);
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-rose-500/10 text-rose-300' : 'hover:bg-rose-50 text-rose-700'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Bulk Delete Services {selectedServiceIds.size > 0 ? `(${selectedServiceIds.size})` : ''}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      handleSelectAllFiltered();
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-800'
+                    }`}
+                  >
+                    <span className="text-[#D4AF37] font-black text-xs">✓</span>
+                    <span>{selectedServiceIds.size === filteredServices.length ? 'Deselect All Services' : `Select All Services (${filteredServices.length})`}</span>
+                  </button>
+
+                  <div className={`border-t my-1 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`} />
+
+                  <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">
+                    Catalog Operations
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      onOpenAddService();
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-800'
+                    }`}
+                  >
+                    <span className="text-[#D4AF37] font-black">+</span>
+                    <span>Add New Service</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      onOpenAddCategory();
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-800'
+                    }`}
+                  >
+                    <span className="text-[#D4AF37] font-black">+</span>
+                    <span>Add New Category</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className={`w-full px-3 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode ? 'hover:bg-white/10 text-amber-300' : 'hover:bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Import via StyleFleet AI</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -706,16 +854,25 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
             </div>
           )}
 
-          {/* ================= BULK ACTIONS FLOATING BAR ================= */}
+          {/* ================= BULK ACTIONS FLOATING BAR (PERFECT LIGHT & DARK MODE) ================= */}
           {selectedServiceIds.size > 0 && (
-            <div className="sticky top-2 z-30 p-2.5 sm:p-3 rounded-2xl border bg-[#0B1528]/95 border-[#D4AF37]/60 shadow-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-2.5 animate-slideDown">
-              <div className="flex items-center gap-2">
+            <div
+              className={`sticky top-2 z-40 p-2.5 sm:p-3 rounded-2xl border transition-all shadow-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-2.5 animate-slideDown ${
+                isDarkMode
+                  ? 'bg-[#0B1528]/95 border-[#D4AF37]/60 text-white shadow-[0_10px_35px_rgba(0,0,0,0.6)]'
+                  : 'bg-white/95 border-amber-300 text-slate-900 shadow-[0_10px_30px_rgba(212,175,55,0.18)] ring-1 ring-amber-400/30'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] flex items-center justify-center font-black text-xs shrink-0">
                   ✓
                 </span>
                 <div>
-                  <span className="text-xs font-black text-white">
+                  <span className={`text-xs font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     {selectedServiceIds.size} {selectedServiceIds.size === 1 ? 'service' : 'services'} selected
+                  </span>
+                  <span className={`text-[10px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Tap any card to toggle selection
                   </span>
                 </div>
               </div>
@@ -724,7 +881,11 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 <button
                   type="button"
                   onClick={handleSelectAllFiltered}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-white/15 text-slate-200 hover:bg-white/10 transition-colors cursor-pointer"
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                    isDarkMode
+                      ? 'border-white/15 text-slate-200 hover:bg-white/10'
+                      : 'border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100'
+                  }`}
                 >
                   {selectedServiceIds.size === filteredServices.length ? 'Deselect All' : `Select All (${filteredServices.length})`}
                 </button>
@@ -743,7 +904,11 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowBulkDeleteConfirm(true)}
-                  className="px-3 py-1 rounded-lg text-xs font-black bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300'
+                  }`}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -754,7 +919,11 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 <button
                   type="button"
                   onClick={handleClearSelection}
-                  className="w-6 h-6 rounded-lg border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xs"
+                  className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-colors cursor-pointer text-xs ${
+                    isDarkMode
+                      ? 'border-white/15 text-slate-400 hover:text-white hover:bg-white/10'
+                      : 'border-slate-300 text-slate-500 hover:text-black hover:bg-slate-100'
+                  }`}
                   title="Clear selection"
                 >
                   ✕
@@ -808,8 +977,8 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
           ) : (
             Object.entries(servicesByCategory).map(([categoryName, catServices]) => (
               <div key={categoryName} className="space-y-2">
-                {/* Category Section Header with Category Edit & Delete */}
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                {/* Category Section Header with Clean 3-Dot Menu */}
+                <div className="flex items-center justify-between gap-2 px-1">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />
                     <h3 className={`text-xs font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -824,61 +993,108 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Category Action Controls */}
-                  <div className="flex items-center gap-1 text-xs">
+                  {/* 3-Dot Menu for Category Actions */}
+                  <div className="relative category-menu-container">
                     <button
                       type="button"
-                      onClick={() => handleSelectAllCategory(catServices)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
-                        catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id))
-                          ? 'bg-[#D4AF37] text-[#07152B] border-[#D4AF37]'
-                          : isDarkMode
-                          ? 'border-white/10 text-slate-300 hover:bg-white/5'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveCategoryMenu(activeCategoryMenu === categoryName ? null : categoryName);
+                      }}
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
+                        isDarkMode
+                          ? 'border-white/10 hover:border-[#D4AF37] text-[#A7B0C3] hover:text-white bg-white/5'
+                          : 'border-slate-300 hover:border-amber-400 text-slate-600 hover:text-black bg-slate-50'
                       }`}
-                      title="Select all services in this category"
+                      title="Category Options"
                     >
-                      {catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id))
-                        ? 'Deselect All'
-                        : 'Select All'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onOpenAddService(categoryName)}
-                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 hover:bg-[#D4AF37] hover:text-[#07152B] transition-all flex items-center gap-0.5 cursor-pointer"
-                      title={`Add service to ${categoryName}`}
-                    >
-                      <span>+ Service</span>
-                    </button>
-
-                    {/* Rename Category Button */}
-                    <button
-                      type="button"
-                      onClick={() => setEditingCategory({ oldName: categoryName, newName: categoryName })}
-                      className="p-1 rounded-md text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
-                      title="Rename Category"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="5" r="1.5" />
+                        <circle cx="12" cy="12" r="1.5" />
+                        <circle cx="12" cy="19" r="1.5" />
                       </svg>
                     </button>
 
-                    {/* Delete Category Button */}
-                    <button
-                      type="button"
-                      onClick={() => setDeletingCategory(categoryName)}
-                      className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                      title="Delete Category"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    {/* Category Dropdown Popover */}
+                    {activeCategoryMenu === categoryName && (
+                      <div
+                        className={`absolute right-0 top-7 w-48 rounded-2xl border shadow-xl py-1 z-30 animate-scaleUp text-left ${
+                          isDarkMode
+                            ? 'bg-[#0F1C36] border-[#2A3858] text-white shadow-black/60'
+                            : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80 ring-1 ring-black/5'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategoryMenu(null);
+                            handleSelectAllCategory(catServices);
+                          }}
+                          className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                            isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-amber-50 text-slate-900'
+                          }`}
+                        >
+                          <span className="text-[#D4AF37] font-black text-xs">✓</span>
+                          <span>
+                            {catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id))
+                              ? 'Deselect Category'
+                              : 'Select All in Category'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategoryMenu(null);
+                            onOpenAddService(categoryName);
+                          }}
+                          className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                            isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-900'
+                          }`}
+                        >
+                          <span className="text-[#D4AF37] font-black">+</span>
+                          <span>Add Service in {categoryName}</span>
+                        </button>
+
+                        <div className={`border-t my-0.5 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`} />
+
+                        {/* Rename Category */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategoryMenu(null);
+                            setEditingCategory({ oldName: categoryName, newName: categoryName });
+                          }}
+                          className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                            isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-900'
+                          }`}
+                        >
+                          <span className="w-4 h-4 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-[10px]">
+                            ✏️
+                          </span>
+                          <span>Rename Category</span>
+                        </button>
+
+                        {/* Delete Category */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategoryMenu(null);
+                            setDeletingCategory(categoryName);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                        >
+                          <span className="w-4 h-4 rounded-md bg-rose-500/15 text-rose-500 flex items-center justify-center text-[10px]">
+                            🗑️
+                          </span>
+                          <span>Delete Category</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* ================= 6 PER ROW COMPACT BOXES + LAST PLACE ADD SERVICE BOX ================= */}
+                {/* ================= 6 PER ROW COMPACT BOXES (TAP TO CLICK, NO CHECKBOX) ================= */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
                   {catServices.map((service) => {
                     const isSelected = selectedServiceIds.has(service.id);
@@ -887,64 +1103,122 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                         key={service.id}
                         onClick={() => handleToggleSelectService(service.id)}
                         className={`p-2.5 rounded-2xl border transition-all relative flex flex-col justify-between group cursor-pointer select-none min-h-[115px] ${
-                          isDarkMode ? 'bg-[#121B33]' : 'bg-white'
-                        } ${
                           isSelected
-                            ? 'ring-2 ring-[#D4AF37] border-[#D4AF37] shadow-md shadow-[#D4AF37]/15'
+                            ? isDarkMode
+                              ? 'ring-2 ring-[#D4AF37] border-[#D4AF37] bg-[#162340] shadow-md shadow-[#D4AF37]/20'
+                              : 'ring-2 ring-[#D4AF37] border-[#D4AF37] bg-amber-50/70 shadow-md shadow-[#D4AF37]/15'
                             : service.active
                             ? isDarkMode
-                              ? 'border-[#2A3858] hover:border-[#D4AF37]/50 shadow-2xs'
-                              : 'border-slate-200 hover:border-[#D4AF37]/60 shadow-2xs'
-                            : 'border-white/5 opacity-55'
+                              ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50 shadow-2xs'
+                              : 'bg-white border-slate-200 hover:border-[#D4AF37]/60 shadow-2xs'
+                            : isDarkMode
+                            ? 'bg-[#121B33]/50 border-white/5 opacity-55'
+                            : 'bg-slate-50 border-slate-200/60 opacity-55'
                         }`}
                       >
-                        {/* Top Row: Checkbox + Active Status + Quick Icons */}
+                        {/* Top Row: Selection / Active Dot on Left + 3-Dot Menu on Right */}
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <label
-                            className="flex items-center gap-1.5 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleSelectService(service.id)}
-                              className="w-3.5 h-3.5 rounded border-[#D4AF37] text-[#D4AF37] focus:ring-0 cursor-pointer accent-[#D4AF37]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => toggleServiceActive(service.id)}
-                              className={`w-2 h-2 rounded-full cursor-pointer transition-transform hover:scale-125 ${
-                                service.active ? 'bg-emerald-400' : 'bg-slate-400'
-                              }`}
-                              title={service.active ? 'Active (Click to pause)' : 'Paused (Click to activate)'}
-                            />
-                          </label>
+                          <div className="flex items-center gap-1.5">
+                            {isSelected ? (
+                              <span className="w-4 h-4 rounded-full bg-[#D4AF37] text-[#07152B] flex items-center justify-center font-black text-[9px] shrink-0">
+                                ✓
+                              </span>
+                            ) : (
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 transition-transform ${
+                                  service.active ? 'bg-emerald-400' : 'bg-slate-400'
+                                }`}
+                                title={service.active ? 'Active' : 'Paused'}
+                              />
+                            )}
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              {service.dur}m
+                            </span>
+                          </div>
 
-                          <div
-                            className="flex items-center gap-0.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          {/* 3-Dot Menu for Individual Service Actions */}
+                          <div className="relative service-menu-container" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              onClick={() => handleOpenEdit(service)}
-                              className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
-                              title="Edit Service"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === service.id ? null : service.id);
+                              }}
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                                isDarkMode
+                                  ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                                  : 'text-slate-500 hover:text-black hover:bg-slate-100'
+                              }`}
+                              title="Service Options"
                             >
-                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <circle cx="12" cy="5" r="1.5" />
+                                <circle cx="12" cy="12" r="1.5" />
+                                <circle cx="12" cy="19" r="1.5" />
                               </svg>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteService(service)}
-                              className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                              title="Delete Service"
-                            >
-                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                            </button>
+
+                            {/* Service Popover */}
+                            {activeMenuId === service.id && (
+                              <div
+                                className={`absolute right-0 top-7 w-40 rounded-2xl border shadow-xl py-1 z-30 animate-scaleUp text-left ${
+                                  isDarkMode
+                                    ? 'bg-[#0F1C36] border-[#2A3858] text-white shadow-black/60'
+                                    : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80 ring-1 ring-black/5'
+                                }`}
+                              >
+                                {/* Edit Service with Premium Icon */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleOpenEdit(service);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                                    isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-900'
+                                  }`}
+                                >
+                                  <span className="w-4 h-4 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-[10px]">
+                                    ✏️
+                                  </span>
+                                  <span>Edit Service</span>
+                                </button>
+
+                                {/* Toggle Active / Pause */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    toggleServiceActive(service.id);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                                    isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-900'
+                                  }`}
+                                >
+                                  <span className="w-4 h-4 rounded-md bg-amber-500/15 text-amber-500 flex items-center justify-center text-[10px]">
+                                    {service.active ? '⏸️' : '▶️'}
+                                  </span>
+                                  <span>{service.active ? 'Pause Service' : 'Activate Service'}</span>
+                                </button>
+
+                                <div className={`border-t my-0.5 ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`} />
+
+                                {/* Delete Service with Premium Rose Icon */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleDeleteService(service);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                                >
+                                  <span className="w-4 h-4 rounded-md bg-rose-500/15 text-rose-500 flex items-center justify-center text-[10px]">
+                                    🗑️
+                                  </span>
+                                  <span>Delete Service</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -960,22 +1234,14 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                           </strong>
                         </div>
 
-                        {/* Bottom: Duration & Price Badge */}
+                        {/* Bottom: Price Badge & Tap Hint */}
                         <div
                           className={`pt-1 border-t flex items-center justify-between text-xs mt-1 ${
                             isDarkMode ? 'border-white/5' : 'border-slate-100'
                           }`}
                         >
-                          <span
-                            className={`text-[10px] font-semibold flex items-center gap-0.5 ${
-                              isDarkMode ? 'text-slate-400' : 'text-slate-500'
-                            }`}
-                          >
-                            <svg className="w-2.5 h-2.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <circle cx="12" cy="12" r="10" />
-                              <polyline points="12 6 12 12 16 14" />
-                            </svg>
-                            <span>{service.dur}m</span>
+                          <span className={`text-[10px] ${isSelected ? 'text-[#D4AF37] font-bold' : 'text-slate-400'}`}>
+                            {isSelected ? 'Selected' : 'Tap to select'}
                           </span>
 
                           <span className="text-xs font-black text-[#D4AF37] font-mono">
