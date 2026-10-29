@@ -27,6 +27,7 @@ import {
   toggleServiceActiveInDb,
   saveCategoryToDb,
   deleteCategoryInDb,
+  renameCategoryInDb,
   updateShopProfileInDb,
   generateUuid,
   isValidUuid,
@@ -177,6 +178,8 @@ interface SalonContextType {
 
   categories: string[];
   addCategory: (cat: string) => void;
+  editCategory: (oldCat: string, newCat: string) => void;
+  deleteCategory: (cat: string) => void;
 
   services: ServiceItem[];
   addService: (service: Omit<ServiceItem, 'id' | 'active'>) => void;
@@ -184,6 +187,8 @@ interface SalonContextType {
   updateService: (id: string, updated: Partial<ServiceItem>) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
+  bulkDeleteServices: (ids: string[]) => void;
+  bulkUpdateServices: (ids: string[], updates: Partial<ServiceItem>) => void;
 
   customers: Customer[];
   addCustomer: (cust: { name: string; phone: string; vip?: boolean; due?: number; notes?: string; lastVisit?: string; status?: 'active' | 'inactive' }) => Customer;
@@ -354,6 +359,34 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`Category "${cat}" added!`);
   };
 
+  const editCategory = (oldCat: string, newCat: string) => {
+    const trimmed = newCat.trim();
+    if (!trimmed || trimmed.toLowerCase() === oldCat.toLowerCase()) return;
+    setCategories((prev) => prev.map((c) => (c.toLowerCase() === oldCat.toLowerCase() ? trimmed : c)));
+    setServices((prev) =>
+      prev.map((s) => (s.cat.toLowerCase() === oldCat.toLowerCase() ? { ...s, cat: trimmed } : s))
+    );
+    if (currentShopId) {
+      renameCategoryInDb(currentShopId, oldCat, trimmed);
+    }
+    showToast(`Category renamed to "${trimmed}"!`);
+  };
+
+  const deleteCategory = (cat: string) => {
+    const target = cat.trim();
+    setCategories((prev) => prev.filter((c) => c.toLowerCase() !== target.toLowerCase()));
+    setServices((prev) =>
+      prev.map((s) => (s.cat.toLowerCase() === target.toLowerCase() ? { ...s, cat: 'General' } : s))
+    );
+    if (!categories.some((c) => c.toLowerCase() === 'general')) {
+      setCategories((prev) => [...prev, 'General']);
+    }
+    if (currentShopId) {
+      deleteCategoryInDb(currentShopId, target);
+    }
+    showToast(`Category "${target}" deleted. Services moved to General.`);
+  };
+
   const [services, setServices] = useState<ServiceItem[]>([]);
 
   const addService = (newService: Omit<ServiceItem, 'id' | 'active'>) => {
@@ -433,6 +466,32 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       deleteServiceInDb(currentShopId, id);
     }
     showToast('Service removed from menu.');
+  };
+
+  const bulkDeleteServices = (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setServices((prev) => prev.filter((s) => !idSet.has(s.id)));
+    if (currentShopId) {
+      for (const id of ids) {
+        deleteServiceInDb(currentShopId, id);
+      }
+    }
+    showToast(`Deleted ${ids.length} services.`);
+  };
+
+  const bulkUpdateServices = (ids: string[], updates: Partial<ServiceItem>) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setServices((prev) =>
+      prev.map((s) => (idSet.has(s.id) ? { ...s, ...updates } : s))
+    );
+    if (currentShopId) {
+      for (const id of ids) {
+        updateServiceInDb(currentShopId, id, updates);
+      }
+    }
+    showToast(`Updated ${ids.length} services.`);
   };
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -1189,12 +1248,16 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateShopProfile,
         categories,
         addCategory,
+        editCategory,
+        deleteCategory,
         services,
         addService,
         addServices,
         updateService,
         deleteService,
         toggleServiceActive,
+        bulkDeleteServices,
+        bulkUpdateServices,
         customers,
         addCustomer,
         toggleCustomerVip,

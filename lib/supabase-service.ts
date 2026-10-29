@@ -2012,6 +2012,22 @@ export async function deleteCategoryInDb(shopId: string, name: string): Promise<
 }
 
 /**
+ * Rename a category in Supabase.
+ */
+export async function renameCategoryInDb(shopId: string, oldName: string, newName: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('service_categories')
+      .update({ name: newName.trim() })
+      .eq('shop_id', shopId)
+      .ilike('name', oldName.trim());
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Update an existing appointment in Supabase.
  */
 export async function updateAppointmentInDb(

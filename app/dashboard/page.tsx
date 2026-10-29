@@ -413,7 +413,10 @@ function DashboardContent() {
             {currentScreen === 'pricelist' && (
               <PriceListView
                 onOpenAddCategory={() => setShowAddCategoryModal(true)}
-                onOpenAddService={() => setShowAddServiceModal(true)}
+                onOpenAddService={(cat?: string) => {
+                  if (cat) setNewServiceCat(cat);
+                  setShowAddServiceModal(true);
+                }}
               />
             )}
 

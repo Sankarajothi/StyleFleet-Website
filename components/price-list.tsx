@@ -5,7 +5,7 @@ import { useSalon, ServiceItem } from '@/components/SalonContext';
 
 interface PriceListViewProps {
   onOpenAddCategory: () => void;
-  onOpenAddService: () => void;
+  onOpenAddService: (cat?: string) => void;
 }
 
 export interface DiscountOffer {
@@ -35,6 +35,10 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     deleteService,
     addService,
     addServices,
+    editCategory,
+    deleteCategory,
+    bulkDeleteServices,
+    bulkUpdateServices,
     shopProfile,
     showToast,
   } = useSalon();
@@ -105,6 +109,23 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   >([]);
   const [isImportingExtracted, setIsImportingExtracted] = useState(false);
   const [extractedCatFilter, setExtractedCatFilter] = useState('All');
+
+  // Bulk Selection & Editing State
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  // Bulk Edit Form fields
+  const [bulkCategory, setBulkCategory] = useState<string>('');
+  const [bulkPriceMode, setBulkPriceMode] = useState<'none' | 'fixed' | 'increase_fixed' | 'decrease_fixed' | 'increase_percent' | 'decrease_percent'>('none');
+  const [bulkPriceValue, setBulkPriceValue] = useState<number>(0);
+  const [bulkDurMode, setBulkDurMode] = useState<'none' | 'set'>('none');
+  const [bulkDurValue, setBulkDurValue] = useState<number>(30);
+  const [bulkStatusMode, setBulkStatusMode] = useState<'none' | 'active' | 'inactive'>('none');
+
+  // Category Edit / Delete State
+  const [editingCategory, setEditingCategory] = useState<{ oldName: string; newName: string } | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   // Close 3-dots menu on outside click
   useEffect(() => {
@@ -183,6 +204,128 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const handleDeleteService = (service: ServiceItem) => {
     setActiveMenuId(null);
     deleteService(service.id);
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      next.delete(service.id);
+      return next;
+    });
+  };
+
+  // Bulk Selection Handlers
+  const handleToggleSelectService = (id: string) => {
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAllCategory = (catServices: ServiceItem[]) => {
+    const allSelected = catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id));
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        catServices.forEach((s) => next.delete(s.id));
+      } else {
+        catServices.forEach((s) => next.add(s.id));
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allSelected = filteredServices.length > 0 && filteredServices.every((s) => selectedServiceIds.has(s.id));
+    if (allSelected) {
+      setSelectedServiceIds(new Set());
+    } else {
+      setSelectedServiceIds(new Set(filteredServices.map((s) => s.id)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedServiceIds(new Set());
+  };
+
+  // Bulk Delete
+  const handleConfirmBulkDelete = () => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+    bulkDeleteServices(ids);
+    setSelectedServiceIds(new Set());
+    setShowBulkDeleteConfirm(false);
+  };
+
+  // Bulk Edit
+  const handleApplyBulkEdit = () => {
+    const ids = Array.from(selectedServiceIds);
+    if (ids.length === 0) return;
+
+    ids.forEach((id) => {
+      const current = services.find((s) => s.id === id);
+      if (!current) return;
+
+      const updates: Partial<ServiceItem> = {};
+
+      if (bulkCategory.trim()) {
+        updates.cat = bulkCategory.trim();
+      }
+
+      if (bulkDurMode === 'set' && bulkDurValue > 0) {
+        updates.dur = Number(bulkDurValue);
+      }
+
+      if (bulkStatusMode === 'active') {
+        updates.active = true;
+      } else if (bulkStatusMode === 'inactive') {
+        updates.active = false;
+      }
+
+      if (bulkPriceMode === 'fixed' && bulkPriceValue >= 0) {
+        updates.price = Number(bulkPriceValue);
+      } else if (bulkPriceMode === 'increase_fixed') {
+        updates.price = Math.max(0, current.price + Number(bulkPriceValue));
+      } else if (bulkPriceMode === 'decrease_fixed') {
+        updates.price = Math.max(0, current.price - Number(bulkPriceValue));
+      } else if (bulkPriceMode === 'increase_percent') {
+        updates.price = Math.round(current.price * (1 + Number(bulkPriceValue) / 100));
+      } else if (bulkPriceMode === 'decrease_percent') {
+        updates.price = Math.max(0, Math.round(current.price * (1 - Number(bulkPriceValue) / 100)));
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updateService(id, updates);
+      }
+    });
+
+    showToast(`Bulk updated ${ids.length} services!`);
+    setShowBulkEditModal(false);
+    setSelectedServiceIds(new Set());
+    // Reset bulk edit states
+    setBulkCategory('');
+    setBulkPriceMode('none');
+    setBulkPriceValue(0);
+    setBulkDurMode('none');
+    setBulkStatusMode('none');
+  };
+
+  // Category Rename & Delete
+  const handleRenameCategorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    const { oldName, newName } = editingCategory;
+    if (!newName.trim()) {
+      showToast('Please enter a valid category name.', 'error');
+      return;
+    }
+    editCategory(oldName, newName.trim());
+    setEditingCategory(null);
+  };
+
+  const handleConfirmDeleteCategory = () => {
+    if (!deletingCategory) return;
+    deleteCategory(deletingCategory);
+    setDeletingCategory(null);
   };
 
   // Toggle Discount Offer Active Status
@@ -349,47 +492,47 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   };
 
   return (
-    <section className="space-y-6 animate-fadeIn">
+    <section className="space-y-4 animate-fadeIn">
       {/* 1. Top Header & Segmented Slider Bar */}
       <div
-        className={`p-6 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
-          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200 shadow-sm'
+        className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all ${
+          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200 shadow-xs'
         }`}
       >
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center font-black">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center font-black shrink-0">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
           <div>
-            <h2 className={`text-xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+            <h2 className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
               Salon Menu & Price Catalog
             </h2>
-            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-              Manage your services, tiered pricing, durations and promotional discounts
+            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+              Manage services, prices, categories, bulk edits and promotional discounts
             </p>
           </div>
         </div>
 
         {/* Segmented Slider Pill: Price List vs Discount Offers */}
         <div
-          className={`p-1 rounded-2xl border flex items-center gap-1 self-start md:self-auto ${
+          className={`p-1 rounded-xl border flex items-center gap-1 self-start md:self-auto ${
             isDarkMode ? 'bg-[#0B1528] border-[#2A3858]' : 'bg-slate-100 border-slate-200'
           }`}
         >
           <button
             type="button"
             onClick={() => setActiveTab('price_list')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'price_list'
-                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md shadow-[#D4AF37]/25'
+                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
                 : isDarkMode
                 ? 'text-[#A7B0C3] hover:text-white'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
             <span>Price List ({services.length})</span>
@@ -398,31 +541,31 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('discount_offers')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'discount_offers'
-                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md shadow-[#D4AF37]/25'
+                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
                 : isDarkMode
                 ? 'text-[#A7B0C3] hover:text-white'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
-            <span>Discount Offers ({offers.length})</span>
+            <span>Offers ({offers.length})</span>
           </button>
         </div>
       </div>
 
       {/* 2. TAB CONTENT: PRICE LIST */}
       {activeTab === 'price_list' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Action Row: AI Scanner, Category Add, Service Add & Search */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             {/* Search Input */}
             <div className="relative flex-1 max-w-sm">
               <svg
-                className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -433,19 +576,19 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               </svg>
               <input
                 type="text"
-                placeholder="Search services by name or category..."
+                placeholder="Search services or categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-xs font-medium outline-none transition-all ${
+                className={`w-full pl-9 pr-3.5 py-2 rounded-xl border text-xs font-medium outline-none transition-all ${
                   isDarkMode
                     ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
-                    : 'bg-white border-slate-200 text-slate-900 focus:border-[#D4AF37] shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-900 focus:border-[#D4AF37] shadow-2xs'
                 }`}
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {/* AI Import Scanner Button */}
               <input
                 type="file"
@@ -458,23 +601,23 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isScanningMenu}
-                className={`px-3.5 py-2 rounded-2xl border text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-2 rounded-xl border text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                   isDarkMode
                     ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
-                    : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 shadow-xs'
+                    : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 shadow-2xs'
                 }`}
                 title="Upload or scan salon menu photo or PDF"
               >
-                <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span>{isScanningMenu ? `Importing Menu... ${scanProgress}%` : 'Import via Menu'}</span>
+                <span>{isScanningMenu ? `Scanning... ${scanProgress}%` : 'Import via Menu'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={onOpenAddCategory}
-                className={`px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   isDarkMode
                     ? 'bg-white/[0.06] hover:bg-white/[0.12] border-[#2A3858] text-white'
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-[#1F2937]'
@@ -489,8 +632,8 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
 
               <button
                 type="button"
-                onClick={onOpenAddService}
-                className="px-4 py-2 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black shadow-md active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
+                onClick={() => onOpenAddService()}
+                className="px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19" />
@@ -501,41 +644,135 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
             </div>
           </div>
 
-          {/* AI Scanner Banner if in progress */}
+          {/* ================= DEDICATED PROGRESS BAR WHILE EXTRACTING THE MENU ================= */}
           {isScanningMenu && (
             <div
-              className={`p-4 rounded-2xl border flex items-center gap-3 animate-pulse ${
-                isDarkMode ? 'bg-amber-950/20 border-amber-500/40 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm'
+              className={`p-3.5 sm:p-4 rounded-2xl border space-y-2.5 transition-all shadow-lg animate-fadeIn ${
+                isDarkMode
+                  ? 'bg-[#0E1B38] border-amber-500/40 text-amber-100'
+                  : 'bg-gradient-to-r from-amber-50 to-orange-50/40 border-amber-300 text-amber-950'
               }`}
             >
-              <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <strong className="text-xs font-bold block truncate">
-                    Analyzing Menu: {menuFileName || 'Salon Menu Card'}
-                  </strong>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded font-extrabold bg-[#D4AF37]/20 text-[#D4AF37] shrink-0">
-                    StyleFleet AI
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center shrink-0">
+                    <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-xs font-black truncate block">
+                        Extracting Menu Catalog: {menuFileName || 'Salon Menu Card'}
+                      </strong>
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] uppercase tracking-wider shrink-0">
+                        StyleFleet AI
+                      </span>
+                    </div>
+                    <p className="text-[11px] opacity-80 truncate">
+                      {scanStatusText || 'Extracting service titles, exact prices and durations...'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-mono font-black text-[#D4AF37]">
+                    {scanProgress}%
                   </span>
                 </div>
-                <p className="text-[11px] opacity-80 truncate">
-                  {scanStatusText || 'Extracting service titles, exact prices and durations...'}
-                </p>
               </div>
-              <span className="text-xs font-mono font-black text-[#D4AF37] shrink-0">{scanProgress}%</span>
+
+              {/* Progress Bar Track & Bar */}
+              <div className="w-full bg-slate-200/60 dark:bg-black/40 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/10 shadow-inner">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#D4AF37] via-amber-400 to-[#E8C98F] transition-all duration-300 shadow-[0_0_12px_rgba(212,175,55,0.5)]"
+                  style={{ width: `${Math.max(6, scanProgress)}%` }}
+                />
+              </div>
+
+              {/* Extraction Milestones */}
+              <div className="grid grid-cols-4 gap-1 pt-1 text-[10px] text-center font-bold">
+                <span className={scanProgress >= 20 ? 'text-[#D4AF37]' : 'opacity-40'}>
+                  1. Image Read
+                </span>
+                <span className={scanProgress >= 45 ? 'text-[#D4AF37]' : 'opacity-40'}>
+                  2. OCR Vision
+                </span>
+                <span className={scanProgress >= 75 ? 'text-[#D4AF37]' : 'opacity-40'}>
+                  3. Price Extraction
+                </span>
+                <span className={scanProgress >= 95 ? 'text-[#D4AF37]' : 'opacity-40'}>
+                  4. Structure Ready
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* ================= BULK ACTIONS FLOATING BAR ================= */}
+          {selectedServiceIds.size > 0 && (
+            <div className="sticky top-2 z-30 p-2.5 sm:p-3 rounded-2xl border bg-[#0B1528]/95 border-[#D4AF37]/60 shadow-xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-2.5 animate-slideDown">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] flex items-center justify-center font-black text-xs shrink-0">
+                  ✓
+                </span>
+                <div>
+                  <span className="text-xs font-black text-white">
+                    {selectedServiceIds.size} {selectedServiceIds.size === 1 ? 'service' : 'services'} selected
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleSelectAllFiltered}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-white/15 text-slate-200 hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  {selectedServiceIds.size === filteredServices.length ? 'Deselect All' : `Select All (${filteredServices.length})`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBulkEditModal(true)}
+                  className="px-3 py-1 rounded-lg text-xs font-black bg-[#D4AF37] hover:bg-[#C59F2E] text-[#07152B] transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>Bulk Edit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  className="px-3 py-1 rounded-lg text-xs font-black bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Bulk Delete</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="w-6 h-6 rounded-lg border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xs"
+                  title="Clear selection"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Category Filter Pills + Quick Add Category */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {['All', ...categories].map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setPriceListCatFilter(cat)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   priceListCatFilter.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md shadow-[#D4AF37]/20 font-black'
+                    ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/20 font-black'
                     : isDarkMode
                     ? 'bg-[#121B33] border border-[#2A3858] text-[#A7B0C3] hover:text-white hover:border-white/20'
                     : 'bg-white border border-slate-200 text-[#374151] hover:text-[#1F2937] hover:border-slate-300'
@@ -544,194 +781,231 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 {cat}
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={onOpenAddCategory}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold border border-dashed flex items-center gap-1 transition-all cursor-pointer ${
+                isDarkMode
+                  ? 'border-white/20 text-[#D4AF37] hover:bg-white/5'
+                  : 'border-slate-300 text-amber-800 hover:bg-amber-50/50'
+              }`}
+              title="Add a new category"
+            >
+              <span>+ Category</span>
+            </button>
           </div>
 
           {/* Category-Wise Service Grouping */}
           {Object.keys(servicesByCategory).length === 0 ? (
             <div
-              className={`p-12 text-center rounded-3xl border ${
+              className={`p-8 text-center rounded-2xl border ${
                 isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#A7B0C3]' : 'bg-white border-slate-200 text-slate-500'
               }`}
             >
-              <p className="text-sm font-semibold">No services found matching your filter.</p>
+              <p className="text-xs font-semibold">No services found matching your filter.</p>
             </div>
           ) : (
             Object.entries(servicesByCategory).map(([categoryName, catServices]) => (
-              <div key={categoryName} className="space-y-3">
-                {/* Category Section Header */}
-                <div className="flex items-center gap-2 px-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
-                  <h3 className={`text-sm font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                    {categoryName}
-                  </h3>
-                  <span
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      isDarkMode ? 'bg-white/10 text-[#A7B0C3]' : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {catServices.length} items
-                  </span>
-                </div>
-
-                {/* Service Cards Grid for Category */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {catServices.map((service) => (
-                    <div
-                      key={service.id}
-                      className={`p-5 rounded-3xl border transition-all shadow-md relative ${
-                        isDarkMode ? 'bg-[#121B33]' : 'bg-white'
-                      } ${
-                        service.active
-                          ? isDarkMode
-                            ? 'border-[#2A3858] hover:border-[#D4AF37]/50'
-                            : 'border-slate-200 hover:border-[#D4AF37]/60'
-                          : 'border-white/5 opacity-55'
+              <div key={categoryName} className="space-y-2">
+                {/* Category Section Header with Category Edit & Delete */}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />
+                    <h3 className={`text-xs font-black uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {categoryName}
+                    </h3>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        isDarkMode ? 'bg-white/10 text-[#A7B0C3]' : 'bg-slate-200 text-slate-700'
                       }`}
                     >
-                      {/* Top Row: Category tag, active toggle, and 3-dots */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#D4AF37] uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 inline-block mb-1.5">
-                            {service.cat}
-                          </span>
-                          <strong className={`text-sm font-bold block ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                      {catServices.length} items
+                    </span>
+                  </div>
+
+                  {/* Category Action Controls */}
+                  <div className="flex items-center gap-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllCategory(catServices)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                        catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id))
+                          ? 'bg-[#D4AF37] text-[#07152B] border-[#D4AF37]'
+                          : isDarkMode
+                          ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                      title="Select all services in this category"
+                    >
+                      {catServices.length > 0 && catServices.every((s) => selectedServiceIds.has(s.id))
+                        ? 'Deselect All'
+                        : 'Select All'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenAddService(categoryName)}
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 hover:bg-[#D4AF37] hover:text-[#07152B] transition-all flex items-center gap-0.5 cursor-pointer"
+                      title={`Add service to ${categoryName}`}
+                    >
+                      <span>+ Service</span>
+                    </button>
+
+                    {/* Rename Category Button */}
+                    <button
+                      type="button"
+                      onClick={() => setEditingCategory({ oldName: categoryName, newName: categoryName })}
+                      className="p-1 rounded-md text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
+                      title="Rename Category"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+
+                    {/* Delete Category Button */}
+                    <button
+                      type="button"
+                      onClick={() => setDeletingCategory(categoryName)}
+                      className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      title="Delete Category"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* ================= 6 PER ROW COMPACT BOXES + LAST PLACE ADD SERVICE BOX ================= */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
+                  {catServices.map((service) => {
+                    const isSelected = selectedServiceIds.has(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        onClick={() => handleToggleSelectService(service.id)}
+                        className={`p-2.5 rounded-2xl border transition-all relative flex flex-col justify-between group cursor-pointer select-none min-h-[115px] ${
+                          isDarkMode ? 'bg-[#121B33]' : 'bg-white'
+                        } ${
+                          isSelected
+                            ? 'ring-2 ring-[#D4AF37] border-[#D4AF37] shadow-md shadow-[#D4AF37]/15'
+                            : service.active
+                            ? isDarkMode
+                              ? 'border-[#2A3858] hover:border-[#D4AF37]/50 shadow-2xs'
+                              : 'border-slate-200 hover:border-[#D4AF37]/60 shadow-2xs'
+                            : 'border-white/5 opacity-55'
+                        }`}
+                      >
+                        {/* Top Row: Checkbox + Active Status + Quick Icons */}
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <label
+                            className="flex items-center gap-1.5 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectService(service.id)}
+                              className="w-3.5 h-3.5 rounded border-[#D4AF37] text-[#D4AF37] focus:ring-0 cursor-pointer accent-[#D4AF37]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleServiceActive(service.id)}
+                              className={`w-2 h-2 rounded-full cursor-pointer transition-transform hover:scale-125 ${
+                                service.active ? 'bg-emerald-400' : 'bg-slate-400'
+                              }`}
+                              title={service.active ? 'Active (Click to pause)' : 'Paused (Click to activate)'}
+                            />
+                          </label>
+
+                          <div
+                            className="flex items-center gap-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(service)}
+                              className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
+                              title="Edit Service"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteService(service)}
+                              className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Delete Service"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Middle: Service Name */}
+                        <div className="my-1 min-h-[30px]">
+                          <strong
+                            className={`text-xs font-bold block line-clamp-2 leading-tight ${
+                              isDarkMode ? 'text-white' : 'text-slate-900'
+                            }`}
+                            title={service.name}
+                          >
                             {service.name}
                           </strong>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {/* Active / Inactive Toggle Switch */}
-                          <button
-                            type="button"
-                            onClick={() => toggleServiceActive(service.id)}
-                            className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                              service.active ? 'bg-[#D4AF37]' : isDarkMode ? 'bg-white/20' : 'bg-slate-300'
-                            }`}
-                            title={service.active ? 'Active service' : 'Disabled service'}
-                          >
-                            <span
-                              className={`w-4 h-4 rounded-full bg-white absolute top-0.5 shadow-sm transition-transform ${
-                                service.active ? 'right-0.5' : 'left-0.5'
-                              }`}
-                            />
-                          </button>
-
-                          {/* 3-Dots Action Menu */}
-                          <div className="relative service-menu-container">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuId(activeMenuId === service.id ? null : service.id);
-                              }}
-                              className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
-                                isDarkMode
-                                  ? 'border-white/10 hover:border-[#D4AF37] text-[#A7B0C3] hover:text-white'
-                                  : 'border-slate-200 hover:border-slate-400 text-slate-700 hover:text-black'
-                              }`}
-                              title="Service Options"
-                            >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <circle cx="12" cy="5" r="1.5" />
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="12" cy="19" r="1.5" />
-                              </svg>
-                            </button>
-
-                            {/* Dropdown Popover */}
-                            {activeMenuId === service.id && (
-                              <div
-                                className={`absolute right-0 top-8 w-36 rounded-2xl border shadow-xl py-1 z-30 animate-fadeIn text-left ${
-                                  isDarkMode ? 'bg-[#0F1C36] border-[#2A3858] text-white' : 'bg-white border-slate-200 text-slate-900'
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEdit(service)}
-                                  className={`w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                                    isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-900'
-                                  }`}
-                                >
-                                  <svg className="w-3.5 h-3.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
-                                  <span>Edit Service</span>
-                                </button>
-
-                                <div className="border-t border-white/10 my-0.5" />
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteService(service)}
-                                  className="w-full px-3 py-1.5 text-xs font-bold flex items-center gap-2 text-red-400 hover:bg-red-500/10 cursor-pointer"
-                                >
-                                  <svg className="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                  </svg>
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Middle Row: Duration info */}
-                      <div className="flex items-center gap-1.5 mt-2.5">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 ${
-                            isDarkMode ? 'bg-white/[0.05] text-[#A7B0C3]' : 'bg-slate-100 text-slate-600'
+                        {/* Bottom: Duration & Price Badge */}
+                        <div
+                          className={`pt-1 border-t flex items-center justify-between text-xs mt-1 ${
+                            isDarkMode ? 'border-white/5' : 'border-slate-100'
                           }`}
                         >
-                          <svg className="w-3 h-3 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          <span>{service.dur} mins</span>
-                        </span>
-                      </div>
-
-                      {/* Bottom Row: Price & Increment / Decrement Controls */}
-                      <div
-                        className={`pt-3 border-t flex items-center justify-between mt-3 text-xs ${
-                          isDarkMode ? 'border-white/[0.06]' : 'border-slate-100'
-                        }`}
-                      >
-                        <span className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                          ₹ {service.price}
-                        </span>
-
-                        {/* Increment / Decrement Price Controls */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleAdjustPrice(service, -50)}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center font-black cursor-pointer transition-colors ${
-                              isDarkMode
-                                ? 'border-[#2A3858] bg-[#0E1528] text-white hover:border-[#D4AF37]'
-                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                          <span
+                            className={`text-[10px] font-semibold flex items-center gap-0.5 ${
+                              isDarkMode ? 'text-slate-400' : 'text-slate-500'
                             }`}
-                            title="Decrease price by ₹50"
                           >
-                            -
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAdjustPrice(service, 50)}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center font-black cursor-pointer transition-colors ${
-                              isDarkMode
-                                ? 'border-[#2A3858] bg-[#0E1528] text-white hover:border-[#D4AF37]'
-                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                            }`}
-                            title="Increase price by ₹50"
-                          >
-                            +
-                          </button>
+                            <svg className="w-2.5 h-2.5 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            <span>{service.dur}m</span>
+                          </span>
+
+                          <span className="text-xs font-black text-[#D4AF37] font-mono">
+                            ₹{service.price}
+                          </span>
                         </div>
                       </div>
+                    );
+                  })}
+
+                  {/* ================= LAST PLACE: ADD SERVICE BOX ================= */}
+                  <button
+                    type="button"
+                    onClick={() => onOpenAddService(categoryName)}
+                    className={`p-2.5 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-1.5 min-h-[115px] group cursor-pointer ${
+                      isDarkMode
+                        ? 'border-[#2A3858] hover:border-[#D4AF37] hover:bg-[#D4AF37]/5 text-slate-400 hover:text-white'
+                        : 'border-slate-300 hover:border-[#D4AF37] hover:bg-amber-50/50 text-slate-600 hover:text-slate-900'
+                    }`}
+                    title={`Add new service in ${categoryName}`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center group-hover:scale-110 group-hover:bg-[#D4AF37] group-hover:text-[#0B1F44] transition-all">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
                     </div>
-                  ))}
+                    <span className="text-xs font-bold block leading-none">Add Service</span>
+                    <span className="text-[10px] opacity-70 block truncate max-w-[90px] leading-tight">in {categoryName}</span>
+                  </button>
                 </div>
               </div>
             ))
@@ -1483,6 +1757,350 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: BULK EDIT SERVICES ================= */}
+      {showBulkEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-5 sm:p-6 rounded-2xl border max-w-md w-full space-y-4 shadow-2xl relative ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <div>
+                <h3 className={`text-sm sm:text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                  Bulk Edit Services
+                </h3>
+                <span className="text-[11px] text-[#D4AF37] font-bold">
+                  Updating {selectedServiceIds.size} selected services
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBulkEditModal(false)}
+                className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Change Category */}
+              <div>
+                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                  Change Category (Optional)
+                </label>
+                <select
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode
+                      ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                  }`}
+                >
+                  <option value="">Keep current category</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      Move to {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price Adjustment */}
+              <div>
+                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                  Price Adjustment
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={bulkPriceMode}
+                    onChange={(e) => setBulkPriceMode(e.target.value as any)}
+                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                        : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                    }`}
+                  >
+                    <option value="none">No price change</option>
+                    <option value="fixed">Set exact price (₹)</option>
+                    <option value="increase_fixed">Increase by fixed ₹</option>
+                    <option value="decrease_fixed">Decrease by fixed ₹</option>
+                    <option value="increase_percent">Increase by %</option>
+                    <option value="decrease_percent">Decrease by %</option>
+                  </select>
+
+                  {bulkPriceMode !== 'none' && (
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder={bulkPriceMode.includes('percent') ? 'e.g. 10%' : 'e.g. ₹50'}
+                      value={bulkPriceValue}
+                      onChange={(e) => setBulkPriceValue(Number(e.target.value))}
+                      className={`w-full px-2.5 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                      }`}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Duration Adjustment */}
+              <div>
+                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                  Duration (Minutes)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={bulkDurMode}
+                    onChange={(e) => setBulkDurMode(e.target.value as any)}
+                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none transition-all ${
+                      isDarkMode
+                        ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                        : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                    }`}
+                  >
+                    <option value="none">No duration change</option>
+                    <option value="set">Set duration to:</option>
+                  </select>
+
+                  {bulkDurMode === 'set' && (
+                    <select
+                      value={bulkDurValue}
+                      onChange={(e) => setBulkDurValue(Number(e.target.value))}
+                      className={`w-full px-2.5 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                      }`}
+                    >
+                      <option value={15}>15 mins</option>
+                      <option value={20}>20 mins</option>
+                      <option value={30}>30 mins</option>
+                      <option value={45}>45 mins</option>
+                      <option value={60}>60 mins</option>
+                      <option value={90}>90 mins</option>
+                      <option value={120}>120 mins</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Toggle */}
+              <div>
+                <label className={`font-bold block mb-1 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                  Active Status
+                </label>
+                <select
+                  value={bulkStatusMode}
+                  onChange={(e) => setBulkStatusMode(e.target.value as any)}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-all ${
+                    isDarkMode
+                      ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                  }`}
+                >
+                  <option value="none">Keep current status</option>
+                  <option value="active">Make all selected Active</option>
+                  <option value="inactive">Make all selected Paused</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setShowBulkEditModal(false)}
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyBulkEdit}
+                className="flex-1 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black cursor-pointer shadow-md shadow-[#D4AF37]/25"
+              >
+                Apply Bulk Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: BULK DELETE CONFIRMATION ================= */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-5 sm:p-6 rounded-2xl border max-w-sm w-full space-y-3.5 shadow-2xl relative ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                Delete {selectedServiceIds.size} Services?
+              </h3>
+              <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                This will permanently delete the selected services from your salon catalog and database. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className={`flex gap-2.5 pt-2 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                className="flex-1 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black cursor-pointer shadow-md shadow-rose-500/25"
+              >
+                Delete {selectedServiceIds.size} Services
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: RENAME CATEGORY ================= */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <form
+            onSubmit={handleRenameCategorySubmit}
+            className={`p-5 sm:p-6 rounded-2xl border max-w-sm w-full space-y-4 shadow-2xl relative ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            <div className={`flex items-center justify-between pb-2 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <h3 className={`text-sm sm:text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                Rename Category
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingCategory(null)}
+                className={`w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={`text-xs font-bold block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                Category Name
+              </label>
+              <input
+                type="text"
+                required
+                value={editingCategory.newName}
+                onChange={(e) => setEditingCategory({ ...editingCategory, newName: e.target.value })}
+                className={`w-full px-3 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${
+                  isDarkMode
+                    ? 'bg-[#121B33] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                    : 'bg-white border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                }`}
+              />
+              <p className="text-[10px] text-slate-400">
+                All services currently under &quot;{editingCategory.oldName}&quot; will automatically update to this new name.
+              </p>
+            </div>
+
+            <div className={`flex gap-2.5 pt-2 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setEditingCategory(null)}
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] text-xs font-black cursor-pointer shadow-md shadow-[#D4AF37]/25"
+              >
+                Save Category
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ================= MODAL: DELETE CATEGORY CONFIRMATION ================= */}
+      {deletingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-5 sm:p-6 rounded-2xl border max-w-sm w-full space-y-3.5 shadow-2xl relative ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-400 flex items-center justify-center mx-auto">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                Delete Category &quot;{deletingCategory}&quot;?
+              </h3>
+              <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                This category will be deleted. Any services inside this category will be preserved and reassigned to &quot;General&quot;.
+              </p>
+            </div>
+
+            <div className={`flex gap-2.5 pt-2 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => setDeletingCategory(null)}
+                className={`flex-1 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCategory}
+                className="flex-1 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-black cursor-pointer shadow-md shadow-rose-500/25"
+              >
+                Delete Category
+              </button>
             </div>
           </div>
         </div>
