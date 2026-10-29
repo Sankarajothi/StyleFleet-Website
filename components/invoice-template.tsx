@@ -334,7 +334,7 @@ export function InvoiceTemplate({
                 {invoiceDateStr}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Stylist: <span className="font-semibold text-slate-800">{bill.staff || 'Stylist'}</span>
+                {(bill.staff || '').includes(',') ? 'Stylists' : 'Stylist'}: <span className="font-semibold text-slate-800">{bill.staff || 'Stylist'}</span>
               </p>
             </div>
           </div>

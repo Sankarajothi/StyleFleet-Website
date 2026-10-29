@@ -3,6 +3,7 @@
 import React from 'react';
 import { useSalon, Bill, Appointment } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
+import { matchStaffName } from '@/lib/salon-helpers';
 
 interface DashboardProps {
   onOpenNewBooking: () => void;
@@ -35,7 +36,7 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
 
   // Scoped datasets: Stylists are strictly restricted to Today's chair appointments & bills; Owners see entire salon
   const effectiveAppointments = isStylist && stylistNameLower
-    ? appointments.filter((a) => a.date === todayStr && a.staff?.trim().toLowerCase() === stylistNameLower)
+    ? appointments.filter((a) => a.date === todayStr && matchStaffName(a.staff, stylistNameLower))
     : appointments;
 
   const effectiveBills = isStylist && stylistNameLower
@@ -43,8 +44,8 @@ export function DashboardView({ onOpenNewBooking, onViewInvoice }: DashboardProp
         (b) =>
           !b.isDeleted &&
           b.isToday &&
-          (b.staff?.trim().toLowerCase() === stylistNameLower ||
-            b.items?.some((i) => i.staff?.trim().toLowerCase() === stylistNameLower))
+          (matchStaffName(b.staff, stylistNameLower) ||
+            b.items?.some((i) => matchStaffName(i.staff, stylistNameLower)))
       )
     : bills.filter((b) => !b.isDeleted);
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, StaffMember } from '@/components/SalonContext';
+import { matchStaffName } from '@/lib/salon-helpers';
 
 type ReportInterval = 'day' | 'week' | 'month';
 
@@ -92,10 +93,10 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
     });
   }, [bills, reportInterval]);
 
-  // Aggregate stats per stylist
+  // Aggregate stats per stylist (supports multi-stylist bills)
   const getStylistStats = (stylistName: string) => {
     const match = filteredBillsByInterval.filter(
-      (b) => b.staff && b.staff.toLowerCase() === stylistName.toLowerCase()
+      (b) => matchStaffName(b.staff, stylistName)
     );
     const servicesCount = match.reduce(
       (acc, b) => acc + (b.items?.reduce((iAcc, item) => iAcc + item.qty, 0) || 1),

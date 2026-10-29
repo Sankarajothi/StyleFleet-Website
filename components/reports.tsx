@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Bill, Expense } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
+import { matchStaffName, parseSelectedStylists } from '@/lib/salon-helpers';
 
 type ReportTab = 'report' | 'summary';
 type ReportSliderPeriod = 'today' | 'week' | 'month' | 'custom';
@@ -139,7 +140,7 @@ export function ReportsView() {
     const nonDeleted = bills.filter((b) => !b.isDeleted);
     if (role === 'stylist' && !hasFullReportsAccess && loggedInStaffName) {
       const nameLower = loggedInStaffName.trim().toLowerCase();
-      return nonDeleted.filter((b) => (b.staff || '').trim().toLowerCase() === nameLower);
+      return nonDeleted.filter((b) => matchStaffName(b.staff, nameLower));
     }
     return nonDeleted;
   }, [bills, role, hasFullReportsAccess, loggedInStaffName]);
@@ -292,22 +293,28 @@ export function ReportsView() {
     });
 
     reportBills.forEach((b) => {
-      const stylistName = b.staff || 'Staff';
-      if (!map[stylistName]) {
-        map[stylistName] = {
-          name: stylistName,
-          role: 'Stylist',
-          servicesDone: 0,
-          billsCount: 0,
-          grossSales: 0,
-          commissionRate: 10,
-          commissionEarned: 0,
-        };
-      }
-      map[stylistName].billsCount += 1;
-      const billRev = b.paidAmount || b.total || 0;
-      map[stylistName].grossSales += billRev;
-      map[stylistName].servicesDone += (b.items || []).reduce((acc, it) => acc + (it.qty || 1), 0);
+      const assignedStylists = parseSelectedStylists(b.staff);
+      const stylistsToCredit = assignedStylists.length > 0 ? assignedStylists : ['Staff'];
+      const splitFactor = stylistsToCredit.length;
+      const billRev = Math.round((b.paidAmount || b.total || 0) / splitFactor);
+      const itemsCount = Math.round((b.items || []).reduce((acc, it) => acc + (it.qty || 1), 0) / splitFactor);
+
+      stylistsToCredit.forEach((stylistName) => {
+        if (!map[stylistName]) {
+          map[stylistName] = {
+            name: stylistName,
+            role: stylistName.toLowerCase() === (shopProfile?.ownerName || 'Owner').toLowerCase() ? 'Owner' : 'Stylist',
+            servicesDone: 0,
+            billsCount: 0,
+            grossSales: 0,
+            commissionRate: 10,
+            commissionEarned: 0,
+          };
+        }
+        map[stylistName].billsCount += 1;
+        map[stylistName].grossSales += billRev;
+        map[stylistName].servicesDone += Math.max(1, itemsCount);
+      });
     });
 
     Object.values(map).forEach((item) => {
@@ -576,8 +583,12 @@ export function ReportsView() {
     selectedMonthBills
       .filter((b) => b.confirmationStatus !== 'Pending')
       .forEach((b) => {
-        const name = b.staff || 'Staff';
-        map[name] = (map[name] || 0) + (b.paidAmount || b.total || 0);
+        const assignedStylists = parseSelectedStylists(b.staff);
+        const stylistsToCredit = assignedStylists.length > 0 ? assignedStylists : ['Staff'];
+        const share = Math.round((b.paidAmount || b.total || 0) / stylistsToCredit.length);
+        stylistsToCredit.forEach((name) => {
+          map[name] = (map[name] || 0) + share;
+        });
       });
     const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? { name: sorted[0][0], revenue: sorted[0][1] } : null;

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Appointment, ServiceItem } from '@/components/SalonContext';
-import { generateTimeSlotsFromBookingHours } from '@/lib/salon-helpers';
+import { generateTimeSlotsFromBookingHours, matchStaffName } from '@/lib/salon-helpers';
+import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
 interface SelectedBookingService {
   id: string;
@@ -58,11 +59,18 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'completed' | 'past' | 'deleted'>('all');
 
-  // Three dots menu & Edit Appointment (Time & Style only)
+  // Default staff calculation based on role (Owner defaults to Owner, Stylist defaults to loggedInStaffName)
+  const defaultStaff = useMemo(() => {
+    if (isStylist && loggedInStaffName) return loggedInStaffName;
+    return shopProfile?.ownerName?.trim() || 'Owner';
+  }, [isStylist, loggedInStaffName, shopProfile?.ownerName]);
+
+  // Three dots menu & Edit Appointment
   const [activeMenuApptId, setActiveMenuApptId] = useState<string | null>(null);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
   const [editStartsAt, setEditStartsAt] = useState('');
   const [editService, setEditService] = useState('');
+  const [editStaff, setEditStaff] = useState('');
 
   // Modal State for New Booking
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,9 +86,19 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   }, [shopProfile?.bookingHours]);
 
   const [bookingSlot, setBookingSlot] = useState(() => (timeSlots.length > 0 ? timeSlots[0] : '10:00 AM'));
-  const [bookingStaff, setBookingStaff] = useState(() => (isStylist && loggedInStaffName ? loggedInStaffName : (staff.length > 0 ? staff[0].name : '')));
+  const [bookingStaff, setBookingStaff] = useState(defaultStaff);
   const [specialNotes, setSpecialNotes] = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
+
+  // Synchronize role default staff
+  useEffect(() => {
+    if (isStylist && loggedInStaffName) {
+      setBookingStaff(loggedInStaffName);
+    } else if (!isStylist) {
+      const owner = shopProfile?.ownerName?.trim() || 'Owner';
+      setBookingStaff((prev) => (!prev ? owner : prev));
+    }
+  }, [isStylist, loggedInStaffName, shopProfile?.ownerName]);
 
   // Recent clients for 1-click selection derived strictly from real customers database
   const recentClients = customers
@@ -210,7 +228,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
       const count = appointments.filter(a => {
         if (a.date !== dateStr || a.status === 'Cancelled') return false;
         if (isStylist && loggedInStaffName) {
-          return a.staff.toLowerCase() === loggedInStaffName.toLowerCase();
+          return matchStaffName(a.staff, loggedInStaffName);
         }
         return true;
       }).length;
@@ -233,14 +251,14 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   const dailyAppointments = appointments.filter(a => {
     if (a.date !== selectedDate) return false;
     if (a.status === 'Cancelled') return false;
-    if (chairFilter !== 'all' && a.staff?.toLowerCase() !== chairFilter.toLowerCase()) return false;
+    if (chairFilter !== 'all' && !matchStaffName(a.staff, chairFilter)) return false;
     if (dailyStatusFilter === 'all') return true;
     return a.status === dailyStatusFilter;
   });
 
   // Filtered Appointments for History view
   const historyAppointments = appointments.filter(a => {
-    if (isStylist && loggedInStaffName && a.staff?.toLowerCase() !== loggedInStaffName.toLowerCase()) {
+    if (isStylist && loggedInStaffName && !matchStaffName(a.staff, loggedInStaffName)) {
       return false;
     }
     const matchesSearch =
@@ -589,6 +607,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                                 setEditingAppt(appt);
                                 setEditStartsAt(appt.startsAt);
                                 setEditService(appt.service);
+                                setEditStaff(appt.staff || defaultStaff);
                               }}
                               className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer ${
                                 isDarkMode ? 'text-slate-200 hover:bg-slate-800 hover:text-[#D4AF37]' : 'text-slate-700 hover:bg-slate-100 hover:text-[#B8863B]'
@@ -1013,46 +1032,31 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 </div>
               )}
 
-              {/* Row 2: Date & Stylist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                    Booking Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs border outline-none ${
-                      isDarkMode
-                        ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]'
-                        : 'bg-white border-slate-300 text-slate-900'
-                    } focus:border-[#D4AF37]`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
-                    Assign Stylist
-                  </label>
-                  <select
-                    value={bookingStaff}
-                    onChange={(e) => setBookingStaff(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs border outline-none cursor-pointer ${
-                      isDarkMode
-                        ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]'
-                        : 'bg-white border-slate-300 text-slate-900'
-                    } focus:border-[#D4AF37]`}
-                  >
-                    {staff.map(st => (
-                      <option key={st.id} value={st.name} className={isDarkMode ? 'bg-[#121B33] text-white' : 'bg-white text-slate-900'}>
-                        {st.name} ({st.role})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Row 2: Date */}
+              <div>
+                <label className={`block text-[11px] font-bold mb-1 uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700'}`}>
+                  Booking Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-xl text-xs border outline-none ${
+                    isDarkMode
+                      ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]'
+                      : 'bg-white border-slate-300 text-slate-900'
+                  } focus:border-[#D4AF37]`}
+                />
               </div>
+
+              {/* Stylist Selection with Multi-Select & Owner Default Support */}
+              <StylistMultiSelect
+                value={bookingStaff}
+                onChange={setBookingStaff}
+                label="Assign Stylist(s)"
+                sublabel="Select Owner, Stylist, or Both"
+              />
 
               {/* Dynamic Time Slot Selector (Interactive Chips + Select) */}
               <div className="space-y-1.5">
@@ -1185,9 +1189,9 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 <span className="block text-[11px] text-slate-400">+91 {editingAppt.phone}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold block uppercase">Assigned Stylist</span>
-                <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{editingAppt.staff}</strong>
-                <span className="block text-[11px] text-slate-400">{editingAppt.date}</span>
+                <span className="text-[10px] text-slate-400 font-bold block uppercase">Booking Date</span>
+                <strong className={`font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{editingAppt.date}</strong>
+                <span className="block text-[11px] text-[#D4AF37] font-bold">{editingAppt.status}</span>
               </div>
             </div>
 
@@ -1205,6 +1209,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 updateAppointment(editingAppt.id, {
                   startsAt: editStartsAt.trim(),
                   service: editService.trim(),
+                  staff: editStaff.trim() || defaultStaff,
                 });
                 setEditingAppt(null);
               }}
@@ -1283,6 +1288,14 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   </div>
                 )}
               </div>
+
+              {/* Field 3: Assigned Stylist(s) with Multi-Select & Owner Default Support */}
+              <StylistMultiSelect
+                value={editStaff}
+                onChange={setEditStaff}
+                label="Assigned Stylist(s)"
+                sublabel="Select Owner, Stylist, or Both"
+              />
 
               {/* Actions */}
               <div className={`flex gap-2.5 pt-3 border-t ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>

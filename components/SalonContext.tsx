@@ -225,7 +225,7 @@ interface SalonContextType {
   billCustPhone: string;
   setBillCustPhone: (phone: string) => void;
   billStaffSelect: string;
-  setBillStaffSelect: (staff: string) => void;
+  setBillStaffSelect: React.Dispatch<React.SetStateAction<string>>;
   billDiscount: number;
   setBillDiscount: (discount: number) => void;
   billPaymentMode: Bill['mode'];
@@ -1072,10 +1072,23 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [billCartItems, setBillCartItems] = useState<BillItem[]>([]);
   const [billCustName, setBillCustName] = useState('');
   const [billCustPhone, setBillCustPhone] = useState('');
-  const [billStaffSelect, setBillStaffSelect] = useState(() => (staff.length > 0 ? staff[0].name : ''));
+  const [billStaffSelect, setBillStaffSelect] = useState(() => {
+    if (role === 'stylist' && loggedInStaffName) return loggedInStaffName;
+    return shopProfile?.ownerName?.trim() || 'Owner';
+  });
   const [billDiscount, setBillDiscount] = useState(0);
   const [billPaymentMode, setBillPaymentMode] = useState<Bill['mode']>('UPI');
   const [partialPaidAmount, setPartialPaidAmount] = useState(0);
+
+  // Synchronize default stylist selection based on active role and profile
+  useEffect(() => {
+    if (role === 'stylist' && loggedInStaffName) {
+      setBillStaffSelect(loggedInStaffName);
+    } else if (role === 'owner') {
+      const owner = shopProfile?.ownerName?.trim() || 'Owner';
+      setBillStaffSelect((prev) => (!prev || prev === 'Stylist' || prev === 'Staff' ? owner : prev));
+    }
+  }, [role, loggedInStaffName, shopProfile?.ownerName]);
 
   const addCartItem = ({ name, price, staff: itemStaff }: { name: string; price: number; staff?: string }) => {
     setBillCartItems((prev) => {
@@ -1116,8 +1129,9 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateAppointmentStatus(appt.id, 'Done');
     setBillCustName(appt.cust);
     setBillCustPhone(appt.phone);
-    setBillStaffSelect(appt.staff || (staff.length > 0 ? staff[0].name : 'Stylist'));
-    setBillCartItems([{ name: appt.service, price: appt.amount, qty: 1, staff: appt.staff || (staff.length > 0 ? staff[0].name : 'Stylist') }]);
+    const defaultStaff = role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile.ownerName || 'Owner');
+    setBillStaffSelect(appt.staff || defaultStaff);
+    setBillCartItems([{ name: appt.service, price: appt.amount, qty: 1, staff: appt.staff || defaultStaff }]);
     setCurrentScreen('billing');
     showToast(`Prefilled bill for ${appt.cust}!`);
   };

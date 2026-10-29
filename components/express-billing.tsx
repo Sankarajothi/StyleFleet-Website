@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSalon, ServiceItem } from '@/components/SalonContext';
+import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
 interface ExpressBillingProps {
   onOpenAddClientModal: () => void;
@@ -48,12 +49,15 @@ export function ExpressBillingView({
 
   const [billTip, setBillTip] = useState(0);
 
-  // Auto-select logged-in stylist
+  // Auto-select logged-in stylist or owner
   React.useEffect(() => {
     if (role === 'stylist' && loggedInStaffName) {
       setBillStaffSelect(loggedInStaffName);
+    } else if (role === 'owner') {
+      const owner = shopProfile?.ownerName?.trim() || 'Owner';
+      setBillStaffSelect((prev) => (!prev || prev === 'Stylist' || prev === 'Staff' ? owner : prev));
     }
-  }, [role, loggedInStaffName, setBillStaffSelect]);
+  }, [role, loggedInStaffName, shopProfile?.ownerName, setBillStaffSelect]);
 
   // Helper for date picker formatted YYYY-MM-DD
   const getTodayInputStr = () => {
@@ -371,23 +375,13 @@ export function ExpressBillingView({
             )}
           </div>
 
-          {/* Stylist Assignment */}
-          <div>
-            <label className={`block text-[11px] font-bold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-              Serving Stylist
-            </label>
-            <select
-              value={billStaffSelect}
-              onChange={(e) => setBillStaffSelect(e.target.value)}
-              className={`w-full px-3.5 py-2.5 rounded-2xl border text-xs outline-none focus:border-[#D4AF37] cursor-pointer ${isDarkMode ? 'bg-[#0B1F44] border-[#2A3858] text-white' : 'bg-[#F7F9FC] border-slate-200 text-[#1F2937]'}`}
-            >
-              {staff.map((st) => (
-                <option key={st.id} value={st.name} className="bg-[#121B33]">
-                  {st.name} ({st.role})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Stylist Assignment with Multi-Select and Owner Default */}
+          <StylistMultiSelect
+            value={billStaffSelect}
+            onChange={setBillStaffSelect}
+            label="Serving Stylist(s)"
+            sublabel="Select Owner, Stylist, or Both"
+          />
 
           {/* Discount & Tip Inputs */}
           <div className="grid grid-cols-2 gap-3 pt-1">

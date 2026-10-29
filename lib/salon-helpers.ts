@@ -96,6 +96,102 @@ export function generateTimeSlotsFromBookingHours(bookingHoursStr?: string): str
   }
 }
 
+export interface StylistOption {
+  id: string;
+  name: string;
+  role: string;
+  isOwner: boolean;
+}
+
+/**
+ * Unified stylist options list.
+ * The Owner is ALWAYS defaultly present first in the list, followed by staff members.
+ * Avoids duplicate if the owner's name matches a staff member.
+ */
+export function getAvailableStylistOptions(
+  ownerName?: string | null,
+  staffList: Array<{ id: string; name: string; role?: string; status?: string }> = []
+): StylistOption[] {
+  const effectiveOwner = ownerName && ownerName.trim() ? ownerName.trim() : 'Owner';
+  const options: StylistOption[] = [
+    {
+      id: 'owner',
+      name: effectiveOwner,
+      role: 'Owner',
+      isOwner: true,
+    },
+  ];
+
+  const ownerLower = effectiveOwner.toLowerCase();
+  for (const st of staffList) {
+    if (st.status === 'inactive') continue;
+    const nameTrimmed = (st.name || '').trim();
+    if (!nameTrimmed) continue;
+    if (nameTrimmed.toLowerCase() === ownerLower) continue;
+    options.push({
+      id: st.id,
+      name: nameTrimmed,
+      role: st.role || 'Stylist',
+      isOwner: false,
+    });
+  }
+
+  return options;
+}
+
+/**
+ * Checks if a comma-separated stylist string contains a given target staff name (case-insensitive).
+ */
+export function matchStaffName(staffField?: string | null, targetName?: string | null): boolean {
+  if (!targetName || !targetName.trim()) return true;
+  const target = targetName.trim().toLowerCase();
+  if (target === 'all') return true;
+  if (!staffField || !staffField.trim()) return false;
+  const parts = staffField.split(',').map((s) => s.trim().toLowerCase());
+  return parts.includes(target);
+}
+
+/**
+ * Parses comma-separated stylists into a clean array of trimmed names.
+ */
+export function parseSelectedStylists(staffString?: string | null): string[] {
+  if (!staffString || !staffString.trim()) return [];
+  return staffString
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Toggles a stylist selection in a comma-separated string.
+ * Supports selecting Owner, Stylist, or both / multiple stylists.
+ */
+export function toggleStylistSelection(
+  currentSelection: string | string[],
+  stylistName: string,
+  fallbackDefault?: string
+): string {
+  const currentList = Array.isArray(currentSelection)
+    ? currentSelection.map((s) => s.trim()).filter(Boolean)
+    : parseSelectedStylists(currentSelection);
+
+  const nameTrimmed = stylistName.trim();
+  const nameLower = nameTrimmed.toLowerCase();
+  const exists = currentList.some((s) => s.toLowerCase() === nameLower);
+
+  let updated: string[];
+  if (exists) {
+    updated = currentList.filter((s) => s.toLowerCase() !== nameLower);
+    if (updated.length === 0 && fallbackDefault) {
+      updated = [fallbackDefault.trim()];
+    }
+  } else {
+    updated = [...currentList, nameTrimmed];
+  }
+
+  return updated.join(', ');
+}
+
 /**
  * Official StyleFleet WhatsApp Bill Templates (100% Mobile Parity)
  * Generates Template 1 (Paid), Template 2 (Partially Paid with UPI ID), or Template 3 (Pending Dues).

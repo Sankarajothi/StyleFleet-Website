@@ -554,7 +554,7 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
           if (parsed.cust && custName === 'Client') custName = parsed.cust;
           if (parsed.phone && !custPhone) custPhone = parsed.phone;
           if (parsed.service && serviceName === 'Salon Service') serviceName = parsed.service;
-          if (parsed.staff_name && staffName === 'Any Stylist') staffName = parsed.staff_name;
+          if (parsed.staff_name && parsed.staff_name.trim()) staffName = parsed.staff_name.trim();
           if (parsed.amount && amount === 0) amount = parsed.amount;
           if (parsed.is_deleted) isDeleted = true;
         } catch {
@@ -625,7 +625,10 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       if (b.notes) {
         const parts = b.notes.split(';');
         for (const p of parts) {
-          if (p.startsWith('staff_name:') && parsedStaff === 'Stylist') parsedStaff = p.replace('staff_name:', '');
+          if (p.startsWith('staff_name:')) {
+            const sn = p.replace('staff_name:', '').trim();
+            if (sn) parsedStaff = sn;
+          }
           if (p.startsWith('cust:') && parsedCust === 'Walk-in Client') parsedCust = p.replace('cust:', '');
           if (p.startsWith('phone:') && !parsedPhone) parsedPhone = p.replace('phone:', '');
         }
@@ -1054,14 +1057,18 @@ export async function saveAppointmentToDb(
 
     if (appt.staff) {
       try {
-        const { data: stRows } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('shop_id', shopId)
-          .ilike('name', appt.staff.trim())
-          .limit(1);
-        if (stRows && stRows.length > 0) {
-          staffId = stRows[0].id;
+        const staffNames = appt.staff.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const sName of staffNames) {
+          const { data: stRows } = await supabase
+            .from('staff')
+            .select('id')
+            .eq('shop_id', shopId)
+            .ilike('name', sName)
+            .limit(1);
+          if (stRows && stRows.length > 0) {
+            staffId = stRows[0].id;
+            break;
+          }
         }
       } catch {}
     }
@@ -1233,18 +1240,22 @@ export async function saveBillToDb(
       } catch {}
     }
 
-    // Resolve staff foreign key
+    // Resolve staff foreign key (supports multi-selected stylists)
     let staffId: string | null = null;
     if (bill.staff) {
       try {
-        const { data: stRows } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('shop_id', shopId)
-          .ilike('name', bill.staff.trim())
-          .limit(1);
-        if (stRows && stRows.length > 0) {
-          staffId = stRows[0].id;
+        const staffNames = bill.staff.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const sName of staffNames) {
+          const { data: stRows } = await supabase
+            .from('staff')
+            .select('id')
+            .eq('shop_id', shopId)
+            .ilike('name', sName)
+            .limit(1);
+          if (stRows && stRows.length > 0) {
+            staffId = stRows[0].id;
+            break;
+          }
         }
       } catch {}
     }
@@ -1631,14 +1642,18 @@ export async function updateBillInDb(
     // Resolve customer and staff foreign keys & update snapshot notes
     if (updated.staff) {
       try {
-        const { data: stRows } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('shop_id', shopId)
-          .ilike('name', updated.staff.trim())
-          .limit(1);
-        if (stRows && stRows.length > 0) {
-          updatePayload.staff_id = stRows[0].id;
+        const staffNames = updated.staff.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const sName of staffNames) {
+          const { data: stRows } = await supabase
+            .from('staff')
+            .select('id')
+            .eq('shop_id', shopId)
+            .ilike('name', sName)
+            .limit(1);
+          if (stRows && stRows.length > 0) {
+            updatePayload.staff_id = stRows[0].id;
+            break;
+          }
         }
       } catch {}
     }
@@ -2022,13 +2037,19 @@ export async function updateAppointmentInDb(
 
     if (updates.staff) {
       try {
-        const { data: stRows } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('shop_id', shopId)
-          .ilike('name', updates.staff.trim())
-          .limit(1);
-        if (stRows && stRows.length > 0) payload.staff_id = stRows[0].id;
+        const staffNames = updates.staff.split(',').map((s) => s.trim()).filter(Boolean);
+        for (const sName of staffNames) {
+          const { data: stRows } = await supabase
+            .from('staff')
+            .select('id')
+            .eq('shop_id', shopId)
+            .ilike('name', sName)
+            .limit(1);
+          if (stRows && stRows.length > 0) {
+            payload.staff_id = stRows[0].id;
+            break;
+          }
+        }
       } catch {}
     }
 

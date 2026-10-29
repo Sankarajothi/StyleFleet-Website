@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Bill } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
-import { buildOfficialWhatsAppBillMessage, openWhatsAppBill } from '@/lib/salon-helpers';
+import { buildOfficialWhatsAppBillMessage, openWhatsAppBill, matchStaffName } from '@/lib/salon-helpers';
 import { InvoiceTemplate } from '@/components/invoice-template';
+import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
 interface SalesAndBillsProps {
   onViewInvoice?: (bill: Bill) => void;
@@ -165,8 +166,11 @@ export function SalesAndBillsView({
   React.useEffect(() => {
     if (role === 'stylist' && loggedInStaffName) {
       setBillStaffSelect(loggedInStaffName);
+    } else if (role === 'owner') {
+      const owner = shopProfile?.ownerName?.trim() || 'Owner';
+      setBillStaffSelect((prev) => (!prev || prev === 'Stylist' || prev === 'Staff' ? owner : prev));
     }
-  }, [role, loggedInStaffName, setBillStaffSelect]);
+  }, [role, loggedInStaffName, shopProfile?.ownerName, setBillStaffSelect]);
 
   // Cart Calculations for Express Billing POS
   const cartSubtotal = useMemo(() => {
@@ -259,7 +263,7 @@ export function SalesAndBillsView({
         cust,
         phone,
         items: [...billCartItems],
-        staff: billStaffSelect || staff[0]?.name || 'Staff',
+        staff: billStaffSelect || (role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile?.ownerName || 'Owner')),
         total: cartTotal,
         paidAmount: finalPaid,
         dueAmount: finalDue,
@@ -290,8 +294,8 @@ export function SalesAndBillsView({
           !b.isDeleted &&
           b.isToday &&
           (!nameLower ||
-            b.staff?.toLowerCase() === nameLower ||
-            b.items?.some((i) => i.staff?.toLowerCase() === nameLower) ||
+            matchStaffName(b.staff, nameLower) ||
+            b.items?.some((i) => matchStaffName(i.staff, nameLower)) ||
             b.notes?.toLowerCase().includes(nameLower))
       );
     }
@@ -2049,39 +2053,29 @@ export function SalesAndBillsView({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1">Stylist</label>
-                  <select
-                    value={editStaff}
-                    onChange={(e) => setEditStaff(e.target.value)}
-                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  >
-                    {staff.map((s) => (
-                      <option key={s.id} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1">Payment Mode</label>
-                  <select
-                    value={editMode}
-                    onChange={(e) => setEditMode(e.target.value as Bill['mode'])}
-                    className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none ${
-                      isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  >
-                    <option value="UPI">UPI</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Card">Card</option>
-                    <option value="Partial Pay">Partial Pay</option>
-                    <option value="Fully Pending">Fully Pending</option>
-                  </select>
-                </div>
+              {/* Serving Stylist(s) Multi-Select */}
+              <StylistMultiSelect
+                value={editStaff}
+                onChange={setEditStaff}
+                label="Serving Stylist(s)"
+                sublabel="Select Owner, Stylist, or Both"
+              />
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">Payment Mode</label>
+                <select
+                  value={editMode}
+                  onChange={(e) => setEditMode(e.target.value as Bill['mode'])}
+                  className={`w-full px-2.5 py-2 rounded-xl border text-xs outline-none ${
+                    isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-slate-50 border-slate-300'
+                  }`}
+                >
+                  <option value="UPI">UPI</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                  <option value="Partial Pay">Partial Pay</option>
+                  <option value="Fully Pending">Fully Pending</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -2416,25 +2410,13 @@ export function SalesAndBillsView({
                 }`}
               >
                 <div className="space-y-3.5">
-                  {/* Serving Stylist */}
-                  <div>
-                    <label className={`block text-[10px] font-bold mb-1 uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Serving Stylist / Chair
-                    </label>
-                    <select
-                      value={billStaffSelect}
-                      onChange={(e) => setBillStaffSelect(e.target.value)}
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none cursor-pointer ${
-                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    >
-                      {staff.map((s) => (
-                        <option key={s.id} value={s.name}>
-                          {s.name} ({s.role})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Serving Stylist(s) with Multi-Select and Owner Default */}
+                  <StylistMultiSelect
+                    value={billStaffSelect}
+                    onChange={setBillStaffSelect}
+                    label="Serving Stylist(s)"
+                    sublabel="Select Owner, Stylist, or Both"
+                  />
 
                   {/* Cart Items List */}
                   <div>

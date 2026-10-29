@@ -257,7 +257,7 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
     const lineAmt = item.amount ?? item.price * qty;
 
     page.drawText(item.name.slice(0, 26), { x: 60, y: curY + 8, size: 9, font: customFontBold, color: navy });
-    page.drawText((item.staff || 'Stylist').slice(0, 18), { x: 230, y: curY + 8, size: 9, font: customFont, color: grayText });
+    page.drawText((item.staff || 'Stylist').slice(0, 22), { x: 230, y: curY + 8, size: 9, font: customFont, color: grayText });
     page.drawText(String(qty), { x: 348, y: curY + 8, size: 9, font: customFont, color: navy });
     
     const pStr = `₹${item.price.toLocaleString('en-IN')}`;
