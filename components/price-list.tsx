@@ -85,7 +85,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const [newOfferValidity, setNewOfferValidity] = useState('');
   const [newOfferNotes, setNewOfferNotes] = useState('');
 
-  // AI Menu Scanner state (Powered by Gemini 3.8 Flash Vision)
+  // AI Menu Scanner state (Powered by StyleFleet AI Vision)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanningMenu, setIsScanningMenu] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -242,7 +242,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     setNewOfferNotes('');
   };
 
-  // AI Menu Photo / PDF Import using Gemini 3.8 Flash Vision
+  // AI Menu Photo / PDF Import using StyleFleet AI Vision
   const handleMenuFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -254,7 +254,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
 
     const p1 = setTimeout(() => {
       setScanProgress(35);
-      setScanStatusText('Gemini 3.8 Flash analyzing menu layout & categories...');
+      setScanStatusText('StyleFleet AI is analyzing menu layout & categories...');
     }, 600);
     const p2 = setTimeout(() => {
       setScanProgress(65);
@@ -312,7 +312,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
       }
     } catch (err: any) {
       console.error('[Menu Upload Error]:', err);
-      showToast(err.message || 'Error scanning salon menu with Gemini AI.', 'error');
+      showToast(err.message || 'Error scanning salon menu with StyleFleet AI.', 'error');
     } finally {
       setIsScanningMenu(false);
       setScanProgress(0);
@@ -515,7 +515,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                     Analyzing Menu: {menuFileName || 'Salon Menu Card'}
                   </strong>
                   <span className="text-[10px] px-1.5 py-0.2 rounded font-extrabold bg-[#D4AF37]/20 text-[#D4AF37] shrink-0">
-                    Gemini 3.8 Flash Vision
+                    StyleFleet AI
                   </span>
                 </div>
                 <p className="text-[11px] opacity-80 truncate">
@@ -1226,7 +1226,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                       Review Extracted Menu Services
                     </h3>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
-                      Gemini 3.8 Flash Vision
+                      StyleFleet AI Vision
                     </span>
                   </div>
                   <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
