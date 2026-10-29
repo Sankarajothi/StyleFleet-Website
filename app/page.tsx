@@ -120,18 +120,6 @@ export default function HomePage() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
-  // Floating Navbar & Mobile Menu State
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Interactive Demo State
@@ -423,172 +411,34 @@ export default function HomePage() {
       {/* ================= VIEW 1: EXACT LUXURY LANDING PAGE ================= */}
       {view === 'home' && (
         <>
-          {/* ================= ULTRA-LUXURY FLOATING GLASS DOCK NAVBAR ================= */}
-          <nav
-            className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ease-out px-3 sm:px-6 lg:px-8 ${
-              isScrolled ? 'pt-2.5 sm:pt-3' : 'pt-3.5 sm:pt-5'
-            }`}
-          >
-            <div
-              className={`max-w-6xl mx-auto rounded-full transition-all duration-500 relative flex items-center justify-between px-3.5 sm:px-5 py-2 sm:py-2.5 border backdrop-blur-2xl ${
-                isScrolled
-                  ? 'bg-[#071329]/92 border-[#D4AF37]/35 shadow-[0_12px_45px_rgba(0,0,0,0.65),0_0_30px_rgba(212,175,55,0.15)] ring-1 ring-[#D4AF37]/20'
-                  : 'bg-[#071329]/70 border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.45),0_0_20px_rgba(212,175,55,0.08)]'
-              }`}
-            >
-              {/* Subtle Golden Top Rim Refraction */}
-              <div className="absolute inset-x-12 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent pointer-events-none rounded-full" />
-
-              {/* Brand Logo & Luxury Monogram */}
-              <a
-                href="#top"
-                className="flex items-center gap-2.5 group cursor-pointer select-none pl-1"
-                aria-label="StyleFleet Home"
-              >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-[#162340] to-[#0A1224] border border-[#D4AF37]/35 p-1.5 flex items-center justify-center shrink-0 shadow-sm shadow-[#D4AF37]/20 group-hover:border-[#D4AF37] group-hover:scale-105 transition-all">
-                  <img
-                    src="/assets/stylefleet-logo.png"
-                    alt="StyleFleet Logo"
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(212,175,55,0.35)]"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-serif text-xl sm:text-2xl font-black tracking-tight text-white group-hover:text-[#F5D580] transition-colors">
-                    Style<span className="text-[#D4AF37]">Fleet</span>
-                  </span>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] shadow-2xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Salon OS
-                  </span>
-                </div>
+          {/* Navigation Bar */}
+          <nav>
+            <div className="wrap">
+              <a className="logo" href="#top">
+                <img
+                  src="/assets/stylefleet-logo.png"
+                  alt="StyleFleet Logo"
+                  width={36}
+                  height={36}
+                  className="logo-img"
+                />
+                <span>StyleFleet</span>
               </a>
-
-              {/* Center Floating Navigation Capsule (Desktop) */}
-              <div className="hidden md:flex items-center gap-0.5 p-1 rounded-full bg-white/[0.04] border border-white/5 shadow-inner">
-                {[
-                  { label: 'Features', href: '#features' },
-                  { label: 'Comparison', href: '#compare' },
-                  { label: 'Languages', href: '#languages' },
-                  { label: 'Reviews', href: '#reviews' },
-                  { label: 'Pricing', href: '#pricing' },
-                ].map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.08] active:bg-[#D4AF37]/20 transition-all cursor-pointer select-none"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-
-              {/* Right: Actions (Login & Get Started & Mobile Menu) */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <button
-                  type="button"
-                  onClick={() => openLogin('stylist')}
-                  className="hidden lg:inline-flex text-xs font-bold text-slate-300 hover:text-[#D4AF37] px-3 py-1.5 rounded-full hover:bg-white/5 transition-all cursor-pointer"
-                >
-                  Stylist Login
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openLogin('owner')}
-                  className="hidden sm:inline-flex text-xs font-bold text-slate-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all cursor-pointer"
-                >
-                  Sign in
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openLogin('owner')}
-                  className="relative group overflow-hidden px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] text-[#07152B] font-black text-xs shadow-md shadow-[#D4AF37]/30 border border-[#FFE17D] hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5 text-[#07152B] fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z" />
-                  </svg>
-                  <span>Get started</span>
-                </button>
-
-                {/* Mobile Hamburger Toggle Button */}
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen((prev) => !prev)}
-                  className="md:hidden w-9 h-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 flex items-center justify-center transition-colors cursor-pointer ml-1"
-                  aria-label="Toggle navigation menu"
-                >
-                  {mobileMenuOpen ? (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#compare">Comparison</a></li>
+                <li><a href="#languages">Languages</a></li>
+                <li><a href="#reviews">Reviews</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+              </ul>
+              <button
+                type="button"
+                className="btn gold"
+                onClick={() => openLogin('owner')}
+              >
+                Get started
+              </button>
             </div>
-
-            {/* Mobile Animated Dropdown Sheet */}
-            {mobileMenuOpen && (
-              <div className="md:hidden max-w-6xl mx-auto mt-2 p-4 rounded-3xl bg-[#071329]/95 backdrop-blur-2xl border border-white/10 shadow-2xl animate-scaleUp space-y-3">
-                <div className="grid grid-cols-2 gap-1.5 text-xs font-semibold">
-                  {[
-                    { label: 'Features', href: '#features' },
-                    { label: 'Comparison', href: '#compare' },
-                    { label: 'Languages', href: '#languages' },
-                    { label: 'Reviews', href: '#reviews' },
-                    { label: 'Pricing', href: '#pricing' },
-                  ].map((item) => (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 hover:text-[#D4AF37] border border-white/5 transition-colors block text-center"
-                    >
-                      {item.label}
-                    </a>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      openLogin('stylist');
-                    }}
-                    className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-[#D4AF37] border border-white/5 transition-colors text-center font-bold"
-                  >
-                    Stylist Login ↗
-                  </button>
-                </div>
-
-                <div className="pt-2 border-t border-white/10 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      openLogin('owner');
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-white/15 bg-white/5 text-slate-200 text-xs font-bold transition-colors cursor-pointer text-center"
-                  >
-                    Owner Login
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      openLogin('owner');
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] text-[#07152B] text-xs font-black transition-colors cursor-pointer text-center shadow-md shadow-[#D4AF37]/25"
-                  >
-                    Get Started Free
-                  </button>
-                </div>
-              </div>
-            )}
           </nav>
 
           {/* Hero Section */}
@@ -1076,28 +926,20 @@ export default function HomePage() {
       {/* ================= VIEW 2: DEDICATED CLEAN LOGIN PAGE ================= */}
       {view === 'login' && (
         <div className="min-h-screen flex flex-col justify-between">
-          <nav className="pt-4 px-4 sm:px-8">
-            <div className="max-w-6xl mx-auto flex items-center justify-between py-3 px-5 rounded-2xl bg-[#071329]/70 border border-white/10 backdrop-blur-xl shadow-lg">
-              <button type="button" className="flex items-center gap-2.5 group cursor-pointer text-left" onClick={returnHome}>
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#162340] to-[#0A1224] border border-[#D4AF37]/35 p-1 flex items-center justify-center">
-                  <img
-                    src="/assets/stylefleet-logo.png"
-                    alt="StyleFleet Logo"
-                    width={28}
-                    height={28}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <span className="font-serif text-xl font-bold tracking-tight text-white group-hover:text-[#F5D580] transition-colors">
-                  Style<span className="text-[#D4AF37]">Fleet</span>
-                </span>
+          <nav>
+            <div className="wrap">
+              <button type="button" className="logo" onClick={returnHome}>
+                <img
+                  src="/assets/stylefleet-logo.png"
+                  alt="StyleFleet Logo"
+                  width={34}
+                  height={34}
+                  className="logo-img"
+                />
+                <span>StyleFleet</span>
               </button>
-              <button
-                type="button"
-                className="text-xs sm:text-sm font-semibold text-[#F6EFE2]/80 hover:text-white px-3.5 py-1.5 rounded-full border border-white/15 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/10 transition-all flex items-center gap-1.5 cursor-pointer"
-                onClick={returnHome}
-              >
-                <span>←</span> Back to Home
+              <button type="button" className="btn ghost" onClick={returnHome}>
+                ← Back to Home
               </button>
             </div>
           </nav>
