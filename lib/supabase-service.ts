@@ -508,15 +508,25 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       console.warn('[Supabase] Note querying subscriptions table:', subErr);
     }
 
-    // 2. Fetch service categories
+    // 2. Fetch service categories (strictly deduplicated case-insensitively)
     const { data: catRows } = await supabase
       .from('service_categories')
       .select('name')
       .eq('shop_id', shopId)
       .order('sort_order', { ascending: true });
 
-    const categories = catRows && catRows.length > 0
-      ? catRows.map((c) => c.name)
+    const uniqueCats: string[] = [];
+    const seenCatSet = new Set<string>();
+    (catRows || []).forEach((c) => {
+      const trimmed = (c.name || '').trim();
+      if (trimmed && !seenCatSet.has(trimmed.toLowerCase())) {
+        seenCatSet.add(trimmed.toLowerCase());
+        uniqueCats.push(trimmed);
+      }
+    });
+
+    const categories = uniqueCats.length > 0
+      ? uniqueCats
       : ['Hair', 'Beard', 'Colour', 'Care', 'Packages'];
 
     // 3. Fetch services

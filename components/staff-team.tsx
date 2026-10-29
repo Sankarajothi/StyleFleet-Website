@@ -224,6 +224,9 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
   const handleSavePermissions = () => {
     if (!permissionsStylist) return;
     updateStaff(permissionsStylist.id, { permissions: stylistPerms });
+    try {
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
     showToast(`Permissions updated for ${permissionsStylist.name}.`);
     setPermissionsStylist(null);
   };

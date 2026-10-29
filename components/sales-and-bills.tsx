@@ -465,17 +465,22 @@ export function SalesAndBillsView({
     return effectiveBills.filter((b) => isBillInDateRange(b, activeRange.prior.start, activeRange.prior.end));
   }, [effectiveBills, activeRange]);
 
+  // Helper: strictly get how much was actually paid on the bill (excluding unpaid pending due)
+  const getBillRevenue = (b: Bill) => {
+    return b.paidAmount !== undefined ? b.paidAmount : (b.status === 'pending' ? 0 : b.total || 0);
+  };
+
   // Target Day Analytics Computations (Only Confirmed bills enter into revenue metrics)
   const targetRevenue = useMemo(() => {
     return targetBills
       .filter((b) => b.confirmationStatus !== 'Pending')
-      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+      .reduce((acc, b) => acc + getBillRevenue(b), 0);
   }, [targetBills]);
 
   const priorRevenue = useMemo(() => {
     return priorBills
       .filter((b) => b.confirmationStatus !== 'Pending')
-      .reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+      .reduce((acc, b) => acc + getBillRevenue(b), 0);
   }, [priorBills]);
 
   const targetCount = targetBills.length;
@@ -499,7 +504,7 @@ export function SalesAndBillsView({
     targetBills
       .filter((b) => b.confirmationStatus !== 'Pending')
       .forEach((b) => {
-        const amt = b.paidAmount || b.total || 0;
+        const amt = getBillRevenue(b);
         if (b.mode === 'Cash') cash += amt;
         else if (b.mode === 'Card') card += amt;
         else upi += amt; // UPI or default
@@ -581,8 +586,8 @@ export function SalesAndBillsView({
           const date = b.createdAt ? new Date(b.createdAt) : b.dateStr ? new Date(b.dateStr) : null;
           return date && date.getDay() === d.dayIdx;
         });
-        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
         return {
           key: d.key,
           label: d.label,
@@ -614,8 +619,8 @@ export function SalesAndBillsView({
           const h = getBillHour(b, idx);
           return h >= s.minH && h < s.maxH;
         });
-        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
         return {
           key: s.key,
           label: s.label,
@@ -651,8 +656,8 @@ export function SalesAndBillsView({
           const bh = getBillHour(b, idx);
           return item.h === 21 ? bh >= 21 : bh === item.h;
         });
-        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+        const targetRev = matchTarget.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
+        const priorRev = matchPrior.filter((b) => b.confirmationStatus !== 'Pending').reduce((acc, b) => acc + getBillRevenue(b), 0);
         return {
           key: item.key,
           label: item.label,

@@ -506,6 +506,7 @@ export default function HomePage() {
             shopName: dbLookup.shopName || 'StyleFleet Salon',
             staffId: dbLookup.staffId,
             stylistName: stylistDisplayName,
+            staffName: stylistDisplayName,
             stylistRole: 'Stylist',
             loginTime: new Date().toISOString(),
           })

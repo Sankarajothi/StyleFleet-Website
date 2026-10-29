@@ -20,6 +20,9 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
     reactivateCustomer,
     importCustomers,
     bills,
+    setBills,
+    createBill,
+    loggedInStaffName,
     appointments,
     setCurrentScreen,
     setBillCustName,
@@ -67,6 +70,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   // Settle Due Modal state
   const [settlingDueCust, setSettlingDueCust] = useState<Customer | null>(null);
   const [settleAmount, setSettleAmount] = useState<number>(0);
+  const [settleMode, setSettleMode] = useState<'Cash' | 'UPI' | 'Card'>('Cash');
 
   // Manual Add Form State
   const [formName, setFormName] = useState('');
@@ -369,11 +373,59 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
   const handleSettleDue = () => {
     if (!settlingDueCust) return;
     const currentDue = settlingDueCust.due || 0;
-    const payment = Math.min(currentDue, Math.max(0, settleAmount));
+    const payment = Math.min(currentDue, Math.max(0, Number(settleAmount)));
+    if (payment <= 0) {
+      showToast('Please enter a valid payment amount.', 'error');
+      return;
+    }
     const newDue = currentDue - payment;
 
-    updateCustomer(settlingDueCust.id, { due: newDue });
-    showToast(`Received ₹${payment} due payment for ${settlingDueCust.name}. Remaining: ₹${newDue}`);
+    // 1. Update customer record in state and DB
+    updateCustomer(settlingDueCust.id, {
+      due: newDue,
+      spend: (settlingDueCust.spend || 0) + payment,
+    });
+
+    // 2. Reduce unpaid bills' dueAmount for this customer
+    setBills((prev) => {
+      let remainingToDeduct = payment;
+      return prev.map((b) => {
+        const matchesCust =
+          (settlingDueCust.phone && b.phone === settlingDueCust.phone) ||
+          b.cust.toLowerCase() === settlingDueCust.name.toLowerCase();
+        if (matchesCust && (b.dueAmount || 0) > 0 && remainingToDeduct > 0) {
+          const deduct = Math.min(b.dueAmount || 0, remainingToDeduct);
+          remainingToDeduct -= deduct;
+          const updatedDue = (b.dueAmount || 0) - deduct;
+          const updatedPaid = (b.paidAmount || 0) + deduct;
+          return {
+            ...b,
+            dueAmount: updatedDue,
+            paidAmount: updatedPaid,
+            status: updatedDue <= 0 ? 'paid' : 'partially_paid',
+          };
+        }
+        return b;
+      });
+    });
+
+    // 3. Create a today revenue record so it strictly reflects in Today's Revenue and Accounts
+    createBill({
+      cust: settlingDueCust.name,
+      phone: settlingDueCust.phone || '',
+      items: [{ name: `Due Payment Clearance (${settlingDueCust.name})`, price: payment, qty: 1 }],
+      staff: role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile?.ownerName || 'Owner'),
+      total: payment,
+      paidAmount: payment,
+      dueAmount: 0,
+      mode: settleMode as any,
+      status: 'paid',
+      discount: 0,
+      tax: 0,
+      tip: 0,
+    });
+
+    showToast(`Received ₹${payment} payment via ${settleMode}. Remaining due: ₹${newDue}`);
     setSettlingDueCust(null);
   };
 
@@ -845,9 +897,20 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                       {c.visits ?? 0} {c.visits === 1 ? 'visit' : 'visits'}
                     </span>
                     {hasDue ? (
-                      <span className={`font-black text-[11px] ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
-                        Due ₹{c.due}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSettlingDueCust(c);
+                          setSettleAmount(c.due || 0);
+                          setSettleMode('Cash');
+                        }}
+                        className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 font-black text-[10px] flex items-center gap-1 cursor-pointer transition-transform active:scale-95"
+                        title="Click to clear or collect due"
+                      >
+                        <span>Due ₹{c.due}</span>
+                        <span className="text-[9px] underline text-amber-400 font-bold">Clear</span>
+                      </button>
                     ) : (
                       <span className="font-black text-[11px] text-[#D4AF37]">
                         ₹{(c.spend || 0).toLocaleString('en-IN')}
@@ -1204,6 +1267,31 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 </div>
               );
             })()}
+
+            {/* Quick Clear Due Banner if Outstanding Balance Exists */}
+            {historyCust.due && historyCust.due > 0 ? (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-rose-400 font-bold text-xs">Unpaid Balance: ₹{historyCust.due}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const c = historyCust;
+                    setHistoryCust(null);
+                    setSettlingDueCust(c);
+                    setSettleAmount(c.due || 0);
+                    setSettleMode('Cash');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs shadow-md transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Clear / Collect Due</span>
+                </button>
+              </div>
+            ) : null}
 
             {/* Client CRM Notes In Banner */}
             {historyCust.notes && (
@@ -1949,6 +2037,149 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                 openWhatsAppBill(viewingBillInvoice.phone, msg);
               }}
             />
+          </div>
+        </div>
+      )}
+      {/* ================= MODAL: COLLECT / CLEAR DUE PAYMENT ================= */}
+      {settlingDueCust && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            className={`p-6 rounded-3xl border max-w-md w-full space-y-5 shadow-2xl relative ${
+              isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-[#E2E8F0] text-[#1F2937]'
+            }`}
+          >
+            {/* Modal Header */}
+            <div className={`flex items-center justify-between pb-3 border-b ${isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'}`}>
+              <div>
+                <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Collect Client Due Payment
+                </h3>
+                <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                  {settlingDueCust.name} {settlingDueCust.phone ? `· +91 ${settlingDueCust.phone}` : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettlingDueCust(null)}
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Total Outstanding Due Badge */}
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-rose-400 block">
+                  Total Outstanding Due
+                </span>
+                <span className="text-2xl font-black text-rose-500">
+                  ₹{settlingDueCust.due || 0}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 block">Remaining Due</span>
+                <span className="text-lg font-black text-[#D4AF37]">
+                  ₹{Math.max(0, (settlingDueCust.due || 0) - (Number(settleAmount) || 0))}
+                </span>
+              </div>
+            </div>
+
+            {/* Amount Paid Now Input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className={`text-xs font-black ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Amount Paid Now (₹)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSettleAmount(settlingDueCust.due || 0)}
+                  className="text-[10px] font-bold text-[#D4AF37] hover:underline cursor-pointer"
+                >
+                  Pay Full (₹{settlingDueCust.due})
+                </button>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-black text-[#D4AF37]">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  max={settlingDueCust.due || 0}
+                  value={settleAmount === 0 ? '' : settleAmount}
+                  onChange={(e) => setSettleAmount(Math.max(0, Number(e.target.value)))}
+                  placeholder="Enter amount paid"
+                  className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border text-sm font-black outline-none transition-colors ${
+                    isDarkMode
+                      ? 'bg-[#0B1F44] border-[#2A3858] text-white focus:border-[#D4AF37]'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#D4AF37]'
+                  }`}
+                  autoFocus
+                />
+              </div>
+              <p className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {settleAmount < (settlingDueCust.due || 0)
+                  ? `Partial Payment: ₹${settleAmount} will be added to today's revenue, remaining ₹${Math.max(0, (settlingDueCust.due || 0) - settleAmount)} remains in credit due.`
+                  : `Full Clearance: ₹${settleAmount} will be added to today's revenue and the client's balance will be fully cleared.`}
+              </p>
+            </div>
+
+            {/* Payment Mode Selector: Cash / GPay / UPI / Card */}
+            <div className="space-y-1.5">
+              <label className={`text-xs font-black block ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                Payment Mode
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['Cash', 'UPI', 'Card'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setSettleMode(m)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      settleMode === m
+                        ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37] shadow-md shadow-amber-400/20'
+                        : isDarkMode
+                        ? 'bg-[#0B1F44] border-[#2A3858] text-slate-300 hover:text-white'
+                        : 'bg-slate-50 border-slate-300 text-slate-700 hover:text-black'
+                    }`}
+                  >
+                    <span>{m === 'UPI' ? 'GPay / UPI' : m}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setSettlingDueCust(null)}
+                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 hover:bg-white/5 text-slate-300'
+                    : 'border-slate-300 hover:bg-slate-100 text-slate-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSettleDue}
+                disabled={!settleAmount || settleAmount <= 0}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Confirm Payment (₹{settleAmount})</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

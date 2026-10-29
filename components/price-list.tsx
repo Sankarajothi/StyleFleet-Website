@@ -240,17 +240,33 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     });
   }, [services, priceListCatFilter, searchQuery]);
 
-  // Group services by Category for organized display
+  // Group services by Category for organized display (strictly deduplicated & normalized)
   const servicesByCategory = useMemo(() => {
     const groups: Record<string, ServiceItem[]> = {};
     filteredServices.forEach((s) => {
-      if (!groups[s.cat]) {
-        groups[s.cat] = [];
+      const rawCat = (s.cat || 'General').trim();
+      const canonicalCat = categories.find((c) => c.trim().toLowerCase() === rawCat.toLowerCase()) || rawCat;
+      if (!groups[canonicalCat]) {
+        groups[canonicalCat] = [];
       }
-      groups[s.cat].push(s);
+      groups[canonicalCat].push({ ...s, cat: canonicalCat });
     });
     return groups;
-  }, [filteredServices]);
+  }, [filteredServices, categories]);
+
+  // Clean deduplicated category list for filter pills
+  const deduplicatedCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    categories.forEach((c) => {
+      const trimmed = (c || '').trim();
+      if (trimmed && !seen.has(trimmed.toLowerCase())) {
+        seen.add(trimmed.toLowerCase());
+        list.push(trimmed);
+      }
+    });
+    return list;
+  }, [categories]);
 
   // Quick Price Increment / Decrement
   const handleAdjustPrice = (service: ServiceItem, delta: number) => {
@@ -1038,9 +1054,9 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
             </div>
           )}
 
-          {/* Category Filter Pills + Quick Add Category */}
+          {/* Category Filter Pills + Quick Add Category (Strictly Deduplicated) */}
           <div className="flex flex-wrap items-center gap-1.5">
-            {['All', ...categories].map((cat) => (
+            {['All', ...deduplicatedCategories].map((cat) => (
               <button
                 key={cat}
                 type="button"

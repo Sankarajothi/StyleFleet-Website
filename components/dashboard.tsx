@@ -215,11 +215,23 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
   const todayBills = effectiveBills.filter((b) => isBillToday(b));
 
   // Metrics Calculation: strictly from real database records with zero artificial additions
-  const totalRevenueNumber = effectiveBills.reduce((acc, b) => acc + (b.paidAmount || 0), 0);
-  const todayRevenueNumber = todayBills.reduce((acc, b) => acc + (b.paidAmount || 0), 0);
-  const totalPendingDues = isStylist
-    ? todayBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0)
-    : effectiveBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0) + customers.reduce((acc, c) => acc + (c.due || 0), 0);
+  const totalRevenueNumber = effectiveBills.reduce(
+    (acc, b) => acc + (b.paidAmount !== undefined ? b.paidAmount : (b.status === 'pending' ? 0 : b.total || 0)),
+    0
+  );
+  const todayRevenueNumber = todayBills.reduce(
+    (acc, b) => acc + (b.paidAmount !== undefined ? b.paidAmount : (b.status === 'pending' ? 0 : b.total || 0)),
+    0
+  );
+  // Outstanding dues: accurately calculated without double-counting bills and customers
+  const totalPendingDues = useMemo(() => {
+    if (isStylist) {
+      return todayBills.reduce((acc, b) => acc + Math.max(0, b.dueAmount || 0), 0);
+    }
+    const customerDues = customers.reduce((acc, c) => acc + Math.max(0, c.due || 0), 0);
+    const billDues = effectiveBills.filter((b) => !b.isDeleted).reduce((acc, b) => acc + Math.max(0, b.dueAmount || 0), 0);
+    return Math.max(customerDues, billDues);
+  }, [isStylist, todayBills, effectiveBills, customers]);
   const confirmedAppointments = effectiveAppointments.filter((a) => a.status === 'Confirmed');
 
   // Curated repeat clients dynamically derived from real customer database:

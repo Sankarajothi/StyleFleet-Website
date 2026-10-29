@@ -199,25 +199,55 @@ export function InvoiceTemplate({
         <style jsx global>{`
           @media print {
             @page {
-              margin: 6mm;
-              size: auto;
+              size: A4 portrait;
+              margin: 8mm 10mm;
             }
-            body {
+            html, body {
               background: #ffffff !important;
               color: #0F1A36 !important;
               margin: 0 !important;
               padding: 0 !important;
+              height: auto !important;
+              overflow: visible !important;
+            }
+            body * {
+              visibility: hidden !important;
             }
             .no-print {
               display: none !important;
             }
+            #printable-luxury-invoice,
+            #printable-luxury-invoice * {
+              visibility: visible !important;
+            }
             #printable-luxury-invoice {
-              box-shadow: none !important;
-              border: none !important;
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              right: 0 !important;
               width: 100% !important;
-              max-width: 100% !important;
-              margin: 0 !important;
-              border-radius: 0 !important;
+              max-width: 780px !important;
+              margin: 0 auto !important;
+              padding: 0 !important;
+              box-shadow: none !important;
+              border: 1px solid #E2E8F0 !important;
+              border-radius: 16px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: avoid !important;
+            }
+            #printable-luxury-invoice h1 {
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
+            }
+            [data-ui="invoice-table-header"],
+            [data-ui="invoice-table-header"] * {
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
+            }
+            [data-ui="invoice-table-header"] [data-ui="amount-col"] {
+              color: #D4A515 !important;
+              -webkit-text-fill-color: #D4A515 !important;
             }
           }
         `}</style>
@@ -246,7 +276,10 @@ export function InvoiceTemplate({
                 )}
               </div>
               <div className="space-y-0.5">
-                <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                <h1
+                  className="text-lg sm:text-2xl font-black text-white tracking-tight"
+                  style={{ color: '#ffffff' }}
+                >
                   {shopProfile.shopName || 'StyleFleet Salon'}
                 </h1>
                 <p className="text-xs text-slate-300">
@@ -341,20 +374,21 @@ export function InvoiceTemplate({
         </div>
 
         {/* 4. SERVICES TABLE (FULLY RESPONSIVE ON MOBILE & DESKTOP) */}
-        <div className="px-4 sm:px-8 pt-4 sm:pt-5">
+        <div className="px-4 sm:px-8 pt-3 sm:pt-4">
           <div className="w-full">
             {/* Table Header Bar */}
             <div
               data-ui="invoice-table-header"
-              className="bg-[#0F1A36] text-white rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 flex items-center text-[10px] sm:text-xs font-black uppercase tracking-wider"
+              className="bg-[#0F1A36] text-white rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 flex items-center text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-sm"
               style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
             >
-              <div className="flex-1">SERVICE</div>
-              <div className="hidden sm:block sm:w-36 text-left">STAFF</div>
-              <div className="w-12 sm:w-16 text-center">QTY</div>
-              <div className="w-16 sm:w-24 text-right">PRICE</div>
+              <div className="flex-1 min-w-0 font-black text-white" style={{ color: '#ffffff' }}>SERVICE</div>
+              <div className="hidden sm:block sm:w-28 text-left font-black text-white" style={{ color: '#ffffff' }}>STAFF</div>
+              <div className="w-10 sm:w-14 text-center font-black text-white shrink-0" style={{ color: '#ffffff' }}>QTY</div>
+              <div className="w-14 sm:w-20 text-right font-black text-white shrink-0" style={{ color: '#ffffff' }}>PRICE</div>
               <div
-                className="w-18 sm:w-24 text-right text-[#D4A515]"
+                data-ui="amount-col"
+                className="w-16 sm:w-22 text-right text-[#D4A515] font-black shrink-0"
                 style={{ color: '#D4A515' }}
               >
                 AMOUNT
@@ -373,22 +407,22 @@ export function InvoiceTemplate({
                   return (
                     <div
                       key={idx}
-                      className="px-3 sm:px-4 py-3 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
+                      className="px-3 sm:px-4 py-2 sm:py-2.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
                     >
-                      <div className="flex-1 pr-2">
-                        <span className="font-bold text-slate-900 block">{item.name}</span>
+                      <div className="flex-1 min-w-0 pr-1">
+                        <span className="font-bold text-slate-900 block truncate">{item.name}</span>
                         <span className="sm:hidden text-[10px] text-slate-500 font-medium">By {itemStaff}</span>
                       </div>
-                      <div className="hidden sm:block sm:w-36 text-left text-slate-600 font-medium">
+                      <div className="hidden sm:block sm:w-28 text-left text-slate-600 font-medium truncate">
                         {itemStaff}
                       </div>
-                      <div className="w-12 sm:w-16 text-center font-bold text-slate-800">
+                      <div className="w-10 sm:w-14 text-center font-bold text-slate-800 shrink-0">
                         {itemQty}
                       </div>
-                      <div className="w-16 sm:w-24 text-right text-slate-700 font-mono text-[11px] sm:text-xs">
+                      <div className="w-14 sm:w-20 text-right text-slate-700 font-mono text-[11px] sm:text-xs shrink-0">
                         ₹{itemPrice}
                       </div>
-                      <div className="w-18 sm:w-24 text-right font-black text-slate-900 font-mono">
+                      <div className="w-16 sm:w-22 text-right font-black text-slate-900 font-mono shrink-0">
                         ₹{itemTotal}
                       </div>
                     </div>
@@ -579,14 +613,7 @@ export function InvoiceTemplate({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const customPdf = (bill as any).pdfUrl || (bill as any).pdf_url;
-                    if (customPdf) {
-                      window.open(customPdf, '_blank');
-                    } else {
-                      handlePrint();
-                    }
-                  }}
+                  onClick={handlePrint}
                   className="py-2 px-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
                   title="Save or Download Invoice as PDF"
                 >

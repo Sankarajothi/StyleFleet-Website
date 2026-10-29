@@ -558,15 +558,19 @@ export const WhatsAppMarketingView: React.FC = () => {
               <div
                 key={camp.id}
                 className={`p-5 rounded-3xl border flex flex-col justify-between space-y-4 shadow-sm transition-all ${
-                  isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50' : 'bg-white border-slate-200 hover:border-[#D4AF37]'
+                  isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50' : 'bg-white border-slate-300 shadow-md hover:border-[#D4AF37]'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold uppercase">
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-black uppercase tracking-wider ${
+                      isDarkMode
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                        : 'bg-amber-100 border-amber-300 text-amber-900'
+                    }`}>
                       {camp.badge}
                     </span>
-                    <span className="text-xs font-black text-[#D4AF37]">
+                    <span className={`text-xs font-black ${isDarkMode ? 'text-[#D4AF37]' : 'text-amber-800'}`}>
                       {camp.count} Clients
                     </span>
                   </div>
@@ -574,12 +578,16 @@ export const WhatsAppMarketingView: React.FC = () => {
                   <h4 className={`text-sm font-black mt-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     {camp.title}
                   </h4>
-                  <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                  <p className={`text-xs mt-1 leading-relaxed ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-700 font-medium'}`}>
                     {camp.desc}
                   </p>
 
-                  <div className="mt-3 p-3 rounded-xl bg-black/20 border border-white/5 text-[11px] text-slate-300 leading-snug">
-                    <p className="line-clamp-3 italic">
+                  <div className={`mt-3 p-3.5 rounded-xl border text-[11px] leading-snug ${
+                    isDarkMode
+                      ? 'bg-black/30 border-white/5 text-slate-200'
+                      : 'bg-amber-50/90 border-amber-200/80 text-slate-800 shadow-inner'
+                  }`}>
+                    <p className={`line-clamp-3 italic font-medium ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                       &quot;{camp.message.replace(/{shopName}/g, shopProfile.shopName || 'StyleFleet')}&quot;
                     </p>
                   </div>

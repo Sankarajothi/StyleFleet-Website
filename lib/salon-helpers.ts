@@ -277,14 +277,16 @@ export function buildOfficialWhatsAppBillMessage(params: {
     socialLinks,
   } = params;
 
+  const rawInv = (invoiceNumber || billId || '').trim();
+  const shortId = billId ? billId.replace(/-/g, '').slice(0, 4) : '';
+  const cleanInvKey = rawInv.toLowerCase().endsWith('.pdf')
+    ? rawInv
+    : (shortId ? `${rawInv}_${shortId}.pdf` : `${rawInv}.pdf`);
+
   let billPdfUrl = (pdfUrl || '').trim();
-  if (!billPdfUrl) {
-    const rawInv = (invoiceNumber || billId || '').trim();
-    const shortId = billId ? billId.replace(/-/g, '').slice(0, 4) : '';
-    const filename = rawInv.toLowerCase().endsWith('.pdf')
-      ? rawInv
-      : (shortId ? `${rawInv}_${shortId}.pdf` : `${rawInv}.pdf`);
-    billPdfUrl = `https://stylefleet.tecstellar.com/b/${encodeURIComponent(filename)}`;
+  // If no pdfUrl or it points to raw supabase storage bucket which causes NoSuchKey 404, use the official digital bill web link
+  if (!billPdfUrl || billPdfUrl.includes('supabase.co/storage') || billPdfUrl.includes('NoSuchKey')) {
+    billPdfUrl = `https://stylefleet.tecstellar.com/b/${encodeURIComponent(cleanInvKey)}`;
   }
   const cleanShopPhone = (shopPhone || '').replace(/\D/g, '').slice(-10);
 

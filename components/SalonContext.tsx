@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Language, TranslationDictionary, useTranslationHelper } from '@/lib/translations';
 import { getShopPrefixFromShopName, formatInvoiceNumber } from '@/lib/salon-helpers';
 import {
@@ -216,6 +217,7 @@ interface SalonContextType {
   markArrivedAndBill: (appt: Appointment) => void;
 
   bills: Bill[];
+  setBills: React.Dispatch<React.SetStateAction<Bill[]>>;
   createBill: (bill: Omit<Bill, 'id' | 'dateStr' | 'isDeleted' | 'isToday'>, customDateStr?: string, customIsToday?: boolean) => Bill;
   editBill: (id: string, updated: Partial<Bill>) => void;
   deleteBill: (id: string) => void;
@@ -371,12 +373,13 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ]);
 
   const addCategory = (cat: string) => {
-    if (!cat || categories.includes(cat)) return;
-    setCategories((prev) => [...prev, cat]);
+    const trimmed = (cat || '').trim();
+    if (!trimmed || categories.some((c) => c.trim().toLowerCase() === trimmed.toLowerCase())) return;
+    setCategories((prev) => [...prev, trimmed]);
     if (currentShopId) {
-      saveCategoryToDb(currentShopId, cat);
+      saveCategoryToDb(currentShopId, trimmed);
     }
-    showToast(`Category "${cat}" added!`);
+    showToast(`Category "${trimmed}" added!`);
   };
 
   const editCategory = (oldCat: string, newCat: string) => {
@@ -718,12 +721,27 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentStylistMember = useMemo(() => {
     if (role !== 'stylist') return null;
+    let session: any = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('stylefleet_auth_session');
+        if (raw) session = JSON.parse(raw);
+      } catch {}
+    }
+    const targetName = (loggedInStaffName || session?.staffName || session?.stylistName || '').trim().toLowerCase();
+    const targetPhone = (session?.phone || '').replace(/\D/g, '').slice(-10);
+    const targetId = session?.staffId;
+
     return (
-      staff.find(
-        (s) =>
-          loggedInStaffName &&
-          s.name.trim().toLowerCase() === loggedInStaffName.trim().toLowerCase()
-      ) || null
+      staff.find((s) => {
+        if (targetId && s.id === targetId) return true;
+        if (targetPhone && s.phone) {
+          const cleanP = s.phone.replace(/\D/g, '').slice(-10);
+          if (cleanP === targetPhone) return true;
+        }
+        if (targetName && s.name && s.name.trim().toLowerCase() === targetName) return true;
+        return false;
+      }) || (staff.length === 1 ? staff[0] : null)
     );
   }, [role, staff, loggedInStaffName]);
 
@@ -1063,7 +1081,9 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           activeSession = JSON.parse(authSessionStr);
           if (activeSession.role) setRole(activeSession.role);
-          if (activeSession.staffName) setLoggedInStaffName(activeSession.staffName);
+          if (activeSession.staffName || activeSession.stylistName) {
+            setLoggedInStaffName(activeSession.staffName || activeSession.stylistName);
+          }
         } catch {}
       }
 
@@ -1150,6 +1170,66 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsHydrated(true);
     }
   }, []);
+
+  // Real-time synchronization of stylist permissions from Supabase
+  useEffect(() => {
+    if (!currentShopId) return;
+
+    const handleSyncStaff = async () => {
+      try {
+        const { data: staffRows } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('shop_id', currentShopId)
+          .order('created_at', { ascending: true });
+
+        if (staffRows && staffRows.length > 0) {
+          setStaff((prev) => {
+            return staffRows.map((st) => {
+              const perms: string[] = [];
+              if (st.permissions && typeof st.permissions === 'object') {
+                const p = st.permissions as Record<string, any>;
+                if (p.customers) perms.push('customers');
+                if (p.sales) perms.push('sales');
+                if (p.appointments) perms.push('appointments');
+                if (p.reminders) perms.push('reminders');
+                if (p.expenses) perms.push('expenses');
+                if (p.reports) perms.push('reports');
+                if (p.team) perms.push('team');
+                if (p.profile) perms.push('profile');
+                if (p.past_expenses || p.expensesHistory) perms.push('past_expenses');
+                if (p.full_reports || p.reportsHistory) perms.push('full_reports');
+                if (p.share_bills || p.shareBills) perms.push('share_bills');
+              }
+              const effectivePerms = perms.length > 0 ? perms : ['customers', 'sales', 'appointments', 'reminders'];
+              const existing = prev.find((s) => s.id === st.id);
+              return {
+                id: st.id,
+                name: st.name,
+                role: st.role || 'Stylist',
+                phone: st.phone,
+                rev: existing?.rev || 0,
+                count: existing?.count || 0,
+                rating: st.rating || '5.0',
+                chair: existing?.chair || 'Available',
+                status: st.is_active ? 'active' : 'inactive',
+                invited: st.invitation_status === 'accepted' || st.invitation_status === 'invited',
+                permissions: effectivePerms,
+              };
+            });
+          });
+        }
+      } catch {}
+    };
+
+    window.addEventListener('focus', handleSyncStaff);
+    const syncInterval = setInterval(handleSyncStaff, 10000);
+
+    return () => {
+      window.removeEventListener('focus', handleSyncStaff);
+      clearInterval(syncInterval);
+    };
+  }, [currentShopId]);
 
   // Continuous integrity: Synchronize bills and appointments strictly with registered salon stylists
   useEffect(() => {
@@ -1415,6 +1495,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteAppointment,
         markArrivedAndBill,
         bills,
+        setBills,
         createBill,
         editBill,
         deleteBill,
