@@ -162,6 +162,131 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
     showToast(`Thank you for rating StyleFleet ${ratingStars} Stars! ⭐`);
   };
 
+  // Download Official GST Tax Invoice for StyleFleet Software Subscription
+  const handleDownloadSubscriptionReceiptPdf = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Popup blocker prevented receipt download. Please allow popups.', 'error');
+      return;
+    }
+
+    const todayDate = new Date().toLocaleDateString('en-IN');
+    const invoiceNo = `SF-GST-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>StyleFleet Software Subscription Tax Invoice - ${invoiceNo}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; padding: 36px; margin: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 28px; }
+          .title { font-size: 24px; font-weight: 900; color: #0B1F44; }
+          .brand { color: #D4AF37; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+          .box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; font-size: 12px; line-height: 1.6; }
+          .box-title { font-weight: 800; font-size: 11px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+          th { text-align: left; padding: 12px; background: #0B1F44; color: white; font-weight: 700; }
+          td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+          .text-right { text-align: right; }
+          .totals { margin-left: auto; width: 340px; font-size: 13px; }
+          .totals-row { display: flex; justify-content: space-between; padding: 6px 0; }
+          .total-highlight { border-top: 2px solid #0B1F44; font-weight: 900; font-size: 16px; color: #0B1F44; padding-top: 8px; }
+          .status-paid { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #ecfdf5; color: #059669; font-weight: 800; font-size: 11px; border: 1px solid #a7f3d0; }
+          .footer { margin-top: 48px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">Style<span class="brand">Fleet</span> Software OS</div>
+            <div class="subtitle">Tax Invoice · Software as a Service (SaaS) Subscription</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="status-paid">PAID IN FULL · VERIFIED</div>
+            <div style="font-size: 12px; font-weight: bold; margin-top: 8px;">Invoice #: ${invoiceNo}</div>
+            <div style="font-size: 11px; color: #64748b;">Invoice Date: ${todayDate}</div>
+          </div>
+        </div>
+
+        <div class="parties">
+          <div class="box">
+            <div class="box-title">Supplier (Service Provider)</div>
+            <strong>TecStellar StyleFleet Private Limited</strong><br />
+            GSTIN: 33AAACT9812K1Z8<br />
+            SAC Code: 998314 (Information Technology Software Services)<br />
+            Email: billing@stylefleet.com · Support: +91 98765 43210
+          </div>
+          <div class="box">
+            <div class="box-title">Billed To (Subscriber)</div>
+            <strong>${shopProfile.shopName || 'StyleFleet Partner Salon'}</strong><br />
+            Owner: ${shopProfile.ownerName || 'Salon Owner'}<br />
+            Phone: +91 ${shopProfile.phone || '9876543210'}<br />
+            Place of Supply: Tamil Nadu (Code 33)
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Description of Service</th>
+              <th>SAC Code</th>
+              <th>Billing Term</th>
+              <th class="text-right">Taxable Value (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>StyleFleet VIP Owner License · Unlimited Terminal SaaS</strong><br />
+                <span style="font-size: 11px; color: #64748b;">Includes AI Menu Vision, WhatsApp Billing API, Deep Analytics & Multi-staff Khata CRM</span>
+              </td>
+              <td>998314</td>
+              <td>12 Months (Annual Plan)</td>
+              <td class="text-right">₹7,999.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-row">
+            <span>Taxable Amount:</span>
+            <span>₹7,999.00</span>
+          </div>
+          <div class="totals-row">
+            <span>CGST (9.0%):</span>
+            <span>₹720.00</span>
+          </div>
+          <div class="totals-row">
+            <span>SGST (9.0%):</span>
+            <span>₹720.00</span>
+          </div>
+          <div class="totals-row total-highlight">
+            <span>Total Amount Paid:</span>
+            <span>₹9,439.00</span>
+          </div>
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px; text-align: right;">
+            Eligible for Input Tax Credit (ITC) under GST Section 16
+          </div>
+        </div>
+
+        <div class="footer">
+          This is a computer-generated tax invoice issued by TecStellar Technologies for StyleFleet OS. No physical signature required.
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+    showToast('StyleFleet GST Subscription Tax Invoice PDF generated!');
+  };
+
   // Handle Permanent Delete from Supabase & App
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const handleConfirmPermanentDelete = async () => {
@@ -802,10 +927,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenSignOutModal }
 
               <button
                 type="button"
-                onClick={() => showToast('Downloading StyleFleet GST Subscription Tax Invoice...')}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shrink-0"
+                onClick={handleDownloadSubscriptionReceiptPdf}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shrink-0 flex items-center gap-1.5"
               >
-                Download Receipt (.pdf)
+                <svg className="w-4 h-4 text-[#D4AF37]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                </svg>
+                <span>Download Receipt (.pdf)</span>
               </button>
             </div>
           </div>

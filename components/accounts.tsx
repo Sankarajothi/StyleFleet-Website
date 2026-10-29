@@ -143,11 +143,12 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
   const marginPct = totalInflow > 0 ? Math.round((netProfit / totalInflow) * 100) : 0;
   const totalPendingDues = filteredBills.reduce((acc, b) => acc + (b.dueAmount || 0), 0);
 
-  // Export Financial Ledger as CSV
+  // Export Financial Ledger as CSV (Excel compatible with UTF-8 BOM)
   const handleExportCSV = () => {
     const csvRows: string[] = [];
-    csvRows.push('STYLEFLEET SALON OS - ACCOUNTS & FINANCIAL LEDGER');
-    csvRows.push(`Period: ${selectedPeriod.toUpperCase()}, Generated At: ${new Date().toLocaleString()}`);
+    csvRows.push('\uFEFFSTYLEFLEET SALON OS - ACCOUNTS & FINANCIAL LEDGER');
+    csvRows.push(`Salon: "${shopProfile.shopName || 'StyleFleet Salon'}"`);
+    csvRows.push(`Period: ${selectedPeriod.toUpperCase()}, Generated At: ${new Date().toLocaleString('en-IN')}`);
     csvRows.push('');
     csvRows.push('PROFIT & LOSS SUMMARY');
     csvRows.push(`Gross Sales (INR),${grossSales}`);
@@ -186,8 +187,109 @@ export const AccountsView: React.FC<AccountsViewProps> = () => {
     showToast('Financial ledger (.csv) exported successfully!');
   };
 
+  // Export Financial Ledger as Printable PDF Statement
   const handleExportPDF = () => {
-    window.print();
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Popup blocker prevented PDF generation. Please allow popups.', 'error');
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>StyleFleet Accounts Statement - ${selectedPeriod.toUpperCase()}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; padding: 32px; margin: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; }
+          .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+          .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+          .card-title { font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+          .card-val { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 6px; }
+          .section-title { font-size: 16px; font-weight: 700; margin: 24px 0 12px; color: #0f172a; border-left: 4px solid #D4AF37; padding-left: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+          th { text-align: left; padding: 10px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-weight: 700; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          .text-right { text-align: right; }
+          .gold { color: #8C6239; font-weight: 800; }
+          .rose { color: #e11d48; font-weight: 700; }
+          .emerald { color: #059669; font-weight: 800; }
+          .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${shopProfile.shopName || 'StyleFleet Salon'}</div>
+            <div class="subtitle">Official Financial Accounts & Expenses Statement · ${selectedPeriod.toUpperCase()}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: bold;">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+            <div style="font-size: 11px; color: #64748b;">Phone: +91 ${shopProfile.phone || '9876543210'}</div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="card">
+            <div class="card-title">Gross Sales Revenue</div>
+            <div class="card-val gold">₹${grossSales.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Total Operating Expenses</div>
+            <div class="card-val rose">₹${operatingExpenses.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Net Operating Profit</div>
+            <div class="card-val emerald">₹${netProfit.toLocaleString('en-IN')} (${marginPct}%)</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Outstanding Khata Dues</div>
+            <div class="card-val">₹${totalPendingDues.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Itemized Operating Expenses (${filteredExpenses.length} entries)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description / Note</th>
+              <th>Paid Via</th>
+              <th>Staff / Attribution</th>
+              <th class="text-right">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredExpenses.map(e => `
+              <tr>
+                <td>${e.date || todayIso}</td>
+                <td><strong>${e.cat}</strong></td>
+                <td>${e.note || 'General expense'}</td>
+                <td>${e.pm || 'Cash'}</td>
+                <td>${e.staff || 'Salon General'}</td>
+                <td class="text-right rose">₹${Number(e.amount || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated automatically by StyleFleet Web Salon Management Platform · Official Financial Ledger
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+    showToast('Financial statement PDF generated!');
   };
 
   // Open Modal for Add

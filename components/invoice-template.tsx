@@ -559,18 +559,24 @@ export function InvoiceTemplate({
                   </svg>
                   <span>Print</span>
                 </button>
-                <a
-                  href={(bill as any).pdfUrl || (bill as any).pdf_url || `https://stylefleet.tecstellar.com/b/${encodeURIComponent(bill.id)}.pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    const customPdf = (bill as any).pdfUrl || (bill as any).pdf_url;
+                    if (customPdf) {
+                      window.open(customPdf, '_blank');
+                    } else {
+                      handlePrint();
+                    }
+                  }}
                   className="py-2 px-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-                  title="View / Download PDF"
+                  title="Save or Download Invoice as PDF"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <span>PDF</span>
-                </a>
+                </button>
               </div>
               <button
                 type="button"

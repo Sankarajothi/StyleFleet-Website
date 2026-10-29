@@ -644,7 +644,7 @@ export function ReportsView() {
     return Object.values(daysMap);
   }, [startDay, endDay, selectedMonthBills, selectedMonthExpenses]);
 
-  // Download Monthly Report Action
+  // Download Monthly Report Action (Excel / CSV)
   const handleDownloadMonthlyReport = () => {
     let csv = `\uFEFFStyleFleet Executive Monthly Summary Report\n`;
     csv += `Salon:,"${shopProfile.shopName || 'StyleFleet Salon'}"\n`;
@@ -677,6 +677,105 @@ export function ReportsView() {
     link.click();
     document.body.removeChild(link);
     showToast(`Downloaded monthly report for ${monthNames[selectedMonth]} ${selectedYear}!`);
+  };
+
+  // Generate Monthly PDF Action
+  const handleGenerateMonthlyPdf = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Popup blocker prevented report generation. Please allow popups.', 'error');
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>StyleFleet Monthly Report - ${monthNames[selectedMonth]} ${selectedYear}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; padding: 32px; margin: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; }
+          .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+          .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+          .card-title { font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+          .card-val { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 6px; }
+          .section-title { font-size: 16px; font-weight: 700; margin: 24px 0 12px; color: #0f172a; border-left: 4px solid #D4AF37; padding-left: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+          th { text-align: left; padding: 10px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-weight: 700; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          .text-right { text-align: right; }
+          .gold { color: #8C6239; font-weight: 800; }
+          .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${shopProfile.shopName || 'StyleFleet Salon'}</div>
+            <div class="subtitle">Executive Monthly Summary Report · ${monthNames[selectedMonth]} ${selectedYear}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: bold;">Generated on: ${new Date().toLocaleDateString('en-IN')}</div>
+            <div style="font-size: 11px; color: #64748b;">Phone: +91 ${shopProfile.phone || '9876543210'}</div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="card">
+            <div class="card-title">Monthly Net Profit</div>
+            <div class="card-val gold">₹${monthlyNetProfit.toLocaleString('en-IN')} (${monthlyMargin}%)</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Total Revenue Collected</div>
+            <div class="card-val">₹${monthlySales.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Monthly Outflow Expenses</div>
+            <div class="card-val">₹${monthlyExpenses.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Customer Outstanding Khata</div>
+            <div class="card-val">₹${monthlyOutstanding.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Day-by-Day Monthly Performance Trend</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-right">Sales Collected (₹)</th>
+              <th class="text-right">Expenses Outflow (₹)</th>
+              <th class="text-right">Net Daily Margin (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${monthlyDayBreakdown.map((d) => `
+              <tr>
+                <td><strong>${d.day} ${monthNames[selectedMonth]} ${selectedYear}</strong></td>
+                <td class="text-right">₹${d.sales.toLocaleString('en-IN')}</td>
+                <td class="text-right">₹${d.expenses.toLocaleString('en-IN')}</td>
+                <td class="text-right gold">₹${(d.sales - d.expenses).toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated automatically by StyleFleet Web Salon Management Platform · Confidential Business Audit
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+    showToast(`Monthly PDF report generated for ${monthNames[selectedMonth]} ${selectedYear}!`);
   };
 
   return (
@@ -1267,17 +1366,34 @@ export function ReportsView() {
               </div>
             </div>
 
-            {/* DOWNLOAD MONTHLY REPORT BUTTON */}
-            <button
-              type="button"
-              onClick={handleDownloadMonthlyReport}
-              className="px-6 py-3 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shadow-md shrink-0"
-            >
-              <svg className="w-4 h-4 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>Download Monthly Report ({monthNames[selectedMonth]} {selectedYear})</span>
-            </button>
+            {/* DOWNLOAD MONTHLY REPORT BUTTONS (PDF & EXCEL) */}
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <button
+                type="button"
+                onClick={handleGenerateMonthlyPdf}
+                className="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shadow-md"
+                title="Generate printable monthly PDF statement"
+              >
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                </svg>
+                <span>Generate Monthly PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadMonthlyReport}
+                className="px-5 py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shadow-md"
+                title="Download monthly Excel (.csv) spreadsheet"
+              >
+                <svg className="w-4 h-4 text-[#0B1F44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Download Monthly Excel</span>
+              </button>
+            </div>
           </div>
 
           {/* Complete Performance Overview Banner */}

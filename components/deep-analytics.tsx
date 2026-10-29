@@ -759,34 +759,203 @@ export function DeepAnalyticsView() {
     showToast('All intelligence filters reset to Today');
   };
 
-  // Export Executive Summary to CSV
+  // Export Executive Summary to CSV (Excel with UTF-8 BOM)
   const handleExportCSV = () => {
-    const headers = ['Metric', 'Value', 'Active Period', 'Active Stylist', 'Active Expense Cat'];
-    const rows = [
-      ['Gross Sales Revenue (INR)', grossSales, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Salon Operating Expenses (INR)', totalExpensesAmt, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Net Salon Profit (INR)', netProfit, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Profit Margin (%)', `${profitMarginPct}%`, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Best Peak Day in History', bestDay ? `${bestDay.displayDate} (INR ${bestDay.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Best Week in History', bestWeek ? `${bestWeek.label} (INR ${bestWeek.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Best Peak Hour Slot', bestPeakHour ? `${bestPeakHour.label} (INR ${bestPeakHour.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Peak Day of Week', `${dayOfWeekAnalytics.peakDay.day} (INR ${dayOfWeekAnalytics.peakDay.rev})`, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Mostly Used Expense Category', expenseCategoryAnalytics.mostFrequentCat ? `${expenseCategoryAnalytics.mostFrequentCat.cat} (${expenseCategoryAnalytics.mostFrequentCat.count} entries)` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Highest Cost Center Category', expenseCategoryAnalytics.highestSpendCat ? `${expenseCategoryAnalytics.highestSpendCat.cat} (INR ${expenseCategoryAnalytics.highestSpendCat.totalAmount})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Total Outstanding Customer Khata (INR)', totalOutstandingDues, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Clients with Pending Balances', debtorClients.length, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Top Stylist by Revenue', staffPerformanceList[0]?.name || 'N/A', period.toUpperCase(), selectedStylist, selectedPaymentMode],
-    ];
+    let csv = `\uFEFFSTYLEFLEET SALON INTELLIGENCE & BUSINESS EXECUTIVE REPORT\n`;
+    csv += `Salon:,"${shopProfile.shopName || 'StyleFleet Salon'}"\n`;
+    csv += `Period:,"${period.toUpperCase()}"\n`;
+    csv += `Generated:,"${new Date().toLocaleString('en-IN')}"\n\n`;
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encoded = encodeURI(csvContent);
+    csv += `1. EXECUTIVE P&L & PEAK MILESTONES\n`;
+    csv += `Metric,Value,Period Context\n`;
+    csv += `Gross Sales Revenue (INR),${grossSales},${period.toUpperCase()}\n`;
+    csv += `Salon Operating Expenses (INR),${totalExpensesAmt},${period.toUpperCase()}\n`;
+    csv += `Net Salon Profit (INR),${netProfit},${period.toUpperCase()}\n`;
+    csv += `Profit Margin %,${profitMarginPct}%,${period.toUpperCase()}\n`;
+    csv += `Best Peak Day in History,"${bestDay ? `${bestDay.displayDate} (INR ${bestDay.rev})` : 'N/A'}",${period.toUpperCase()}\n`;
+    csv += `Best Week in History,"${bestWeek ? `${bestWeek.label} (INR ${bestWeek.rev})` : 'N/A'}",${period.toUpperCase()}\n`;
+    csv += `Best Peak Hour Slot,"${bestPeakHour ? `${bestPeakHour.label} (INR ${bestPeakHour.rev})` : 'N/A'}",${period.toUpperCase()}\n`;
+    csv += `Peak Day of Week,"${dayOfWeekAnalytics.peakDay.day} (INR ${dayOfWeekAnalytics.peakDay.rev})",${period.toUpperCase()}\n`;
+    csv += `Mostly Used Expense Category,"${expenseCategoryAnalytics.mostFrequentCat ? `${expenseCategoryAnalytics.mostFrequentCat.cat} (${expenseCategoryAnalytics.mostFrequentCat.count} entries)` : 'N/A'}",${period.toUpperCase()}\n`;
+    csv += `Highest Cost Center Category,"${expenseCategoryAnalytics.highestSpendCat ? `${expenseCategoryAnalytics.highestSpendCat.cat} (INR ${expenseCategoryAnalytics.highestSpendCat.totalAmount})` : 'N/A'}",${period.toUpperCase()}\n`;
+    csv += `Total Outstanding Customer Khata (INR),${totalOutstandingDues},${period.toUpperCase()}\n`;
+    csv += `Clients with Pending Balances,${debtorClients.length},${period.toUpperCase()}\n\n`;
+
+    csv += `2. STYLIST PERFORMANCE LEADERBOARD\n`;
+    csv += `Rank,Stylist Name,Role,Station,Revenue (INR),Bills Count,Avg Ticket (INR),Upsell %,Repeat %,Net to Salon (INR)\n`;
+    staffPerformanceList.forEach((st, idx) => {
+      csv += `${idx + 1},"${st.name}","${st.role}","${st.chair}",${st.revenue},${st.billsCount},${st.avgBill},${st.upsellRate}%,${st.repeatClientRate}%,${st.netToSalon}\n`;
+    });
+    csv += `\n`;
+
+    csv += `3. EXPENSE CATEGORIES BREAKDOWN\n`;
+    csv += `Category,Total Spent (INR),Frequency Count,Spend Share %,Avg Per Entry (INR),Highest Single (INR)\n`;
+    expenseCategoryAnalytics.categories.forEach((c) => {
+      csv += `"${c.cat}",${c.totalAmount},${c.count},${c.pctSpend}%,${c.avgPerEntry},${c.highestSingle}\n`;
+    });
+    csv += `\n`;
+
+    csv += `4. OUTSTANDING CUSTOMER KHATA BALANCES\n`;
+    csv += `Client Name,Phone,Visits,Lifetime Spend (INR),Pending Due (INR),Last Visit\n`;
+    debtorClients.forEach((c) => {
+      csv += `"${c.name}","+91 ${c.phone}",${c.visits || 1},${c.spend || 0},${c.due || 0},"${c.lastVisit || todayStr}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encoded);
+    link.href = url;
     link.setAttribute('download', `salon_intelligence_${period}_${todayStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Salon Intelligence executive CSV downloaded!');
+    URL.revokeObjectURL(url);
+    showToast('Salon Intelligence executive Excel (.csv) downloaded!');
+  };
+
+  // Generate Executive Intelligence PDF Report
+  const handleGeneratePdf = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Popup blocker prevented PDF generation. Please allow popups.', 'error');
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>StyleFleet Salon Intelligence - ${period.toUpperCase()}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; padding: 32px; margin: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; }
+          .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+          .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+          .card-title { font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+          .card-val { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 6px; }
+          .section-title { font-size: 16px; font-weight: 700; margin: 24px 0 12px; color: #0f172a; border-left: 4px solid #D4AF37; padding-left: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+          th { text-align: left; padding: 10px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-weight: 700; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          .text-right { text-align: right; }
+          .gold { color: #8C6239; font-weight: 800; }
+          .rose { color: #e11d48; font-weight: 700; }
+          .emerald { color: #059669; font-weight: 800; }
+          .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${shopProfile.shopName || 'StyleFleet Salon'}</div>
+            <div class="subtitle">Salon Intelligence & Executive Audit Report · ${period.toUpperCase()}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: bold;">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+            <div style="font-size: 11px; color: #64748b;">Phone: +91 ${shopProfile.phone || '9876543210'}</div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="card">
+            <div class="card-title">Gross Billed Sales</div>
+            <div class="card-val gold">₹${grossSales.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Operating Expenses</div>
+            <div class="card-val rose">₹${totalExpensesAmt.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Net Salon Profit</div>
+            <div class="card-val emerald">₹${netProfit.toLocaleString('en-IN')} (${profitMarginPct}%)</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Pending Khata Dues</div>
+            <div class="card-val">₹${totalOutstandingDues.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Peak Milestones & Outflow Highlights</div>
+        <table>
+          <tbody>
+            <tr><td><strong>🌟 Best Peak Day</strong></td><td>${bestDay ? `${bestDay.displayDate} (₹${bestDay.rev.toLocaleString('en-IN')}, ${bestDay.count} clients)` : 'N/A'}</td></tr>
+            <tr><td><strong>📅 Best Week</strong></td><td>${bestWeek ? `${bestWeek.label} (₹${bestWeek.rev.toLocaleString('en-IN')})` : 'N/A'}</td></tr>
+            <tr><td><strong>⚡ Best Peak Hour</strong></td><td>${bestPeakHour ? `${bestPeakHour.label} (₹${bestPeakHour.rev.toLocaleString('en-IN')}, ${bestPeakHour.count} invoices)` : 'N/A'}</td></tr>
+            <tr><td><strong>🚀 Peak Day of Week</strong></td><td>${dayOfWeekAnalytics.peakDay.day} (₹${dayOfWeekAnalytics.peakDay.rev.toLocaleString('en-IN')} turnover)</td></tr>
+            <tr><td><strong>📊 Mostly Used Expense Category</strong></td><td>${expenseCategoryAnalytics.mostFrequentCat ? `${expenseCategoryAnalytics.mostFrequentCat.cat} (${expenseCategoryAnalytics.mostFrequentCat.count} entries, ₹${expenseCategoryAnalytics.mostFrequentCat.totalAmount.toLocaleString('en-IN')})` : 'N/A'}</td></tr>
+            <tr><td><strong>💰 Highest Spend Category</strong></td><td>${expenseCategoryAnalytics.highestSpendCat ? `${expenseCategoryAnalytics.highestSpendCat.cat} (₹${expenseCategoryAnalytics.highestSpendCat.totalAmount.toLocaleString('en-IN')})` : 'N/A'}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="section-title">Stylist Performance Leaderboard</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Stylist Name</th>
+              <th>Role</th>
+              <th class="text-right">Bills</th>
+              <th class="text-right">Gross Revenue (₹)</th>
+              <th class="text-right">Upsell %</th>
+              <th class="text-right">Repeat %</th>
+              <th class="text-right">Net to Salon (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${staffPerformanceList.map((st, idx) => `
+              <tr>
+                <td>#${idx + 1}</td>
+                <td><strong>${st.name}</strong></td>
+                <td>${st.role}</td>
+                <td class="text-right">${st.billsCount}</td>
+                <td class="text-right gold">₹${st.revenue.toLocaleString('en-IN')}</td>
+                <td class="text-right">${st.upsellRate}%</td>
+                <td class="text-right">${st.repeatClientRate}%</td>
+                <td class="text-right emerald">₹${st.netToSalon.toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="section-title">Outstanding Debtor Clients (${debtorClients.length} accounts)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Client Name</th>
+              <th>Phone</th>
+              <th>Visits / Spend</th>
+              <th>Last Visit</th>
+              <th class="text-right">Pending Balance (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${debtorClients.slice(0, 15).map(c => `
+              <tr>
+                <td><strong>${c.name}</strong></td>
+                <td>+91 ${c.phone}</td>
+                <td>${c.visits || 1} visits · ₹${(c.spend || 0).toLocaleString('en-IN')} spend</td>
+                <td>${c.lastVisit || todayStr}</td>
+                <td class="text-right" style="color: #d97706; font-weight: bold;">₹${(c.due || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated automatically by StyleFleet Web Salon Management Platform · Confidential Executive Audit
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+    showToast('Salon Intelligence PDF report generated!');
   };
 
   return (
@@ -839,20 +1008,34 @@ export function DeepAnalyticsView() {
 
           <button
             type="button"
-            onClick={handleExportCSV}
-            className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-bold cursor-pointer transition-colors ${
-              isDarkMode
-                ? 'bg-[#121B33] border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
-                : 'bg-white border-emerald-500/40 text-emerald-600 hover:bg-emerald-50'
-            }`}
-            title="Download CSV Executive Summary"
+            onClick={handleGeneratePdf}
+            className="px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors bg-rose-600/15 border-rose-500/40 text-rose-400 hover:bg-rose-600/25 active:scale-95 shadow-sm"
+            title="Generate printable executive intelligence PDF"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="8" y1="13" x2="16" y2="13" />
             </svg>
-            <span className="hidden sm:inline">Export Intelligence CSV</span>
+            <span className="hidden sm:inline">Generate PDF Report</span>
+            <span className="sm:hidden">PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-colors active:scale-95 shadow-sm ${
+              isDarkMode
+                ? 'bg-[#121B33] border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
+                : 'bg-white border-emerald-500/40 text-emerald-600 hover:bg-emerald-50'
+            }`}
+            title="Download complete intelligence Excel (.csv) spreadsheet"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span className="hidden sm:inline">Download Excel</span>
+            <span className="sm:hidden">Excel</span>
           </button>
         </div>
       </div>

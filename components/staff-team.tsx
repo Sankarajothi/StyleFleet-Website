@@ -228,36 +228,168 @@ export const StaffTeamView: React.FC<StaffTeamViewProps> = ({ onOpenAddStaff }) 
     setPermissionsStylist(null);
   };
 
-  // Export to Excel / CSV
+  // Export to Excel / CSV (Excel compatible with UTF-8 BOM)
   const handleExportCSV = () => {
-    const headers = ['Stylist Name', 'Mobile Number', 'Status', 'Rating', 'Services Billed', 'Billed Revenue (INR)', 'Period'];
+    let csv = `\uFEFFSTYLEFLEET SALON OS - STYLIST PERFORMANCE & COMMISSIONS\n`;
+    csv += `Salon:,"${shopProfile?.shopName || 'StyleFleet Salon'}"\n`;
+    csv += `Period:,"${reportInterval.toUpperCase()}"\n`;
+    csv += `Generated:,"${new Date().toLocaleString('en-IN')}"\n\n`;
+
+    const headers = ['Stylist Name', 'Role', 'Mobile Number', 'Chair', 'Rating', 'Services Delivered', 'Billed Revenue (INR)', 'Commission Rate (%)', 'Commission Earned (INR)', 'Net to Salon (INR)', 'Status'];
     const rows = staff.map((st) => {
       const stats = getStylistStats(st.name);
+      const commRate = st.commissionRate || 15;
+      const commEarned = Math.round((stats.rev * commRate) / 100);
+      const netToSalon = Math.max(0, stats.rev - commEarned);
+
       return [
         `"${st.name}"`,
+        `"${st.role || 'Stylist'}"`,
         `"+91 ${st.phone}"`,
-        `"${st.status === 'inactive' ? 'Inactive' : st.invited ? 'Invited' : 'Active'}"`,
+        `"${st.chair || 'Main Floor'}"`,
         `"${st.rating || '5.0'}"`,
         stats.servicesCount,
         stats.rev,
-        `"${reportInterval.toUpperCase()}"`,
+        `${commRate}%`,
+        commEarned,
+        netToSalon,
+        `"${st.status === 'inactive' ? 'Inactive' : st.invited ? 'Invited' : 'Active'}"`,
       ].join(',');
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    csv += [headers.join(','), ...rows].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.href = url;
     link.setAttribute('download', `stylist_performance_report_${reportInterval}_${todayIso}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     showToast('Stylist Performance CSV exported successfully!');
   };
 
-  // Download / Print PDF
+  // Download / Print PDF Report (Dedicated printable statement)
   const handlePrintPDF = () => {
-    window.print();
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Popup blocker prevented PDF generation. Please allow popups.', 'error');
+      return;
+    }
+
+    const totalRev = staff.reduce((acc, st) => acc + getStylistStats(st.name).rev, 0);
+    const totalSvcs = staff.reduce((acc, st) => acc + getStylistStats(st.name).servicesCount, 0);
+    const totalComm = staff.reduce((acc, st) => {
+      const stats = getStylistStats(st.name);
+      return acc + Math.round((stats.rev * (st.commissionRate || 15)) / 100);
+    }, 0);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>StyleFleet Staff Performance - ${reportInterval.toUpperCase()}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; padding: 32px; margin: 0; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px; }
+          .title { font-size: 24px; font-weight: 800; color: #0f172a; }
+          .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+          .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+          .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+          .card-title { font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+          .card-val { font-size: 20px; font-weight: 800; color: #0f172a; margin-top: 6px; }
+          .section-title { font-size: 16px; font-weight: 700; margin: 24px 0 12px; color: #0f172a; border-left: 4px solid #D4AF37; padding-left: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+          th { text-align: left; padding: 10px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-weight: 700; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          .text-right { text-align: right; }
+          .gold { color: #8C6239; font-weight: 800; }
+          .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${shopProfile?.shopName || 'StyleFleet Salon'}</div>
+            <div class="subtitle">Official Stylist ROI, Commission & Performance Statement · ${reportInterval.toUpperCase()}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: bold;">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+            <div style="font-size: 11px; color: #64748b;">Phone: +91 ${shopProfile?.phone || '9876543210'}</div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="card">
+            <div class="card-title">Total Staff</div>
+            <div class="card-val">${staff.length} Stylists</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Total Staff Revenue</div>
+            <div class="card-val gold">₹${totalRev.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Services Delivered</div>
+            <div class="card-val">${totalSvcs} services</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Total Commissions</div>
+            <div class="card-val">₹${totalComm.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Stylist Roster & Commission Statement</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Stylist Name</th>
+              <th>Role & Station</th>
+              <th>Mobile</th>
+              <th class="text-right">Services</th>
+              <th class="text-right">Billed Revenue (₹)</th>
+              <th class="text-right">Comm. %</th>
+              <th class="text-right">Commission (₹)</th>
+              <th class="text-right">Net to Salon (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${staff.map(st => {
+              const stats = getStylistStats(st.name);
+              const commRate = st.commissionRate || 15;
+              const commEarned = Math.round((stats.rev * commRate) / 100);
+              const netToSalon = Math.max(0, stats.rev - commEarned);
+
+              return `
+                <tr>
+                  <td><strong>${st.name}</strong></td>
+                  <td>${st.role || 'Stylist'} · ${st.chair || 'Main Floor'}</td>
+                  <td>+91 ${st.phone}</td>
+                  <td class="text-right">${stats.servicesCount}</td>
+                  <td class="text-right gold">₹${stats.rev.toLocaleString('en-IN')}</td>
+                  <td class="text-right">${commRate}%</td>
+                  <td class="text-right">₹${commEarned.toLocaleString('en-IN')}</td>
+                  <td class="text-right">₹${netToSalon.toLocaleString('en-IN')}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated automatically by StyleFleet Web Salon Management Platform · Official Team Audit
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+    showToast('Stylist statement PDF generated!');
   };
 
   return (
