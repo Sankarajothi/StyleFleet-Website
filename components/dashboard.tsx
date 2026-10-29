@@ -63,6 +63,21 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
       if (hour < 17) return { greeting: 'மதிய வணக்கம்', subtitle: 'நடப்பு முன்பதிவு கண்ணோட்டம்' };
       return { greeting: 'மாலை வணக்கம்', subtitle: 'இன்றைய இறுதி கணக்கு சுருக்கம்' };
     }
+    if (language === 'te') {
+      if (hour < 12) return { greeting: 'శుభోదయం', subtitle: 'నేటి సెలూన్ పనితీరు & షెడ్యూల్' };
+      if (hour < 17) return { greeting: 'శుభ మధ్యాహ్నం', subtitle: 'సెలూన్ ఫ్లోర్ & లైవ్ బుకింగ్స్' };
+      return { greeting: 'శుభ సాయంత్రం', subtitle: 'నేటి ముగింపు & రాబడి సారాంశం' };
+    }
+    if (language === 'kn') {
+      if (hour < 12) return { greeting: 'ಶುಭೋದಯ', subtitle: 'ಇಂದಿನ ಸಲೂನ್ ಕಾರ್ಯಕ್ಷಮತೆ ಮತ್ತು ವೇಳಾಪಟ್ಟಿ' };
+      if (hour < 17) return { greeting: 'ಶುಭ ಮಧ್ಯಾಹ್ನ', subtitle: 'ಲೈವ್ ಬುಕಿಂಗ್‌ಗಳು ಮತ್ತು ಸೇವೆಗಳು' };
+      return { greeting: 'ಶುಭ ಸಂಜೆ', subtitle: 'ಇಂದಿನ ದಿನಾಂತ್ಯದ ಆದಾಯದ ಅವಲೋಕನ' };
+    }
+    if (language === 'ml') {
+      if (hour < 12) return { greeting: 'സുപ്രഭാതം', subtitle: 'ഇന്നത്തെ സലൂൺ പ്രവർത്തനങ്ങളും ഷെഡ്യൂളും' };
+      if (hour < 17) return { greeting: 'ശുഭ ഉച്ചനേരം', subtitle: 'സലൂൺ ഫ്ലോർ & ലൈവ് അപ്പോയിന്റ്‌മെന്റുകൾ' };
+      return { greeting: 'ശുഭ സായാഹ്നം', subtitle: 'ഇന്നത്തെ വരുമാന അവലോകനം' };
+    }
     if (hour < 12) return { greeting: 'Good Morning', subtitle: 'Welcome to your salon command center' };
     if (hour < 17) return { greeting: 'Good Afternoon', subtitle: 'Floor is active with client appointments' };
     return { greeting: 'Good Evening', subtitle: 'Here is your end-of-day revenue overview' };
@@ -104,6 +119,57 @@ export function DashboardView({ onOpenNewBooking, onBookAgain, onViewInvoice }: 
         recentBills: 'சமீபத்திய பில்கள்',
         viewBill: 'பில் பார்க்க',
         avgBill: 'சராசரி பில்',
+      };
+    }
+    if (language === 'te') {
+      return {
+        totalRev: 'మొత్తం ఆదాయం',
+        todayRev: 'నేటి ఆదాయం',
+        todayAppt: 'నేటి అపాయింట్‌మెంట్లు',
+        todayBills: 'నేటి బిల్లులు',
+        pendingDues: 'బాకీ మొత్తం',
+        bookAgain: 'మళ్ళీ బుక్ చేయండి',
+        bookAgainDesc: 'ఇటీవలి క్లయింట్ల కోసం 1-క్లిక్ బుకింగ్',
+        newBooking: 'కొత్త బుకింగ్',
+        createBill: 'బిల్ చేయండి',
+        todaySchedule: 'నేటి అపాయింట్‌మెంట్ల షెడ్యూల్',
+        recentBills: 'ఇటీవలి బిల్లులు & రసీదులు',
+        viewBill: 'బిల్ చూడండి',
+        avgBill: 'సగటు బిల్',
+      };
+    }
+    if (language === 'kn') {
+      return {
+        totalRev: 'ಒಟ್ಟು ಆದಾಯ',
+        todayRev: 'ಇಂದಿನ ಆದಾಯ',
+        todayAppt: 'ಇಂದಿನ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳು',
+        todayBills: 'ಇಂದಿನ ಬಿಲ್‌ಗಳು',
+        pendingDues: 'ಬಾಕಿ ಮೊತ್ತ',
+        bookAgain: 'ಮತ್ತೆ ಬುಕ್ ಮಾಡಿ',
+        bookAgainDesc: 'ಇತ್ತೀಚಿನ ಗ್ರಾಹಕರಿಗಾಗಿ 1-ಕ್ಲಿಕ್ ಬುಕಿಂಗ್',
+        newBooking: 'ಹೊಸ ಬುಕಿಂಗ್',
+        createBill: 'ಬಿಲ್ ರಚಿಸಿ',
+        todaySchedule: 'ಇಂದಿನ ವೇಳಾಪಟ್ಟಿ',
+        recentBills: 'ಇತ್ತೀಚಿನ ಬಿಲ್‌ಗಳು',
+        viewBill: 'ಬಿಲ್ ವೀಕ್ಷಿಸಿ',
+        avgBill: 'ಸರಾಸರಿ ಬಿಲ್',
+      };
+    }
+    if (language === 'ml') {
+      return {
+        totalRev: 'ആകെ വരുമാനം',
+        todayRev: 'ഇന്നത്തെ വരുമാനം',
+        todayAppt: 'ഇന്നത്തെ അപ്പോയിന്റ്‌മെന്റുകൾ',
+        todayBills: 'ഇന്നത്തെ ബില്ലുകൾ',
+        pendingDues: 'ബാക്കി കുടിശ്ശിക',
+        bookAgain: 'വീണ്ടും ബുക്ക് ചെയ്യുക',
+        bookAgainDesc: 'സമീപകാല ഉപഭോക്താക്കൾക്കായി 1-ക്ലിക്ക് ബുക്കിംഗ്',
+        newBooking: 'പുതിയ ബുക്കിംഗ്',
+        createBill: 'ബിൽ തയ്യാറാക്കുക',
+        todaySchedule: 'ഇന്നത്തെ ഷെഡ്യൂൾ',
+        recentBills: 'സമീപകാല ബില്ലുകൾ',
+        viewBill: 'ബിൽ കാണുക',
+        avgBill: 'ശരാശരി ബിൽ',
       };
     }
     return {

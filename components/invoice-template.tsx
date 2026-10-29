@@ -431,10 +431,28 @@ export function InvoiceTemplate({
                   via {bill.mode || 'UPI'}
                 </span>
               </div>
-              {shopProfile.upiId && !isPaid && (
-                <p className="text-[11px] text-slate-500 font-mono mt-1">
-                  UPI ID: <span className="font-bold text-slate-800">{shopProfile.upiId}</span>
-                </p>
+              {shopProfile.upiId && !isPaid && (bill.dueAmount || 0) > 0 && (
+                <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 max-w-sm text-left shadow-sm">
+                  <div className="flex items-center gap-1.5 text-[11px] font-black text-amber-900 uppercase tracking-wider mb-1">
+                    <svg className="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                    <span>Instant UPI Settlement</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 leading-snug">
+                    Salon UPI ID: <strong className="font-mono font-black text-slate-900 select-all">{shopProfile.upiId}</strong>
+                  </p>
+                  <p className="text-[10px] text-amber-800 font-bold mt-0.5">
+                    Pending Balance: ₹{(bill.dueAmount || 0).toLocaleString('en-IN')}
+                  </p>
+                  <a
+                    href={`upi://pay?pa=${encodeURIComponent(shopProfile.upiId)}&pn=${encodeURIComponent(shopProfile.shopName)}&am=${bill.dueAmount}&cu=INR`}
+                    className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-amber-900 hover:text-amber-950 underline mt-1.5"
+                  >
+                    <span>Tap to Pay with UPI App (GPay / PhonePe / Paytm) →</span>
+                  </a>
+                </div>
               )}
             </div>
 

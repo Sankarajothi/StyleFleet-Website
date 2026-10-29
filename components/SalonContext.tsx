@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { Language } from '@/lib/translations';
 import { getShopPrefixFromShopName, formatInvoiceNumber } from '@/lib/salon-helpers';
 import {
   fetchSalonDataFromDb,
@@ -170,8 +171,8 @@ interface SalonContextType {
   setSidebarCollapsed: (collapsed: boolean) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-  language: 'en' | 'hi' | 'ta';
-  setLanguage: (lang: 'en' | 'hi' | 'ta') => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
   
   shopProfile: ShopProfile;
   updateShopProfile: (profile: Partial<ShopProfile>) => void;
@@ -283,7 +284,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'hi' | 'ta'>('en');
+  const [language, setLanguage] = useState<Language>('en');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isLoadingSalonData, setIsLoadingSalonData] = useState(true);
@@ -965,8 +966,8 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (savedTheme === 'light') {
         setIsDarkMode(false);
       }
-      const savedLang = localStorage.getItem('stylefleet_language');
-      if (savedLang === 'hi' || savedLang === 'ta' || savedLang === 'en') {
+      const savedLang = localStorage.getItem('stylefleet_language') as Language | null;
+      if (savedLang && ['en', 'hi', 'ta', 'te', 'kn', 'ml'].includes(savedLang)) {
         setLanguage(savedLang);
       }
       const storedProfile = localStorage.getItem('stylefleet_shop_profile');
@@ -1203,22 +1204,29 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
 
-    // Run check periodically (every 15 seconds)
-    const intervalId = setInterval(checkActiveSessionInDb, 15000);
+    // Run check periodically (every 8 seconds to immediately detect deletions from mobile phone)
+    const intervalId = setInterval(checkActiveSessionInDb, 8000);
 
-    // Run check when window gains focus or tab becomes visible
+    // Run check when window gains focus, tab becomes visible, or storage changes
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         checkActiveSessionInDb();
       }
     };
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === 'stylefleet_shop_id' || e.key === 'stylefleet_auth_session') {
+        checkActiveSessionInDb();
+      }
+    };
     window.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       clearInterval(intervalId);
       window.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [currentShopId]);
 
