@@ -34,6 +34,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     updateService,
     deleteService,
     addService,
+    addServices,
     shopProfile,
     showToast,
   } = useSalon();
@@ -84,10 +85,26 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
   const [newOfferValidity, setNewOfferValidity] = useState('');
   const [newOfferNotes, setNewOfferNotes] = useState('');
 
-  // AI Menu Scanner state
+  // AI Menu Scanner state (Powered by Gemini 3.8 Flash Vision)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanningMenu, setIsScanningMenu] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatusText, setScanStatusText] = useState('');
+  const [menuFileName, setMenuFileName] = useState('');
+  const [showExtractedModal, setShowExtractedModal] = useState(false);
+  const [extractedServices, setExtractedServices] = useState<
+    Array<{
+      id: string;
+      name: string;
+      cat: string;
+      price: number;
+      dur: number;
+      description?: string;
+      selected: boolean;
+    }>
+  >([]);
+  const [isImportingExtracted, setIsImportingExtracted] = useState(false);
+  const [extractedCatFilter, setExtractedCatFilter] = useState('All');
 
   // Close 3-dots menu on outside click
   useEffect(() => {
@@ -225,37 +242,110 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
     setNewOfferNotes('');
   };
 
-  // AI Menu Photo / PDF Import Simulation
-  const handleMenuFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // AI Menu Photo / PDF Import using Gemini 3.8 Flash Vision
+  const handleMenuFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setMenuFileName(file.name);
     setIsScanningMenu(true);
     setScanProgress(15);
+    setScanStatusText('Reading salon menu image...');
 
-    const step1 = setTimeout(() => setScanProgress(45), 600);
-    const step2 = setTimeout(() => setScanProgress(80), 1300);
-    const step3 = setTimeout(() => {
+    const p1 = setTimeout(() => {
+      setScanProgress(35);
+      setScanStatusText('Gemini 3.8 Flash analyzing menu layout & categories...');
+    }, 600);
+    const p2 = setTimeout(() => {
+      setScanProgress(65);
+      setScanStatusText('Extracting service titles, exact prices & durations...');
+    }, 1400);
+    const p3 = setTimeout(() => {
+      setScanProgress(85);
+      setScanStatusText('Structuring catalog data...');
+    }, 2200);
+
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch('/api/menu/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64Data,
+          mimeType: file.type || 'image/jpeg',
+        }),
+      });
+
+      const data = await response.json();
+
+      clearTimeout(p1);
+      clearTimeout(p2);
+      clearTimeout(p3);
       setScanProgress(100);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to extract services from menu.');
+      }
+
+      const items = (data.services || []).map((s: any, idx: number) => ({
+        id: `extracted-${Date.now()}-${idx}`,
+        name: s.name,
+        cat: s.cat || 'General',
+        price: Number(s.price) || 100,
+        dur: Number(s.dur) || 30,
+        description: s.description || '',
+        selected: true,
+      }));
+
+      if (items.length === 0) {
+        showToast('No recognizable salon services or prices found in this menu card.', 'error');
+      } else {
+        setExtractedServices(items);
+        setShowExtractedModal(true);
+        showToast(`✨ Extracted ${items.length} services with prices from "${file.name}"!`, 'success');
+      }
+    } catch (err: any) {
+      console.error('[Menu Upload Error]:', err);
+      showToast(err.message || 'Error scanning salon menu with Gemini AI.', 'error');
+    } finally {
       setIsScanningMenu(false);
-
-      // Pre-populate high quality extracted salon services
-      const sampleImported = [
-        { cat: 'Haircut', name: 'Signature Layered Cut', price: 650, dur: 45 },
-        { cat: 'Spa', name: 'Moroccan Argan Hair Spa', price: 1800, dur: 60 },
-        { cat: 'Care', name: 'O3+ Bridal Glow Facial', price: 2800, dur: 75 },
-      ];
-
-      sampleImported.forEach((it) => addService(it));
-      showToast(`AI extracted & imported 3 services from "${file.name}"!`);
+      setScanProgress(0);
+      setScanStatusText('');
       if (fileInputRef.current) fileInputRef.current.value = '';
-    }, 2000);
+    }
+  };
 
-    return () => {
-      clearTimeout(step1);
-      clearTimeout(step2);
-      clearTimeout(step3);
-    };
+  const handleConfirmImportExtracted = async () => {
+    const selected = extractedServices.filter((s) => s.selected && s.name.trim() && s.price > 0);
+    if (selected.length === 0) {
+      showToast('Please select at least one valid service to import.', 'error');
+      return;
+    }
+
+    setIsImportingExtracted(true);
+    try {
+      await addServices(
+        selected.map((s) => ({
+          name: s.name.trim(),
+          cat: s.cat.trim() || 'General',
+          price: s.price,
+          dur: s.dur,
+        }))
+      );
+      setShowExtractedModal(false);
+      setExtractedServices([]);
+    } catch (err: any) {
+      console.error('[Import Error]:', err);
+      showToast('Error saving extracted services to catalog.', 'error');
+    } finally {
+      setIsImportingExtracted(false);
+    }
   };
 
   return (
@@ -415,15 +505,24 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
           {isScanningMenu && (
             <div
               className={`p-4 rounded-2xl border flex items-center gap-3 animate-pulse ${
-                isDarkMode ? 'bg-amber-950/20 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-900'
+                isDarkMode ? 'bg-amber-950/20 border-amber-500/40 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm'
               }`}
             >
-              <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-              <div className="flex-1">
-                <strong className="text-xs block">Importing Menu Card...</strong>
-                <p className="text-[11px] opacity-80">Scanning service items, pricing tiers and durations from salon menu.</p>
+              <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <strong className="text-xs font-bold block truncate">
+                    Analyzing Menu: {menuFileName || 'Salon Menu Card'}
+                  </strong>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded font-extrabold bg-[#D4AF37]/20 text-[#D4AF37] shrink-0">
+                    Gemini 3.8 Flash Vision
+                  </span>
+                </div>
+                <p className="text-[11px] opacity-80 truncate">
+                  {scanStatusText || 'Extracting service titles, exact prices and durations...'}
+                </p>
               </div>
-              <span className="text-xs font-mono font-bold">{scanProgress}%</span>
+              <span className="text-xs font-mono font-black text-[#D4AF37] shrink-0">{scanProgress}%</span>
             </div>
           )}
 
@@ -1101,6 +1200,290 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REVIEW & IMPORT EXTRACTED MENU SERVICES ================= */}
+      {showExtractedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
+          <div
+            className={`rounded-3xl border w-full max-w-4xl shadow-2xl animate-scaleUp my-auto flex flex-col max-h-[92vh] overflow-hidden ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-slate-200 text-[#1F2937]'
+            }`}
+          >
+            {/* Modal Header */}
+            <div className={`p-4 sm:p-5 border-b flex items-center justify-between shrink-0 ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className={`text-base sm:text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Review Extracted Menu Services
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
+                      Gemini 3.8 Flash Vision
+                    </span>
+                  </div>
+                  <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                    Extracted from &ldquo;{menuFileName || 'Uploaded Menu'}&rdquo; · Verify and adjust prices before importing
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowExtractedModal(false)}
+                className={`w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+                    : 'border-slate-300 bg-slate-100 text-slate-700 hover:text-black hover:bg-slate-200 shadow-xs'
+                }`}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Action & Filter Bar */}
+            <div className={`px-4 sm:px-5 py-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 ${isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allSelected = extractedServices.every((s) => s.selected);
+                    setExtractedServices((prev) => prev.map((s) => ({ ...s, selected: !allSelected })));
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border font-bold text-xs cursor-pointer transition-colors ${
+                    isDarkMode ? 'border-[#2A3858] bg-[#121B33] text-slate-200 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {extractedServices.every((s) => s.selected) ? 'Deselect All' : 'Select All'}
+                </button>
+
+                <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {extractedServices.filter((s) => s.selected).length} of {extractedServices.length} selected
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-[#D4AF37]">
+                  Total Value: ₹{extractedServices.filter((s) => s.selected).reduce((acc, s) => acc + (s.price || 0), 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Extracted Services Table / Cards List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2.5">
+              {extractedServices.length === 0 ? (
+                <div className="py-12 text-center text-sm text-slate-400">
+                  No services extracted.
+                </div>
+              ) : (
+                extractedServices.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center gap-3 ${
+                      item.selected
+                        ? isDarkMode
+                          ? 'bg-[#162340] border-[#D4AF37]/40 ring-1 ring-[#D4AF37]/30'
+                          : 'bg-amber-50/40 border-[#D4AF37] ring-1 ring-[#D4AF37]/20 shadow-xs'
+                        : isDarkMode
+                        ? 'bg-[#0E1A33] border-white/5 opacity-60'
+                        : 'bg-slate-50 border-slate-200 opacity-60'
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setExtractedServices((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, selected: checked } : s))
+                          );
+                        }}
+                        className="w-4 h-4 rounded text-[#D4AF37] accent-[#D4AF37] cursor-pointer"
+                      />
+                      <span className="text-xs font-mono font-bold text-slate-400">#{idx + 1}</span>
+                    </div>
+
+                    {/* Service Name Input */}
+                    <div className="flex-1 min-w-0">
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Service Name
+                      </label>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setExtractedServices((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, name: val } : s))
+                          );
+                        }}
+                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-bold outline-none ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                        placeholder="Service name..."
+                      />
+                    </div>
+
+                    {/* Category Input */}
+                    <div className="w-full sm:w-40 shrink-0">
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        value={item.cat}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setExtractedServices((prev) =>
+                            prev.map((s, i) => (i === idx ? { ...s, cat: val } : s))
+                          );
+                        }}
+                        list="existing-cats-list"
+                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
+                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                        placeholder="Category..."
+                      />
+                    </div>
+
+                    {/* Price Input */}
+                    <div className="w-full sm:w-28 shrink-0">
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Price (₹)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1.5 text-xs font-bold text-[#D4AF37]">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.price || ''}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            setExtractedServices((prev) =>
+                              prev.map((s, i) => (i === idx ? { ...s, price: val } : s))
+                            );
+                          }}
+                          className={`w-full pl-6 pr-2 py-1.5 rounded-xl border text-xs font-extrabold outline-none ${
+                            isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#D4AF37]' : 'bg-white border-slate-300 text-[#07152B]'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Duration Input */}
+                    <div className="w-full sm:w-24 shrink-0">
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Duration
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="5"
+                          step="5"
+                          value={item.dur || ''}
+                          onChange={(e) => {
+                            const val = Math.max(5, Number(e.target.value));
+                            setExtractedServices((prev) =>
+                              prev.map((s, i) => (i === idx ? { ...s, dur: val } : s))
+                            );
+                          }}
+                          className={`w-full px-2.5 py-1.5 pr-6 rounded-xl border text-xs font-bold outline-none ${
+                            isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                        <span className="absolute right-2 top-1.5 text-[10px] text-slate-400">m</span>
+                      </div>
+                    </div>
+
+                    {/* Delete Item Button */}
+                    <div className="shrink-0 sm:pt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExtractedServices((prev) => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-colors"
+                        title="Remove service"
+                        aria-label="Remove"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <datalist id="existing-cats-list">
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`p-4 sm:p-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 ${isDarkMode ? 'bg-[#0B1F44] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="text-xs">
+                <span className="font-bold text-[#D4AF37]">
+                  {extractedServices.filter((s) => s.selected).length} services ready to add
+                </span>
+                <span className={`block text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Services and categories will be permanently added to your salon database.
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowExtractedModal(false)}
+                  className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 text-slate-300 hover:bg-white/5'
+                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 shadow-xs'
+                  }`}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isImportingExtracted || extractedServices.filter((s) => s.selected).length === 0}
+                  onClick={handleConfirmImportExtracted}
+                  className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg select-none transition-all ${
+                    extractedServices.filter((s) => s.selected).length === 0 || isImportingExtracted
+                      ? 'bg-[#D4AF37]/50 text-[#07152B]/70 cursor-not-allowed opacity-60'
+                      : 'bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] text-[#07152B] hover:brightness-105 active:scale-95 shadow-[#D4AF37]/25'
+                  }`}
+                >
+                  {isImportingExtracted ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-[#07152B] border-t-transparent rounded-full animate-spin" />
+                      <span>Saving to Catalog...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-[#07152B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>
+                        Import {extractedServices.filter((s) => s.selected).length} Services to Catalog
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

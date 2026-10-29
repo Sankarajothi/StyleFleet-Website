@@ -180,6 +180,7 @@ interface SalonContextType {
 
   services: ServiceItem[];
   addService: (service: Omit<ServiceItem, 'id' | 'active'>) => void;
+  addServices: (services: Array<Omit<ServiceItem, 'id' | 'active'>>) => Promise<number>;
   updateService: (id: string, updated: Partial<ServiceItem>) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
@@ -367,6 +368,37 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       saveServiceToDb(currentShopId, s);
     }
     showToast(`Service "${s.name}" added to price list.`);
+  };
+
+  const addServices = async (newServices: Array<Omit<ServiceItem, 'id' | 'active'>>): Promise<number> => {
+    if (!newServices || newServices.length === 0) return 0;
+    const createdItems: ServiceItem[] = newServices.map((it) => ({
+      ...it,
+      id: generateUuid(),
+      active: true,
+    }));
+
+    // Update categories if new categories were extracted from the menu
+    const newCats = new Set<string>();
+    createdItems.forEach((s) => {
+      if (s.cat && !categories.includes(s.cat)) {
+        newCats.add(s.cat);
+      }
+    });
+    if (newCats.size > 0) {
+      setCategories((prev) => Array.from(new Set([...prev, ...Array.from(newCats)])));
+    }
+
+    setServices((prev) => [...createdItems, ...prev]);
+
+    if (currentShopId) {
+      for (const s of createdItems) {
+        saveServiceToDb(currentShopId, s);
+      }
+    }
+
+    showToast(`Successfully added ${createdItems.length} services to catalog!`, 'success');
+    return createdItems.length;
   };
 
   const toggleServiceActive = (id: string) => {
@@ -1159,6 +1191,7 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addCategory,
         services,
         addService,
+        addServices,
         updateService,
         deleteService,
         toggleServiceActive,
