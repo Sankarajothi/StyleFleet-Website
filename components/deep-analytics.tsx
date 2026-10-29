@@ -5,7 +5,7 @@ import { useSalon, Bill, StaffMember, Customer, Expense } from '@/components/Sal
 import { AnimatedCounter } from '@/components/animated-counter';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all';
-type LedgerTab = 'expenses' | 'bills';
+type LedgerTab = 'expenses' | 'bills' | 'pending';
 
 export function DeepAnalyticsView() {
   const {
@@ -14,7 +14,6 @@ export function DeepAnalyticsView() {
     staff,
     services,
     customers,
-    appointments,
     shopProfile,
     isDarkMode,
     showToast,
@@ -28,7 +27,7 @@ export function DeepAnalyticsView() {
   const [ledgerSearch, setLedgerSearch] = useState<string>('');
   const [ledgerTab, setLedgerTab] = useState<LedgerTab>('expenses');
 
-  // Chart hover states
+  // Interactive chart hover states
   const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{ day: string; slot: string; rev: number; count: number } | null>(null);
 
@@ -36,6 +35,12 @@ export function DeepAnalyticsView() {
   const now = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => {
     const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
 
@@ -49,6 +54,20 @@ export function DeepAnalyticsView() {
       if (!isNaN(d.getTime())) {
         const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (dStr === todayStr) return true;
+      }
+    }
+    return false;
+  };
+
+  const isBillYesterday = (b: Bill): boolean => {
+    if (b.isYesterday) return true;
+    if (b.createdAt && b.createdAt.startsWith(yesterdayStr)) return true;
+    if (b.dateStr && b.dateStr.startsWith(yesterdayStr)) return true;
+    if (b.dateStr) {
+      const d = new Date(b.dateStr);
+      if (!isNaN(d.getTime())) {
+        const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (dStr === yesterdayStr) return true;
       }
     }
     return false;
@@ -97,6 +116,11 @@ export function DeepAnalyticsView() {
     return e.date.startsWith(todayStr);
   };
 
+  const isExpenseYesterday = (e: Expense): boolean => {
+    if (!e.date) return false;
+    return e.date.startsWith(yesterdayStr);
+  };
+
   // Distinct list of expense categories present in data
   const distinctExpenseCategories = useMemo(() => {
     const set = new Set<string>();
@@ -104,14 +128,12 @@ export function DeepAnalyticsView() {
       const cat = (e.cat || 'Other').trim();
       if (cat) set.add(cat);
     });
-    // Add default fallbacks if none exist
     if (set.size === 0) {
       ['Products & stock', 'Maintenance', 'Staff salaries', 'Electricity & utility', 'Rent', 'Tea & Snacks', 'Other'].forEach(c => set.add(c));
     }
     return Array.from(set).sort();
   }, [expenses]);
 
-  // Distinct active staff names
   const distinctStaffNames = useMemo(() => {
     return staff.map((s) => s.name).filter(Boolean);
   }, [staff]);
@@ -202,10 +224,9 @@ export function DeepAnalyticsView() {
         if (cat !== selectedExpenseCat.trim().toLowerCase()) return false;
       }
 
-      // Stylist Slicer filter (if expense is linked to a staff)
+      // Stylist Slicer filter
       if (selectedStylist !== 'all') {
         if (!e.staff || e.staff.trim().toLowerCase() !== selectedStylist.trim().toLowerCase()) {
-          // If filtering by stylist, only include expenses attributed to this stylist or salon general if requested
           return false;
         }
       }
@@ -233,35 +254,244 @@ export function DeepAnalyticsView() {
   const billCount = filteredBills.length;
   const avgTicket = billCount > 0 ? Math.round(grossSales / billCount) : 0;
 
-  // Real payment channels
-  const paymentModes = useMemo(() => {
-    let upi = 0;
-    let cash = 0;
-    let card = 0;
-    let due = 0;
+  // Baseline comparison (Yesterday / Prior Period)
+  const baselineStats = useMemo(() => {
+    const yesterdayBills = bills.filter((b) => !b.isDeleted && isBillYesterday(b));
+    const yesterdayExpenses = expenses.filter((e) => isExpenseYesterday(e));
 
-    filteredBills.forEach((b) => {
-      const paid = b.paidAmount || 0;
-      if (b.mode === 'Cash') cash += paid;
-      else if (b.mode === 'Card') card += paid;
-      else upi += paid;
-      due += b.dueAmount || 0;
+    const yRev = yesterdayBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+    const yExp = yesterdayExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    const yNet = Math.max(0, yRev - yExp);
+
+    const revGrowthPct = yRev > 0 ? Math.round(((grossSales - yRev) / yRev) * 100) : 0;
+    const profitGrowthPct = yNet > 0 ? Math.round(((netProfit - yNet) / yNet) * 100) : 0;
+
+    return {
+      yRev,
+      yExp,
+      yNet,
+      revGrowthPct,
+      profitGrowthPct,
+    };
+  }, [bills, expenses, grossSales, netProfit, yesterdayStr]);
+
+  // ================= 4. BEST PEAK INTELLIGENCE (BEST DAY, BEST WEEK, BEST PEAK HOUR, PEAK DAY OF WEEK) =================
+  // 4a. BEST DAY (Highest revenue day in salon database)
+  const dailyAggregates = useMemo(() => {
+    const map: Record<string, { dateKey: string; displayDate: string; rev: number; count: number }> = {};
+
+    bills.forEach((b) => {
+      if (b.isDeleted) return;
+      const rev = b.paidAmount || b.total || 0;
+      let dateKey = todayStr;
+      let display = 'Today';
+
+      if (!b.isToday) {
+        if (b.createdAt) {
+          dateKey = b.createdAt.slice(0, 10);
+          const d = new Date(b.createdAt);
+          if (!isNaN(d.getTime())) {
+            display = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          }
+        } else if (b.dateStr) {
+          dateKey = b.dateStr.slice(0, 10);
+          display = b.dateStr;
+        }
+      }
+
+      if (!map[dateKey]) {
+        map[dateKey] = { dateKey, displayDate: display, rev: 0, count: 0 };
+      }
+      map[dateKey].rev += rev;
+      map[dateKey].count += 1;
     });
 
-    const totalPaid = upi + cash + card || 1;
-    return {
-      upi,
-      cash,
-      card,
-      due,
-      upiPct: Math.round((upi / totalPaid) * 100),
-      cashPct: Math.round((cash / totalPaid) * 100),
-      cardPct: Math.round((card / totalPaid) * 100),
-    };
-  }, [filteredBills]);
+    return Object.values(map);
+  }, [bills, todayStr]);
 
-  // ================= 4. EXPENSE CATEGORY DEEP INTELLIGENCE =================
-  // Computes which category expenses are mostly used (by frequency of use AND total amount spent)
+  const bestDay = useMemo(() => {
+    if (dailyAggregates.length === 0) return null;
+    return [...dailyAggregates].sort((a, b) => b.rev - a.rev)[0];
+  }, [dailyAggregates]);
+
+  // 4b. BEST WEEK (Highest revenue calendar week)
+  const weeklyAggregates = useMemo(() => {
+    const map: Record<string, { weekKey: string; label: string; rev: number; count: number }> = {};
+
+    bills.forEach((b) => {
+      if (b.isDeleted) return;
+      const rev = b.paidAmount || b.total || 0;
+      const t = getBillTimestamp(b) || now.getTime();
+      const d = new Date(t);
+
+      const oneJan = new Date(d.getFullYear(), 0, 1);
+      const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
+      const weekNum = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
+      const weekKey = `${d.getFullYear()}-W${weekNum}`;
+      const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+      const label = `Week ${weekNum} (${monthShort})`;
+
+      if (!map[weekKey]) {
+        map[weekKey] = { weekKey, label, rev: 0, count: 0 };
+      }
+      map[weekKey].rev += rev;
+      map[weekKey].count += 1;
+    });
+
+    return Object.values(map);
+  }, [bills, now]);
+
+  const bestWeek = useMemo(() => {
+    if (weeklyAggregates.length === 0) return null;
+    return [...weeklyAggregates].sort((a, b) => b.rev - a.rev)[0];
+  }, [weeklyAggregates]);
+
+  // 4c. BEST PEAK HOUR (Highest rush slot across all bills)
+  const hourlySlotAggregates = useMemo(() => {
+    const slots = [
+      { label: '9:00 AM – 11:00 AM', startH: 9, endH: 11 },
+      { label: '11:00 AM – 1:00 PM', startH: 11, endH: 13 },
+      { label: '1:00 PM – 3:00 PM', startH: 13, endH: 15 },
+      { label: '3:00 PM – 5:00 PM', startH: 15, endH: 17 },
+      { label: '5:00 PM – 7:00 PM', startH: 17, endH: 19 },
+      { label: '7:00 PM – 9:00 PM', startH: 19, endH: 21 },
+      { label: '9:00 PM+', startH: 21, endH: 24 },
+    ];
+
+    return slots.map((s) => {
+      let rev = 0;
+      let count = 0;
+      bills.forEach((b) => {
+        if (b.isDeleted) return;
+        const h = getBillHour(b);
+        if (h >= s.startH && h < s.endH) {
+          rev += b.paidAmount || b.total || 0;
+          count += 1;
+        }
+      });
+      return { ...s, rev, count };
+    });
+  }, [bills]);
+
+  const bestPeakHour = useMemo(() => {
+    if (hourlySlotAggregates.length === 0) return null;
+    return [...hourlySlotAggregates].sort((a, b) => b.rev - a.rev)[0];
+  }, [hourlySlotAggregates]);
+
+  // 4d. WHICH DAY IN THE WEEK HAD MORE PEAK
+  const dayOfWeekAnalytics = useMemo(() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const map: Record<string, { day: string; rev: number; count: number; isWeekend: boolean }> = {};
+    days.forEach((d, idx) => {
+      map[d] = { day: d, rev: 0, count: 0, isWeekend: idx === 0 || idx === 6 };
+    });
+
+    bills.forEach((b) => {
+      if (b.isDeleted) return;
+      const rev = b.paidAmount || b.total || 0;
+      let dObj = new Date();
+      if (b.createdAt) {
+        const d = new Date(b.createdAt);
+        if (!isNaN(d.getTime())) dObj = d;
+      } else if (b.dateStr) {
+        const d = new Date(b.dateStr);
+        if (!isNaN(d.getTime())) dObj = d;
+      }
+      const dayName = days[dObj.getDay()];
+      map[dayName].rev += rev;
+      map[dayName].count += 1;
+    });
+
+    const list = Object.values(map);
+    const weekdayList = list.filter((d) => !d.isWeekend);
+    const avgWeekdayRev = weekdayList.reduce((acc, d) => acc + d.rev, 0) / Math.max(1, weekdayList.length);
+
+    const sortedByRev = [...list].sort((a, b) => b.rev - a.rev);
+    const peakDay = sortedByRev[0];
+    const peakOverWeekdayPct = avgWeekdayRev > 0
+      ? Math.round(((peakDay.rev - avgWeekdayRev) / avgWeekdayRev) * 100)
+      : 0;
+
+    return {
+      list,
+      peakDay,
+      peakOverWeekdayPct,
+      avgWeekdayRev,
+    };
+  }, [bills]);
+
+  // ================= 5. STYLIST PERFORMANCE REPORT =================
+  const repeatClientIdentifiers = useMemo(() => {
+    const counts: Record<string, number> = {};
+    bills.forEach((b) => {
+      if (b.isDeleted) return;
+      const key = b.phone || b.cust.toLowerCase();
+      if (key) counts[key] = (counts[key] || 0) + 1;
+    });
+    return new Set(Object.keys(counts).filter((k) => counts[k] >= 2));
+  }, [bills]);
+
+  const staffPerformanceList = useMemo(() => {
+    const targetStaff = selectedStylist !== 'all'
+      ? staff.filter((st) => st.name.toLowerCase() === selectedStylist.toLowerCase())
+      : staff;
+
+    return targetStaff.map((st) => {
+      const stylistBills = filteredBills.filter(
+        (b) => b.staff && b.staff.toLowerCase() === st.name.toLowerCase()
+      );
+
+      const revenue = stylistBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
+      const servicesBilled = stylistBills.reduce((acc, b) => acc + (b.items?.length || 1), 0);
+      const commRate = st.commissionRate || 15;
+      const commissionEarned = Math.round((revenue * commRate) / 100);
+      const netToSalon = Math.max(0, revenue - commissionEarned);
+
+      const multiItemBills = stylistBills.filter((b) => (b.items?.length || 0) >= 2).length;
+      const upsellRate = stylistBills.length > 0 ? Math.round((multiItemBills / stylistBills.length) * 100) : 0;
+
+      const repeatBills = stylistBills.filter((b) => {
+        const key = b.phone || b.cust.toLowerCase();
+        return key && repeatClientIdentifiers.has(key);
+      }).length;
+      const repeatClientRate = stylistBills.length > 0 ? Math.round((repeatBills / stylistBills.length) * 100) : 0;
+
+      const storeShare = grossSales > 0 ? Math.round((revenue / grossSales) * 100) : 0;
+      const avgBill = stylistBills.length > 0 ? Math.round(revenue / stylistBills.length) : 0;
+
+      const serviceCounts: Record<string, number> = {};
+      stylistBills.forEach((b) => {
+        (b.items || []).forEach((it) => {
+          serviceCounts[it.name] = (serviceCounts[it.name] || 0) + (it.qty || 1);
+        });
+      });
+      const topService = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Haircut';
+
+      return {
+        id: st.id,
+        name: st.name,
+        role: st.role || 'Stylist',
+        rating: st.rating || '5.0',
+        chair: st.chair || 'Main Floor',
+        revenue,
+        billsCount: stylistBills.length,
+        servicesBilled,
+        storeShare,
+        commissionEarned,
+        netToSalon,
+        upsellRate,
+        repeatClientRate,
+        avgBill,
+        topService,
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+  }, [staff, filteredBills, grossSales, repeatClientIdentifiers, selectedStylist]);
+
+  const maxStaffRevenue = useMemo(() => {
+    return Math.max(...staffPerformanceList.map((s) => s.revenue), 1);
+  }, [staffPerformanceList]);
+
+  // ================= 6. EXPENSE CATEGORIES INTELLIGENCE =================
   const expenseCategoryAnalytics = useMemo(() => {
     const catMap: Record<string, { totalAmount: number; count: number; items: Expense[]; highestSingle: number }> = {};
 
@@ -298,9 +528,7 @@ export function DeepAnalyticsView() {
       };
     });
 
-    // Sort by count descending (mostly used frequency)
     const sortedByFrequency = [...list].sort((a, b) => b.count - a.count);
-    // Sort by spend descending
     const sortedBySpend = [...list].sort((a, b) => b.totalAmount - a.totalAmount);
 
     const mostFrequentCat = sortedByFrequency[0] || null;
@@ -315,82 +543,40 @@ export function DeepAnalyticsView() {
     };
   }, [filteredExpenses]);
 
-  // ================= 5. STYLIST PERFORMANCE DEEP ANALYTICS =================
-  const repeatClientIdentifiers = useMemo(() => {
-    const counts: Record<string, number> = {};
-    bills.forEach((b) => {
-      if (b.isDeleted) return;
-      const key = b.phone || b.cust.toLowerCase();
-      if (key) counts[key] = (counts[key] || 0) + 1;
-    });
-    return new Set(Object.keys(counts).filter((k) => counts[k] >= 2));
+  // ================= 7. PENDING COMPLETE DETAILED REPORT =================
+  // Debtor clients with positive due balances
+  const debtorClients = useMemo(() => {
+    return customers
+      .filter((c) => (c.due || 0) > 0)
+      .sort((a, b) => (b.due || 0) - (a.due || 0));
+  }, [customers]);
+
+  const totalOutstandingDues = useMemo(() => {
+    return debtorClients.reduce((sum, c) => sum + (c.due || 0), 0);
+  }, [debtorClients]);
+
+  const avgPendingPerDebtor = debtorClients.length > 0
+    ? Math.round(totalOutstandingDues / debtorClients.length)
+    : 0;
+
+  // Unpaid or partially paid bills in database
+  const pendingBillsList = useMemo(() => {
+    return bills
+      .filter((b) => !b.isDeleted && ((b.dueAmount && b.dueAmount > 0) || b.status === 'partially_paid' || b.status === 'pending'))
+      .sort((a, b) => (b.dueAmount || 0) - (a.dueAmount || 0));
   }, [bills]);
 
-  const staffPerformanceList = useMemo(() => {
-    // If a specific stylist is filtered, show that stylist first or only
-    const targetStaff = selectedStylist !== 'all'
-      ? staff.filter((st) => st.name.toLowerCase() === selectedStylist.toLowerCase())
-      : staff;
+  // Send WhatsApp Payment Reminder to Client
+  const handleSendReminderWhatsApp = (clientName: string, phone: string, dueAmount: number) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const sName = shopProfile.shopName || 'StyleFleet Salon';
+    const message = `Hello ${clientName}! ✨ Greetings from ${sName}.\n\nThis is a gentle reminder regarding your outstanding salon khata balance of ₹${dueAmount.toLocaleString('en-IN')}.\n\nYou can clear this conveniently via UPI or cash on your next visit. We look forward to serving you again soon! 💇‍♀️💅`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/91${cleanPhone}?text=${encoded}`, '_blank');
+    showToast(`WhatsApp reminder prepared for ${clientName}`);
+  };
 
-    return targetStaff.map((st) => {
-      const stylistBills = filteredBills.filter(
-        (b) => b.staff && b.staff.toLowerCase() === st.name.toLowerCase()
-      );
-
-      const revenue = stylistBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-      const servicesBilled = stylistBills.reduce((acc, b) => acc + (b.items?.length || 1), 0);
-      const commRate = st.commissionRate || 15;
-      const commissionEarned = Math.round((revenue * commRate) / 100);
-      const netToSalon = Math.max(0, revenue - commissionEarned);
-
-      // Real upsell rate: bills with 2 or more line items
-      const multiItemBills = stylistBills.filter((b) => (b.items?.length || 0) >= 2).length;
-      const upsellRate = stylistBills.length > 0 ? Math.round((multiItemBills / stylistBills.length) * 100) : 0;
-
-      // Real repeat client rate
-      const repeatBills = stylistBills.filter((b) => {
-        const key = b.phone || b.cust.toLowerCase();
-        return key && repeatClientIdentifiers.has(key);
-      }).length;
-      const repeatClientRate = stylistBills.length > 0 ? Math.round((repeatBills / stylistBills.length) * 100) : 0;
-
-      const storeShare = grossSales > 0 ? Math.round((revenue / grossSales) * 100) : 0;
-      const avgBill = stylistBills.length > 0 ? Math.round(revenue / stylistBills.length) : 0;
-
-      // Top service performed by this stylist
-      const serviceCounts: Record<string, number> = {};
-      stylistBills.forEach((b) => {
-        (b.items || []).forEach((it) => {
-          serviceCounts[it.name] = (serviceCounts[it.name] || 0) + (it.qty || 1);
-        });
-      });
-      const topService = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Haircut';
-
-      return {
-        id: st.id,
-        name: st.name,
-        role: st.role || 'Stylist',
-        rating: st.rating || '5.0',
-        chair: st.chair || 'Main Floor',
-        revenue,
-        billsCount: stylistBills.length,
-        servicesBilled,
-        storeShare,
-        commissionEarned,
-        netToSalon,
-        upsellRate,
-        repeatClientRate,
-        avgBill,
-        topService,
-      };
-    }).sort((a, b) => b.revenue - a.revenue);
-  }, [staff, filteredBills, grossSales, repeatClientIdentifiers, selectedStylist]);
-
-  const maxStaffRevenue = useMemo(() => {
-    return Math.max(...staffPerformanceList.map((s) => s.revenue), 1);
-  }, [staffPerformanceList]);
-
-  // ================= 6. POWER BI DUAL-METRIC TIMELINE (REVENUE VS EXPENSE) =================
+  // ================= 8. POWER BI DUAL CASHFLOW TIMELINE =================
   const runningTimelineData = useMemo(() => {
     const timeSlots = [
       { label: '9-11 AM', startH: 0, endH: 11 },
@@ -443,7 +629,6 @@ export function DeepAnalyticsView() {
     return Math.max(maxRev, maxExp);
   }, [runningTimelineData, grossSales, totalExpensesAmt]);
 
-  // Smooth SVG Path for Running Revenue & Expense Lines
   const { revLinePath, revAreaPath, expLinePath } = useMemo(() => {
     const width = 640;
     const height = 180;
@@ -470,53 +655,7 @@ export function DeepAnalyticsView() {
     return { revLinePath: revLine, revAreaPath: revArea, expLinePath: expLine };
   }, [runningTimelineData, maxRunningVal]);
 
-  // ================= 7. FLOOR & CHAIR PRODUCTIVITY =================
-  const floorStationsData = useMemo(() => {
-    const stationNames = ['Chair 1', 'Chair 2', 'Chair 3', 'Spa Room'];
-
-    return stationNames.map((stationName, idx) => {
-      const assignedStaff = staff.filter(
-        (s) => s.chair && s.chair.toLowerCase() === stationName.toLowerCase()
-      );
-      const staffNames = assignedStaff.map((s) => s.name.toLowerCase());
-
-      const stationBills = filteredBills.filter((b) => {
-        if (!b.staff) return false;
-        if (staffNames.length > 0) {
-          return staffNames.includes(b.staff.toLowerCase());
-        }
-        return (b.cust.length + idx) % stationNames.length === idx;
-      });
-
-      const stationRevenue = stationBills.reduce((acc, b) => acc + (b.paidAmount || b.total || 0), 0);
-      const servicesCount = stationBills.reduce((acc, b) => acc + (b.items?.length || 1), 0);
-
-      let totalMins = 0;
-      stationBills.forEach((b) => {
-        (b.items || []).forEach((it) => {
-          const matchedService = services.find((s) => s.name.toLowerCase() === it.name.toLowerCase());
-          totalMins += (matchedService?.dur || 30) * (it.qty || 1);
-        });
-      });
-
-      const avgTurnaround = stationBills.length > 0 ? Math.round(totalMins / stationBills.length) : 35;
-      const openCapacityMins = 600;
-      const occupancyLoadPct = Math.min(100, Math.round((totalMins / openCapacityMins) * 100));
-
-      return {
-        id: `station-${idx}`,
-        name: stationName,
-        assignedStaffName: assignedStaff[0]?.name || (staff[idx]?.name ?? 'Floor Stylist'),
-        revenue: stationRevenue,
-        billsCount: stationBills.length,
-        servicesCount,
-        avgTurnaround: Math.max(15, avgTurnaround),
-        occupancyLoadPct: stationBills.length > 0 ? Math.max(20, occupancyLoadPct) : 0,
-      };
-    });
-  }, [staff, filteredBills, services]);
-
-  // ================= 8. PEAK HOURS HEATMAP =================
+  // ================= 9. PEAK HOURS HEATMAP =================
   const heatmapDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const heatmapSlots = ['9-11 AM', '11-1 PM', '1-3 PM', '3-5 PM', '5-7 PM', '7-9 PM', '9 PM+'];
 
@@ -573,7 +712,7 @@ export function DeepAnalyticsView() {
     return max;
   }, [heatmapMatrix]);
 
-  // ================= 9. INTERACTIVE LEDGER EXPLORER SEARCH =================
+  // ================= 10. INTERACTIVE DRILL-DOWN LEDGER SEARCH =================
   const searchedExpenses = useMemo(() => {
     if (!ledgerSearch.trim()) return filteredExpenses;
     const q = ledgerSearch.toLowerCase();
@@ -599,12 +738,16 @@ export function DeepAnalyticsView() {
     );
   }, [filteredBills, ledgerSearch]);
 
-  // Total outstanding khata dues
-  const totalOutstandingDues = useMemo(() => {
-    return customers.reduce((sum, c) => sum + (c.due || 0), 0);
-  }, [customers]);
+  const searchedDebtors = useMemo(() => {
+    if (!ledgerSearch.trim()) return debtorClients;
+    const q = ledgerSearch.toLowerCase();
+    return debtorClients.filter((c) =>
+      (c.name && c.name.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.includes(q)) ||
+      String(c.due).includes(q)
+    );
+  }, [debtorClients, ledgerSearch]);
 
-  // Check if any slicer is actively filtering beyond defaults
   const isAnyFilterActive = period !== 'today' || selectedStylist !== 'all' || selectedExpenseCat !== 'all' || selectedPaymentMode !== 'all';
 
   const handleResetFilters = () => {
@@ -618,19 +761,20 @@ export function DeepAnalyticsView() {
 
   // Export Executive Summary to CSV
   const handleExportCSV = () => {
-    const headers = ['Metric', 'Value', 'Active Period', 'Active Stylist Filter', 'Active Expense Cat Filter'];
+    const headers = ['Metric', 'Value', 'Active Period', 'Active Stylist', 'Active Expense Cat'];
     const rows = [
       ['Gross Sales Revenue (INR)', grossSales, period.toUpperCase(), selectedStylist, selectedExpenseCat],
       ['Salon Operating Expenses (INR)', totalExpensesAmt, period.toUpperCase(), selectedStylist, selectedExpenseCat],
       ['Net Salon Profit (INR)', netProfit, period.toUpperCase(), selectedStylist, selectedExpenseCat],
       ['Profit Margin (%)', `${profitMarginPct}%`, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Total Invoices Billed', billCount, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Average Ticket Size (INR)', avgTicket, period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Mostly Used Expense Category (Frequency)', expenseCategoryAnalytics.mostFrequentCat ? `${expenseCategoryAnalytics.mostFrequentCat.cat} (${expenseCategoryAnalytics.mostFrequentCat.count} times)` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['Highest Spend Expense Category', expenseCategoryAnalytics.highestSpendCat ? `${expenseCategoryAnalytics.highestSpendCat.cat} (INR ${expenseCategoryAnalytics.highestSpendCat.totalAmount})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
-      ['UPI Collection (INR)', paymentModes.upi, period.toUpperCase(), selectedStylist, selectedPaymentMode],
-      ['Cash Collection (INR)', paymentModes.cash, period.toUpperCase(), selectedStylist, selectedPaymentMode],
-      ['Outstanding Client Dues (INR)', totalOutstandingDues, period.toUpperCase(), selectedStylist, selectedPaymentMode],
+      ['Best Peak Day in History', bestDay ? `${bestDay.displayDate} (INR ${bestDay.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Best Week in History', bestWeek ? `${bestWeek.label} (INR ${bestWeek.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Best Peak Hour Slot', bestPeakHour ? `${bestPeakHour.label} (INR ${bestPeakHour.rev})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Peak Day of Week', `${dayOfWeekAnalytics.peakDay.day} (INR ${dayOfWeekAnalytics.peakDay.rev})`, period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Mostly Used Expense Category', expenseCategoryAnalytics.mostFrequentCat ? `${expenseCategoryAnalytics.mostFrequentCat.cat} (${expenseCategoryAnalytics.mostFrequentCat.count} entries)` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Highest Cost Center Category', expenseCategoryAnalytics.highestSpendCat ? `${expenseCategoryAnalytics.highestSpendCat.cat} (INR ${expenseCategoryAnalytics.highestSpendCat.totalAmount})` : 'N/A', period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Total Outstanding Customer Khata (INR)', totalOutstandingDues, period.toUpperCase(), selectedStylist, selectedExpenseCat],
+      ['Clients with Pending Balances', debtorClients.length, period.toUpperCase(), selectedStylist, selectedExpenseCat],
       ['Top Stylist by Revenue', staffPerformanceList[0]?.name || 'N/A', period.toUpperCase(), selectedStylist, selectedPaymentMode],
     ];
 
@@ -646,10 +790,10 @@ export function DeepAnalyticsView() {
   };
 
   return (
-    <section className="space-y-6 animate-fadeIn pb-20">
+    <section className="space-y-7 animate-fadeIn pb-24">
       {/* ================= 1. HEADER & POWER BI TITLE ================= */}
       <div
-        className={`p-6 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+        className={`p-6 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-sm ${
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
         }`}
       >
@@ -669,7 +813,7 @@ export function DeepAnalyticsView() {
               </span>
             </div>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Deep analytics: stylist ROI, mostly used expense categories, cashflow velocity & real-time drilldowns
+              Peak performance, profit comparison, stylist leaderboard, expense outflow & complete pending receivables
             </p>
           </div>
         </div>
@@ -689,7 +833,7 @@ export function DeepAnalyticsView() {
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>Reset All Slicers</span>
+              <span>Reset Slicers</span>
             </button>
           )}
 
@@ -729,7 +873,7 @@ export function DeepAnalyticsView() {
             </span>
           </div>
           <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            Click any card below to cross-filter instantly
+            Click any stylist, category, or card to filter
           </span>
         </div>
 
@@ -841,7 +985,7 @@ export function DeepAnalyticsView() {
         {isAnyFilterActive && (
           <div className="flex items-center gap-2 pt-2 border-t border-white/5 flex-wrap">
             <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Active Filters:
+              Active Slicers:
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#D4AF37]/15 text-[#D4AF37]">
               Period: {period.toUpperCase()}
@@ -868,343 +1012,262 @@ export function DeepAnalyticsView() {
         )}
       </div>
 
-      {/* ================= 3. EXECUTIVE POWER BI SCORECARDS ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Gross Revenue */}
+      {/* ================= 3. TOP OF SALON INTELLIGENCE: PROFIT COMPARISON & PEAK PERFORMANCE HIGHLIGHTS ================= */}
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
+            <h3 className={`text-base font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              Peak Intelligence & Profit Comparison
+            </h3>
+          </div>
+          <span className="text-[11px] font-bold text-[#D4AF37] px-2.5 py-0.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30">
+            Real Database Milestones
+          </span>
+        </div>
+
+        {/* 3A. PROFIT COMPARISON CARD (EXECUTIVE P&L) */}
         <div
-          onClick={() => setLedgerTab('bills')}
-          className={`p-5 rounded-3xl border transition-all cursor-pointer ${
-            isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50' : 'bg-white border-slate-200 hover:border-amber-400'
+          className={`p-6 rounded-3xl border transition-all ${
+            isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Gross Billed Revenue
-            </span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-              {billCount} bills
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-black text-[#D4AF37]">₹</span>
-            <strong className={`text-2xl sm:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              <AnimatedCounter value={grossSales} />
-            </strong>
-          </div>
-          <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-            Avg ticket: ₹{avgTicket.toLocaleString('en-IN')}
-          </span>
-        </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/5 pb-4">
+            <div>
+              <span className="text-xs font-black uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Salon Profit Comparison · Revenue vs Expense Margin
+              </span>
+              <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                Net cashflow efficiency comparing gross revenue against operational expenses for {period.toUpperCase()}
+              </p>
+            </div>
 
-        {/* Operating Expenses */}
-        <div
-          onClick={() => setLedgerTab('expenses')}
-          className={`p-5 rounded-3xl border transition-all cursor-pointer ${
-            isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-rose-400/50' : 'bg-white border-slate-200 hover:border-rose-400'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Operating Expenses
-            </span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400">
-              {filteredExpenses.length} entries
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-black text-rose-400">₹</span>
-            <strong className={`text-2xl sm:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              <AnimatedCounter value={totalExpensesAmt} />
-            </strong>
-          </div>
-          <span className={`text-[11px] block mt-1 truncate ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-            {expenseCategoryAnalytics.categories.length} categories active
-          </span>
-        </div>
-
-        {/* Net Profit */}
-        <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Net Salon Profit
-            </span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-              {profitMarginPct}% Margin
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-black text-emerald-400">₹</span>
-            <strong className={`text-2xl sm:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              <AnimatedCounter value={netProfit} />
-            </strong>
-          </div>
-          <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-            Sales minus recorded expenses
-          </span>
-        </div>
-
-        {/* Mostly Used Category (Frequency) */}
-        <div
-          onClick={() => {
-            if (expenseCategoryAnalytics.mostFrequentCat) {
-              setSelectedExpenseCat(
-                selectedExpenseCat === expenseCategoryAnalytics.mostFrequentCat.cat
-                  ? 'all'
-                  : expenseCategoryAnalytics.mostFrequentCat.cat
-              );
-            }
-          }}
-          className={`p-5 rounded-3xl border transition-all cursor-pointer ${
-            isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-amber-400/50' : 'bg-white border-slate-200 hover:border-amber-400'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Mostly Used Category
-            </span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-              Top Outflow
-            </span>
-          </div>
-          <div className="mt-2">
-            <strong className={`text-lg sm:text-xl font-black block truncate ${isDarkMode ? 'text-amber-400' : 'text-amber-800'}`}>
-              {expenseCategoryAnalytics.mostFrequentCat?.cat || 'None'}
-            </strong>
-          </div>
-          <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-            {expenseCategoryAnalytics.mostFrequentCat
-              ? `${expenseCategoryAnalytics.mostFrequentCat.count} entries (${expenseCategoryAnalytics.mostFrequentCat.pctFreq}% of all entries)`
-              : 'No expenses recorded'}
-          </span>
-        </div>
-
-        {/* Outstanding Dues */}
-        <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Khata Dues
-            </span>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-              {paymentModes.due > 0 ? 'Active' : 'Clear'}
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-black text-amber-400">₹</span>
-            <strong className={`text-2xl sm:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              <AnimatedCounter value={totalOutstandingDues} />
-            </strong>
-          </div>
-          <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}`}>
-            Total recoverable customer balance
-          </span>
-        </div>
-      </div>
-
-      {/* ================= 4. EXPENSE CATEGORY DEEP INTELLIGENCE (WHICH CATEGORY EXPENSES MOSTLY USED) ================= */}
-      <div
-        className={`p-6 rounded-3xl border space-y-4 ${
-          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
-        }`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
-          <div>
             <div className="flex items-center gap-2">
-              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Expense Categories Intelligence · Outflow Analytics
-              </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                Frequency vs Spend
+              <span className={`text-xs font-black px-3 py-1 rounded-xl border ${
+                profitMarginPct >= 50
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                  : 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+              }`}>
+                {profitMarginPct}% Net Margin ({profitMarginPct >= 50 ? 'High Profitability' : 'Moderate Profitability'})
               </span>
             </div>
-            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Identifies which category expenses are mostly used in the salon and where money is going
-            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-rose-400">
-              Total Outflow: ₹{totalExpensesAmt.toLocaleString('en-IN')}
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+            {/* 1. Gross Revenue */}
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center justify-between text-xs">
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Gross Billed Revenue</span>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                  {billCount} invoices
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-xl font-black text-[#D4AF37]">₹</span>
+                <strong className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <AnimatedCounter value={grossSales} />
+                </strong>
+              </div>
+              <div className="mt-2 text-[10px] flex items-center justify-between text-slate-400 border-t border-white/5 pt-1.5">
+                <span>Avg Ticket: ₹{avgTicket.toLocaleString('en-IN')}</span>
+                {period === 'today' && (
+                  <span className={baselineStats.revGrowthPct >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                    {baselineStats.revGrowthPct >= 0 ? `+${baselineStats.revGrowthPct}%` : `${baselineStats.revGrowthPct}%`} vs yesterday
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Total Outflow Expenses */}
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center justify-between text-xs">
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Operating Expenses Outflow</span>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400">
+                  {filteredExpenses.length} entries
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-xl font-black text-rose-400">₹</span>
+                <strong className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <AnimatedCounter value={totalExpensesAmt} />
+                </strong>
+              </div>
+              <div className="mt-2 text-[10px] flex items-center justify-between text-slate-400 border-t border-white/5 pt-1.5">
+                <span>Outflow Share: {grossSales > 0 ? Math.round((totalExpensesAmt / grossSales) * 100) : 0}%</span>
+                <span className="text-rose-400 font-medium truncate max-w-[120px]">
+                  Top: {expenseCategoryAnalytics.mostFrequentCat?.cat || 'General'}
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Net Salon Profit */}
+            <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-emerald-500/30' : 'bg-emerald-50/50 border-emerald-300'}`}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-emerald-400 font-bold">Net Operating Profit</span>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                  Take-Home
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-xl font-black text-emerald-400">₹</span>
+                <strong className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <AnimatedCounter value={netProfit} />
+                </strong>
+              </div>
+              <div className="mt-2 text-[10px] flex items-center justify-between text-slate-400 border-t border-white/5 pt-1.5">
+                <span className="text-emerald-400 font-bold">{profitMarginPct}% profit retained</span>
+                {period === 'today' && (
+                  <span className={baselineStats.profitGrowthPct >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                    {baselineStats.profitGrowthPct >= 0 ? `+${baselineStats.profitGrowthPct}%` : `${baselineStats.profitGrowthPct}%`} profit
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Top 2 Callout Cards: Most Frequent vs Highest Spend */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1: Most Frequently Used */}
+        {/* 3B. THE 4 BEST PEAK INTELLIGENCE CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: BEST DAY */}
           <div
-            onClick={() => {
-              if (expenseCategoryAnalytics.mostFrequentCat) {
-                setSelectedExpenseCat(expenseCategoryAnalytics.mostFrequentCat.cat);
-              }
-            }}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-              selectedExpenseCat === expenseCategoryAnalytics.mostFrequentCat?.cat
-                ? 'border-amber-400 ring-2 ring-amber-400/20'
-                : isDarkMode
-                ? 'bg-[#0B1528] border-white/5 hover:border-amber-400/40'
-                : 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+            className={`p-5 rounded-3xl border transition-all ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/50' : 'bg-white border-slate-200 hover:border-amber-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                The Best Day
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
+                Record High
+              </span>
+            </div>
+            <div className="mt-3">
+              <strong className={`text-lg font-black block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {bestDay?.displayDate || 'Today'}
+              </strong>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-sm font-black text-[#D4AF37]">₹</span>
+                <span className="text-2xl font-black text-[#D4AF37]">
+                  {(bestDay?.rev || grossSales).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                {bestDay?.count || billCount} clients served on peak day
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: THE BEST WEEK */}
+          <div
+            className={`p-5 rounded-3xl border transition-all ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                The Best Week
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                Peak Turnover
+              </span>
+            </div>
+            <div className="mt-3">
+              <strong className={`text-lg font-black block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {bestWeek?.label || 'Current Week'}
+              </strong>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-sm font-black text-emerald-400">₹</span>
+                <span className="text-2xl font-black text-emerald-400">
+                  {(bestWeek?.rev || grossSales).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                {bestWeek?.count || billCount} customer invoices billed in 7 days
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: THE BEST PEAK HOUR */}
+          <div
+            className={`p-5 rounded-3xl border transition-all ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-sky-500/50' : 'bg-white border-slate-200 hover:border-sky-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                The Best Peak Hour
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400">
+                Rush Window
+              </span>
+            </div>
+            <div className="mt-3">
+              <strong className={`text-lg font-black block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {bestPeakHour?.label || '5:00 PM – 7:00 PM'}
+              </strong>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-sm font-black text-sky-400">₹</span>
+                <span className="text-2xl font-black text-sky-400">
+                  {(bestPeakHour?.rev || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                {bestPeakHour?.count || 0} clients served during peak hour rush
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: WHICH DAY IN THE WEEK HAD MORE PEAK */}
+          <div
+            className={`p-5 rounded-3xl border transition-all ${
+              isDarkMode ? 'bg-[#121B33] border-[#2A3858] hover:border-amber-400/50' : 'bg-white border-slate-200 hover:border-amber-400'
             }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
                 </svg>
-                #1 Mostly Used Category (By Frequency)
+                Peak Day of Week
               </span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-                {expenseCategoryAnalytics.mostFrequentCat?.count || 0} times logged
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
+                Weekly King
               </span>
             </div>
-            <div className="mt-2.5">
-              <strong className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                {expenseCategoryAnalytics.mostFrequentCat?.cat || 'No expenses logged'}
+            <div className="mt-3">
+              <strong className={`text-lg font-black block truncate ${isDarkMode ? 'text-amber-400' : 'text-amber-900'}`}>
+                {dayOfWeekAnalytics.peakDay.day} Peak Rush
               </strong>
-              <div className="mt-1 flex items-center gap-3 text-xs">
-                <span className="text-amber-400 font-bold">
-                  ₹{(expenseCategoryAnalytics.mostFrequentCat?.totalAmount || 0).toLocaleString('en-IN')} total
-                </span>
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                  Avg: ₹{(expenseCategoryAnalytics.mostFrequentCat?.avgPerEntry || 0).toLocaleString('en-IN')} per entry
-                </span>
-                <span className="text-[10px] font-bold text-amber-400">
-                  {expenseCategoryAnalytics.mostFrequentCat?.pctFreq || 0}% of all transactions
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-sm font-black text-amber-400">₹</span>
+                <span className="text-2xl font-black text-amber-400">
+                  {dayOfWeekAnalytics.peakDay.rev.toLocaleString('en-IN')}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Card 2: Highest Total Cost Center */}
-          <div
-            onClick={() => {
-              if (expenseCategoryAnalytics.highestSpendCat) {
-                setSelectedExpenseCat(expenseCategoryAnalytics.highestSpendCat.cat);
-              }
-            }}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-              selectedExpenseCat === expenseCategoryAnalytics.highestSpendCat?.cat
-                ? 'border-rose-400 ring-2 ring-rose-400/20'
-                : isDarkMode
-                ? 'bg-[#0B1528] border-white/5 hover:border-rose-400/40'
-                : 'bg-rose-50/60 border-rose-200 hover:border-rose-400'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                #1 Highest Spend Category (Cost Center)
-              </span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
-                {expenseCategoryAnalytics.highestSpendCat?.pctSpend || 0}% of total expenses
+              <span className={`text-[11px] block mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                {dayOfWeekAnalytics.peakOverWeekdayPct > 0 ? `+${dayOfWeekAnalytics.peakOverWeekdayPct}%` : 'Higher than'} weekday baseline ({dayOfWeekAnalytics.peakDay.count} clients)
               </span>
             </div>
-            <div className="mt-2.5">
-              <strong className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                {expenseCategoryAnalytics.highestSpendCat?.cat || 'No expenses logged'}
-              </strong>
-              <div className="mt-1 flex items-center gap-3 text-xs">
-                <span className="text-rose-400 font-bold">
-                  ₹{(expenseCategoryAnalytics.highestSpendCat?.totalAmount || 0).toLocaleString('en-IN')} total
-                </span>
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                  Largest single bill: ₹{(expenseCategoryAnalytics.highestSpendCat?.highestSingle || 0).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
           </div>
-        </div>
-
-        {/* Detailed Category Outflow List / Matrix */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
-            <span>Category & Usage Frequency</span>
-            <span>Spend Share & Amount (₹)</span>
-          </div>
-
-          {expenseCategoryAnalytics.categories.length === 0 ? (
-            <div className={`p-6 rounded-2xl text-center text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              No expense records found for this period. Add expenses to populate real category analytics.
-            </div>
-          ) : (
-            expenseCategoryAnalytics.categories.map((c, idx) => {
-              const isSelected = selectedExpenseCat.toLowerCase() === c.cat.toLowerCase();
-              const isMostFreq = expenseCategoryAnalytics.mostFrequentCat?.cat === c.cat;
-              const isHighest = expenseCategoryAnalytics.highestSpendCat?.cat === c.cat;
-
-              return (
-                <div
-                  key={c.cat}
-                  onClick={() => setSelectedExpenseCat(isSelected ? 'all' : c.cat)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? isDarkMode
-                        ? 'bg-[#0B1528] border-rose-400/80 ring-2 ring-rose-400/20'
-                        : 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/20'
-                      : isDarkMode
-                      ? 'bg-[#0E1528] border-white/5 hover:border-white/10'
-                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-rose-500/20 text-rose-400 font-black text-[10px] flex items-center justify-center">
-                        #{idx + 1}
-                      </span>
-                      <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>
-                        {c.cat}
-                      </strong>
-                      {isMostFreq && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          MOST FREQUENT
-                        </span>
-                      )}
-                      {isHighest && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                          HIGHEST SPEND
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <strong className="text-sm font-extrabold text-rose-400">
-                        ₹{c.totalAmount.toLocaleString('en-IN')}
-                      </strong>
-                      <span className={`text-[10px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {c.count} entries ({c.pctSpend}% of budget)
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dual Bar: Spend Share vs Frequency Share */}
-                  <div className="w-full bg-slate-700/30 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${Math.max(5, c.pctSpend)}%` }}
-                      className="h-full bg-rose-400 rounded-full"
-                    />
-                  </div>
-
-                  {/* Sub-Metrics */}
-                  <div className="flex items-center justify-between text-[10px] mt-2 pt-1 border-t border-white/5 flex-wrap gap-1">
-                    <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                      Average per entry: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>₹{c.avgPerEntry.toLocaleString('en-IN')}</strong>
-                    </span>
-                    <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
-                      Single largest receipt: <strong className="text-rose-400">₹{c.highestSingle.toLocaleString('en-IN')}</strong>
-                    </span>
-                    <span className="text-sky-400 font-bold">
-                      Click to isolate this category in ledger ↓
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
         </div>
       </div>
 
-      {/* ================= 5. STYLIST PERFORMANCE DEEP ANALYTICS MATRIX ================= */}
+      {/* ================= 4. STYLIST PERFORMANCE REPORT (ON TOP AS REQUESTED) ================= */}
       <div
         className={`p-6 rounded-3xl border space-y-4 ${
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
@@ -1214,14 +1277,14 @@ export function DeepAnalyticsView() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Stylist Performance & Profitability Matrix
+                Stylist Performance Report & ROI Leaderboard
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30">
                 Revenue, Upsell & Retention
               </span>
             </div>
             <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Ranked by billed revenue with commission calculation, upsell conversion rate & repeat client retention
+              Ranked by revenue contribution with commission breakdown, upsell conversion rate & repeat client retention
             </p>
           </div>
 
@@ -1246,8 +1309,8 @@ export function DeepAnalyticsView() {
                 className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                   isSelected
                     ? isDarkMode
-                      ? 'bg-[#0B1528] border-[#D4AF37] ring-2 ring-[#D4AF37]/20'
-                      : 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/20'
+                      ? 'bg-[#0B1528] border-[#D4AF37] ring-2 ring-[#D4AF37]/20 shadow-md'
+                      : 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/20 shadow-md'
                     : isDarkMode
                     ? 'bg-[#0E1528] border-white/5 hover:border-white/10'
                     : 'bg-slate-50 border-slate-200 hover:border-slate-300'
@@ -1273,7 +1336,7 @@ export function DeepAnalyticsView() {
                       ₹{st.revenue.toLocaleString('en-IN')}
                     </strong>
                     <span className={`text-[10px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {st.billsCount} bills ({st.storeShare}% share)
+                      {st.billsCount} bills ({st.storeShare}% store share)
                     </span>
                   </div>
                 </div>
@@ -1283,7 +1346,7 @@ export function DeepAnalyticsView() {
                   <div style={{ width: `${barWidth}%` }} className="h-full bg-[#D4AF37] rounded-full" />
                 </div>
 
-                {/* Metric Grid */}
+                {/* Metric Sub-Grid */}
                 <div className="grid grid-cols-2 gap-2 text-[10px] pt-2 border-t border-white/5">
                   <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#0B1528]' : 'bg-white border border-slate-200'}`}>
                     <span className={`block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Avg Bill Size</span>
@@ -1317,146 +1380,9 @@ export function DeepAnalyticsView() {
         </div>
       </div>
 
-      {/* ================= 6. POWER BI DUAL CASHFLOW TIMELINE (REVENUE VS EXPENSES) ================= */}
-      <div
-        className={`p-6 rounded-3xl border space-y-4 ${
-          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
-        }`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
-          <div>
-            <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Cashflow Dynamics · Revenue vs Expense Outflow
-            </h3>
-            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Dynamic shift comparison for {period.toUpperCase()} across operating hours
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-bold">
-            <div className="flex items-center gap-1.5 text-[#D4AF37]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" />
-              <span>Revenue (₹{grossSales.toLocaleString('en-IN')})</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-rose-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-              <span>Expense Outflow (₹{totalExpensesAmt.toLocaleString('en-IN')})</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dual SVG Area / Line Chart */}
-        <div className="relative pt-2">
-          <svg viewBox="0 0 640 180" className="w-full h-48 overflow-visible">
-            <defs>
-              <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {revAreaPath && <path d={revAreaPath} fill="url(#goldGradient)" />}
-
-            {/* Revenue Line */}
-            {revLinePath && (
-              <path
-                d={revLinePath}
-                fill="none"
-                stroke="#D4AF37"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-
-            {/* Expense Outflow Line */}
-            {expLinePath && (
-              <path
-                d={expLinePath}
-                fill="none"
-                stroke="#F43F5E"
-                strokeWidth="2.5"
-                strokeDasharray="4 3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-
-            {runningTimelineData.map((d, idx) => {
-              const width = 640;
-              const height = 180;
-              const padding = 28;
-              const cx = padding + (idx / Math.max(1, runningTimelineData.length - 1)) * (width - padding * 2);
-              const cyRev = height - padding - (d.runningRev / maxRunningVal) * (height - padding * 2);
-              const cyExp = height - padding - (d.runningExp / maxRunningVal) * (height - padding * 2);
-              const isHovered = hoveredPointIdx === idx;
-
-              return (
-                <g key={d.label}>
-                  {/* Revenue Point */}
-                  <circle
-                    cx={cx}
-                    cy={cyRev}
-                    r={isHovered ? 6 : 4}
-                    fill={isHovered ? '#FFFFFF' : '#D4AF37'}
-                    stroke={isDarkMode ? '#0B1F44' : '#FFFFFF'}
-                    strokeWidth="2"
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredPointIdx(idx)}
-                    onMouseLeave={() => setHoveredPointIdx(null)}
-                  />
-
-                  {/* Expense Point */}
-                  <circle
-                    cx={cx}
-                    cy={cyExp}
-                    r={isHovered ? 5 : 3}
-                    fill="#F43F5E"
-                    stroke={isDarkMode ? '#0B1F44' : '#FFFFFF'}
-                    strokeWidth="1.5"
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredPointIdx(idx)}
-                    onMouseLeave={() => setHoveredPointIdx(null)}
-                  />
-
-                  <text
-                    x={cx}
-                    y={height - 4}
-                    textAnchor="middle"
-                    className={`text-[10px] font-bold ${isDarkMode ? 'fill-slate-400' : 'fill-slate-600'}`}
-                  >
-                    {d.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Tooltip */}
-          {hoveredPointIdx !== null && runningTimelineData[hoveredPointIdx] && (
-            <div
-              className={`p-3 rounded-2xl border flex items-center justify-between text-xs mt-3 animate-fadeIn ${
-                isDarkMode ? 'bg-[#0B1528] border-[#D4AF37]/40 text-white' : 'bg-amber-50 border-amber-300 text-slate-900'
-              }`}
-            >
-              <div>
-                Shift: <strong className="text-[#D4AF37]">{runningTimelineData[hoveredPointIdx].label}</strong>
-              </div>
-              <div className="flex items-center gap-4">
-                <span>
-                  Cumul. Revenue: <strong className="text-[#D4AF37]">₹{runningTimelineData[hoveredPointIdx].runningRev.toLocaleString('en-IN')}</strong> ({runningTimelineData[hoveredPointIdx].billCount} bills)
-                </span>
-                <span>
-                  Cumul. Expenses: <strong className="text-rose-400">₹{runningTimelineData[hoveredPointIdx].runningExp.toLocaleString('en-IN')}</strong> ({runningTimelineData[hoveredPointIdx].expCount} entries)
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ================= 7. HEATMAP & FLOOR STATIONS ================= */}
+      {/* ================= 5. CASHFLOW DYNAMICS & 7-DAY PEAK RUSH HEATMAP ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Heatmap Matrix */}
+        {/* Dynamic Cashflow Chart */}
         <div
           className={`lg:col-span-7 p-6 rounded-3xl border space-y-4 ${
             isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
@@ -1465,61 +1391,159 @@ export function DeepAnalyticsView() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
             <div>
               <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                7-Day × Peak Hours Rush Heatmap
+                Cashflow Dynamics · Sales vs Outflow
               </h3>
               <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                Customer rush density matrix across operating hours
+                Shift velocity for {period.toUpperCase()} across operating hours
               </p>
             </div>
+            <div className="flex items-center gap-3 text-xs font-bold">
+              <span className="text-[#D4AF37] flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" /> Revenue
+              </span>
+              <span className="text-rose-400 flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Outflow
+              </span>
+            </div>
+          </div>
 
-            <div className="flex items-center gap-2 text-[10px] font-bold">
-              <span className="text-slate-400">Low</span>
-              <div className="flex gap-1">
-                <span className="w-3 h-3 rounded-md bg-slate-800 border border-white/10" />
-                <span className="w-3 h-3 rounded-md bg-amber-500/25" />
-                <span className="w-3 h-3 rounded-md bg-amber-500/50" />
-                <span className="w-3 h-3 rounded-md bg-[#D4AF37]" />
+          <div className="relative pt-2">
+            <svg viewBox="0 0 640 180" className="w-full h-44 overflow-visible">
+              <defs>
+                <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {revAreaPath && <path d={revAreaPath} fill="url(#goldGradient)" />}
+
+              {revLinePath && (
+                <path
+                  d={revLinePath}
+                  fill="none"
+                  stroke="#D4AF37"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {expLinePath && (
+                <path
+                  d={expLinePath}
+                  fill="none"
+                  stroke="#F43F5E"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {runningTimelineData.map((d, idx) => {
+                const width = 640;
+                const height = 180;
+                const padding = 28;
+                const cx = padding + (idx / Math.max(1, runningTimelineData.length - 1)) * (width - padding * 2);
+                const cyRev = height - padding - (d.runningRev / maxRunningVal) * (height - padding * 2);
+                const isHovered = hoveredPointIdx === idx;
+
+                return (
+                  <g key={d.label}>
+                    <circle
+                      cx={cx}
+                      cy={cyRev}
+                      r={isHovered ? 6 : 4}
+                      fill={isHovered ? '#FFFFFF' : '#D4AF37'}
+                      stroke={isDarkMode ? '#0B1F44' : '#FFFFFF'}
+                      strokeWidth="2"
+                      className="cursor-pointer"
+                      onMouseEnter={() => setHoveredPointIdx(idx)}
+                      onMouseLeave={() => setHoveredPointIdx(null)}
+                    />
+                    <text
+                      x={cx}
+                      y={height - 4}
+                      textAnchor="middle"
+                      className={`text-[10px] font-bold ${isDarkMode ? 'fill-slate-400' : 'fill-slate-600'}`}
+                    >
+                      {d.label}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+
+            {hoveredPointIdx !== null && runningTimelineData[hoveredPointIdx] && (
+              <div
+                className={`p-3 rounded-2xl border flex items-center justify-between text-xs mt-3 animate-fadeIn ${
+                  isDarkMode ? 'bg-[#0B1528] border-[#D4AF37]/40 text-white' : 'bg-amber-50 border-amber-300 text-slate-900'
+                }`}
+              >
+                <div>
+                  Shift: <strong className="text-[#D4AF37]">{runningTimelineData[hoveredPointIdx].label}</strong>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>Rev: <strong className="text-[#D4AF37]">₹{runningTimelineData[hoveredPointIdx].runningRev.toLocaleString('en-IN')}</strong></span>
+                  <span>Exp: <strong className="text-rose-400">₹{runningTimelineData[hoveredPointIdx].runningExp.toLocaleString('en-IN')}</strong></span>
+                </div>
               </div>
-              <span className="text-[#D4AF37]">Peak Rush</span>
+            )}
+          </div>
+        </div>
+
+        {/* 7-Day Peak Rush Heatmap */}
+        <div
+          className={`lg:col-span-5 p-6 rounded-3xl border space-y-4 ${
+            isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div>
+              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                7-Day Peak Rush Density
+              </h3>
+              <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+                Rushes vs slowest lulls across shifts
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold">
+              <span className="text-slate-400">Low</span>
+              <span className="w-2.5 h-2.5 rounded bg-amber-500/30" />
+              <span className="w-2.5 h-2.5 rounded bg-[#D4AF37]" />
+              <span className="text-[#D4AF37]">Peak</span>
             </div>
           </div>
 
           <div className="overflow-x-auto [scrollbar-width:none]">
-            <table className="w-full min-w-[480px] text-center border-collapse text-xs">
+            <table className="w-full text-center border-collapse text-xs">
               <thead>
                 <tr>
-                  <th className={`p-2 text-left text-[11px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Day
-                  </th>
+                  <th className={`p-1.5 text-left text-[11px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>Day</th>
                   {heatmapSlots.map((s) => (
-                    <th key={s} className={`p-2 text-[10px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      {s}
-                    </th>
+                    <th key={s} className={`p-1.5 text-[9px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{s.split(' ')[0]}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {heatmapDays.map((d) => (
                   <tr key={d} className="border-t border-white/5">
-                    <td className={`p-2 text-left font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {d}
-                    </td>
+                    <td className={`p-1 text-left font-bold text-[11px] ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{d}</td>
                     {heatmapSlots.map((s) => {
                       const cell = heatmapMatrix[d]?.[s] || { rev: 0, count: 0 };
                       const intensity = maxHeatmapRev > 0 ? cell.rev / maxHeatmapRev : 0;
-
                       let bgClass = isDarkMode ? 'bg-[#0B1528] text-slate-500' : 'bg-slate-100 text-slate-400';
-                      if (intensity > 0.75) bgClass = 'bg-[#D4AF37] text-[#0B1F44] font-black';
-                      else if (intensity > 0.45) bgClass = 'bg-amber-500/40 text-white font-bold';
-                      else if (intensity > 0.15) bgClass = 'bg-amber-500/20 text-amber-300 font-semibold';
-                      else if (cell.count > 0) bgClass = isDarkMode ? 'bg-slate-800/80 text-slate-300' : 'bg-slate-200 text-slate-700';
+                      if (intensity > 0.7) bgClass = 'bg-[#D4AF37] text-[#0B1F44] font-black';
+                      else if (intensity > 0.3) bgClass = 'bg-amber-500/40 text-white font-bold';
+                      else if (cell.count > 0) bgClass = isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700';
 
                       return (
-                        <td key={s} className="p-1">
+                        <td key={s} className="p-0.5">
                           <div
                             onMouseEnter={() => setHoveredCell({ day: d, slot: s, rev: cell.rev, count: cell.count })}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className={`w-full py-2.5 rounded-xl transition-colors cursor-pointer text-[10px] ${bgClass}`}
+                            className={`w-full py-1.5 rounded-lg text-[9px] transition-colors cursor-pointer ${bgClass}`}
                           >
                             {cell.rev > 0 ? `₹${Math.round(cell.rev / 1000)}k` : '—'}
                           </div>
@@ -1533,87 +1557,349 @@ export function DeepAnalyticsView() {
           </div>
 
           {hoveredCell && (
-            <div
-              className={`p-3 rounded-2xl border flex items-center justify-between text-xs animate-fadeIn ${
-                isDarkMode ? 'bg-[#0E1528] border-[#D4AF37]/40 text-white' : 'bg-amber-50 border-amber-300 text-slate-900'
-              }`}
-            >
-              <div>
-                Shift: <strong className="text-[#D4AF37]">{hoveredCell.day} · {hoveredCell.slot}</strong>
-              </div>
-              <div>
-                Billed: <strong>₹{hoveredCell.rev.toLocaleString('en-IN')}</strong> ({hoveredCell.count} invoices)
-              </div>
+            <div className={`p-2.5 rounded-xl border text-xs animate-fadeIn flex items-center justify-between ${
+              isDarkMode ? 'bg-[#0E1528] border-[#D4AF37]/40 text-white' : 'bg-amber-50 border-amber-300 text-slate-900'
+            }`}>
+              <span>{hoveredCell.day} · {hoveredCell.slot}</span>
+              <strong className="text-[#D4AF37]">₹{hoveredCell.rev.toLocaleString('en-IN')} ({hoveredCell.count} invoices)</strong>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Floor & Chair Productivity */}
-        <div
-          className={`lg:col-span-5 p-6 rounded-3xl border space-y-4 ${
-            isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
-          }`}
-        >
-          <div className="border-b border-white/5 pb-3">
-            <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-              Floor & Chair Productivity
-            </h3>
+      {/* ================= 6. GO DOWN TO THE EXPENSE REPORT (AS USER REQUESTED) ================= */}
+      <div
+        className={`p-6 rounded-3xl border space-y-4 ${
+          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                Salon Expense Report & Outflow Intelligence
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                Frequency vs Spend
+              </span>
+            </div>
             <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Station capacity utilization and turnaround speed
+              Detailed breakdown of which category expenses are mostly used in the salon and where cash goes
             </p>
           </div>
 
-          <div className="space-y-3">
-            {floorStationsData.map((station) => (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-rose-400">
+              Total Expenses: ₹{totalExpensesAmt.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+
+        {/* Top 2 Outflow Cards: Most Frequent vs Highest Spend */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card 1: Most Frequently Used Category */}
+          <div
+            onClick={() => {
+              if (expenseCategoryAnalytics.mostFrequentCat) {
+                setSelectedExpenseCat(
+                  selectedExpenseCat === expenseCategoryAnalytics.mostFrequentCat.cat
+                    ? 'all'
+                    : expenseCategoryAnalytics.mostFrequentCat.cat
+                );
+              }
+            }}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+              selectedExpenseCat === expenseCategoryAnalytics.mostFrequentCat?.cat
+                ? 'border-amber-400 ring-2 ring-amber-400/20'
+                : isDarkMode
+                ? 'bg-[#0B1528] border-white/5 hover:border-amber-400/40'
+                : 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Mostly Used Category (Highest Frequency)
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                {expenseCategoryAnalytics.mostFrequentCat?.count || 0} times logged
+              </span>
+            </div>
+            <div className="mt-2.5">
+              <strong className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {expenseCategoryAnalytics.mostFrequentCat?.cat || 'No expenses logged'}
+              </strong>
+              <div className="mt-1 flex items-center gap-3 text-xs">
+                <span className="text-amber-400 font-bold">
+                  ₹{(expenseCategoryAnalytics.mostFrequentCat?.totalAmount || 0).toLocaleString('en-IN')} total
+                </span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
+                  Avg: ₹{(expenseCategoryAnalytics.mostFrequentCat?.avgPerEntry || 0).toLocaleString('en-IN')} / entry
+                </span>
+                <span className="text-[10px] font-bold text-amber-400">
+                  {expenseCategoryAnalytics.mostFrequentCat?.pctFreq || 0}% frequency share
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Highest Total Cost Center */}
+          <div
+            onClick={() => {
+              if (expenseCategoryAnalytics.highestSpendCat) {
+                setSelectedExpenseCat(
+                  selectedExpenseCat === expenseCategoryAnalytics.highestSpendCat.cat
+                    ? 'all'
+                    : expenseCategoryAnalytics.highestSpendCat.cat
+                );
+              }
+            }}
+            className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+              selectedExpenseCat === expenseCategoryAnalytics.highestSpendCat?.cat
+                ? 'border-rose-400 ring-2 ring-rose-400/20'
+                : isDarkMode
+                ? 'bg-[#0B1528] border-white/5 hover:border-rose-400/40'
+                : 'bg-rose-50/60 border-rose-200 hover:border-rose-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Highest Spend Category (Cost Center)
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400">
+                {expenseCategoryAnalytics.highestSpendCat?.pctSpend || 0}% of total expenses
+              </span>
+            </div>
+            <div className="mt-2.5">
+              <strong className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {expenseCategoryAnalytics.highestSpendCat?.cat || 'No expenses logged'}
+              </strong>
+              <div className="mt-1 flex items-center gap-3 text-xs">
+                <span className="text-rose-400 font-bold">
+                  ₹{(expenseCategoryAnalytics.highestSpendCat?.totalAmount || 0).toLocaleString('en-IN')} total
+                </span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
+                  Largest single bill: ₹{(expenseCategoryAnalytics.highestSpendCat?.highestSingle || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Category Outflow List / Matrix */}
+        <div className="space-y-3 pt-2">
+          {expenseCategoryAnalytics.categories.map((c, idx) => {
+            const isSelected = selectedExpenseCat.toLowerCase() === c.cat.toLowerCase();
+            const isMostFreq = expenseCategoryAnalytics.mostFrequentCat?.cat === c.cat;
+            const isHighest = expenseCategoryAnalytics.highestSpendCat?.cat === c.cat;
+
+            return (
               <div
-                key={station.id}
-                className={`p-3 rounded-2xl border space-y-1.5 ${
-                  isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'
+                key={c.cat}
+                onClick={() => setSelectedExpenseCat(isSelected ? 'all' : c.cat)}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  isSelected
+                    ? isDarkMode
+                      ? 'bg-[#0B1528] border-rose-400/80 ring-2 ring-rose-400/20'
+                      : 'bg-rose-50 border-rose-300 ring-2 ring-rose-400/20'
+                    : isDarkMode
+                    ? 'bg-[#0E1528] border-white/5 hover:border-white/10'
+                    : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <div>
-                    <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>
-                      {station.name}
-                    </strong>
-                    <span className={`text-[10px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Stylist: {station.assignedStaffName}
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-md bg-rose-500/20 text-rose-400 font-black text-[10px] flex items-center justify-center">
+                      #{idx + 1}
                     </span>
+                    <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>
+                      {c.cat}
+                    </strong>
+                    {isMostFreq && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        MOST FREQUENT
+                      </span>
+                    )}
+                    {isHighest && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                        HIGHEST SPEND
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-right">
-                    <span className="text-sm font-extrabold text-[#D4AF37]">
-                      ₹{station.revenue.toLocaleString('en-IN')}
-                    </span>
+                    <strong className="text-sm font-extrabold text-rose-400">
+                      ₹{c.totalAmount.toLocaleString('en-IN')}
+                    </strong>
                     <span className={`text-[10px] block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {station.billsCount} clients ({station.servicesCount} services)
+                      {c.count} entries ({c.pctSpend}% of budget)
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>
-                      Avg Turnaround: ~{station.avgTurnaround} mins
-                    </span>
-                    <span className="font-bold text-emerald-400">
-                      {station.occupancyLoadPct}% load
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-700/30 h-2 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${station.occupancyLoadPct}%` }}
-                      className="h-full bg-emerald-400 rounded-full"
-                    />
-                  </div>
+                <div className="w-full bg-slate-700/30 h-2 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.max(5, c.pctSpend)}%` }}
+                    className="h-full bg-rose-400 rounded-full"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] mt-2 pt-1 border-t border-white/5 flex-wrap gap-1">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
+                    Average per entry: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>₹{c.avgPerEntry.toLocaleString('en-IN')}</strong>
+                  </span>
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>
+                    Single largest receipt: <strong className="text-rose-400">₹{c.highestSingle.toLocaleString('en-IN')}</strong>
+                  </span>
+                  <span className="text-sky-400 font-bold">
+                    {isSelected ? '✓ Filter active' : 'Click to filter ledger ↓'}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* ================= 8. POWER BI INTERACTIVE DRILL-DOWN LEDGER (TABLE EXPLORER) ================= */}
+      {/* ================= 7. THE PENDING COMPLETE DETAILED REPORT (AS USER REQUESTED) ================= */}
+      <div
+        className={`p-6 rounded-3xl border space-y-4 ${
+          isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+              <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                The Pending Complete Detailed Report · Khata & Receivables
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                100% Real Debtor Ledger
+              </span>
+            </div>
+            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
+              Full client-by-client pending khata dues with 1-click WhatsApp payment reminders and invoice tracking
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-amber-400 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              Total Outstanding: ₹{totalOutstandingDues.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+
+        {/* 3 Summary KPIs for Receivables */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Total Pending Dues
+            </span>
+            <strong className="text-2xl font-black text-amber-400 block mt-1">
+              ₹{totalOutstandingDues.toLocaleString('en-IN')}
+            </strong>
+            <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Total uncollected revenue in khata
+            </span>
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Clients with Balances
+            </span>
+            <strong className={`text-2xl font-black block mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              {debtorClients.length} clients
+            </strong>
+            <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Debtor profiles currently tracked
+            </span>
+          </div>
+
+          <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+            <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Avg Overdue per Client
+            </span>
+            <strong className="text-2xl font-black text-sky-400 block mt-1">
+              ₹{avgPendingPerDebtor.toLocaleString('en-IN')}
+            </strong>
+            <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Average outstanding per debtor
+            </span>
+          </div>
+        </div>
+
+        {/* Debtor Clients Table */}
+        <div className="overflow-x-auto [scrollbar-width:none]">
+          {debtorClients.length === 0 ? (
+            <div className={`p-8 text-center text-xs rounded-2xl border ${isDarkMode ? 'bg-[#0B1528] border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+              ✨ Outstanding balance is clear! No clients currently have pending dues.
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className={`border-b ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                  <th className="py-2.5 px-3 font-bold">Client Name</th>
+                  <th className="py-2.5 px-3 font-bold">Phone Number</th>
+                  <th className="py-2.5 px-3 font-bold">Visits / Lifetime</th>
+                  <th className="py-2.5 px-3 font-bold">Last Visit</th>
+                  <th className="py-2.5 px-3 font-bold text-right">Pending Due (₹)</th>
+                  <th className="py-2.5 px-3 font-bold text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {debtorClients.map((c) => (
+                  <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                    <td className="py-2.5 px-3">
+                      <strong className={`block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {c.name}
+                      </strong>
+                      {c.vip && (
+                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[#D4AF37]/20 text-[#D4AF37]">
+                          VIP
+                        </span>
+                      )}
+                    </td>
+                    <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      +91 {c.phone}
+                    </td>
+                    <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {c.visits || 1} visits · ₹{(c.spend || 0).toLocaleString('en-IN')} spend
+                    </td>
+                    <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {c.lastVisit || todayStr}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-amber-400 text-sm whitespace-nowrap">
+                      ₹{(c.due || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleSendReminderWhatsApp(c.name, c.phone, c.due || 0)}
+                        className="px-2.5 py-1 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold cursor-pointer transition-transform active:scale-95 inline-flex items-center gap-1.5"
+                        title="Send WhatsApp payment reminder"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564c.173.087.289.129.332.202.043.073.043.419-.101.824z" />
+                        </svg>
+                        <span>WhatsApp Reminder</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* ================= 8. INTERACTIVE REAL-DATA LEDGER EXPLORER ================= */}
       <div
         className={`p-6 rounded-3xl border space-y-4 ${
           isDarkMode ? 'bg-[#121B33] border-[#2A3858]' : 'bg-white border-slate-200'
@@ -1626,15 +1912,14 @@ export function DeepAnalyticsView() {
                 Interactive Data Ledger Explorer
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
-                Real Records
+                Drill-Down
               </span>
             </div>
             <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-              Drill down into real transaction records matching the active slicers above
+              Drill down into verified database records matching the active slicers above
             </p>
           </div>
 
-          {/* Search bar inside ledger */}
           <div className="flex items-center gap-2">
             <div
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs w-48 sm:w-60 ${
@@ -1661,8 +1946,8 @@ export function DeepAnalyticsView() {
           </div>
         </div>
 
-        {/* Tab switch: Filtered Expenses vs Filtered Invoices */}
-        <div className="flex items-center gap-2">
+        {/* Tab switch */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setLedgerTab('expenses')}
@@ -1689,6 +1974,20 @@ export function DeepAnalyticsView() {
             }`}
           >
             <span>Revenue Invoices ({searchedBills.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLedgerTab('pending')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-1.5 ${
+              ledgerTab === 'pending'
+                ? 'bg-amber-500 text-[#0B1F44] shadow-sm'
+                : isDarkMode
+                ? 'bg-[#0B1528] text-slate-400 hover:text-white'
+                : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span>Pending Receivables ({debtorClients.length})</span>
           </button>
         </div>
 
@@ -1801,6 +2100,60 @@ export function DeepAnalyticsView() {
                       </td>
                       <td className="py-2.5 px-3 text-right font-black text-[#D4AF37] whitespace-nowrap">
                         ₹{(b.paidAmount || b.total || 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* TABLE 3: PENDING RECEIVABLES DRILLDOWN */}
+        {ledgerTab === 'pending' && (
+          <div className="overflow-x-auto [scrollbar-width:none]">
+            {searchedDebtors.length === 0 ? (
+              <div className={`p-8 text-center text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                No pending receivables found matching your search.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className={`border-b ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                    <th className="py-2.5 px-3 font-bold">Client Name</th>
+                    <th className="py-2.5 px-3 font-bold">Phone</th>
+                    <th className="py-2.5 px-3 font-bold">Total Visits</th>
+                    <th className="py-2.5 px-3 font-bold">Last Visit</th>
+                    <th className="py-2.5 px-3 font-bold text-right">Pending Khata Due (₹)</th>
+                    <th className="py-2.5 px-3 font-bold text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {searchedDebtors.map((c) => (
+                    <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                      <td className={`py-2.5 px-3 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {c.name}
+                      </td>
+                      <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        +91 {c.phone}
+                      </td>
+                      <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {c.visits || 1}
+                      </td>
+                      <td className={`py-2.5 px-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {c.lastVisit || todayStr}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-amber-400 whitespace-nowrap">
+                        ₹{(c.due || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleSendReminderWhatsApp(c.name, c.phone, c.due || 0)}
+                          className="px-2.5 py-1 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold cursor-pointer transition-transform active:scale-95 inline-flex items-center gap-1"
+                        >
+                          Send WhatsApp
+                        </button>
                       </td>
                     </tr>
                   ))}
