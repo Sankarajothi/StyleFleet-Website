@@ -816,7 +816,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
           <div
-            className={`p-4 sm:p-6 sm:p-7 rounded-3xl border max-w-2xl w-full space-y-5 shadow-2xl transition-all animate-scaleUp max-h-[92vh] overflow-y-auto my-auto ${
+            className={`p-4 sm:p-6 sm:p-7 rounded-3xl border max-w-4xl w-full space-y-5 shadow-2xl transition-all animate-scaleUp max-h-[92vh] overflow-y-auto my-auto ${
               isDarkMode
                 ? 'bg-[#1A2746] border-[#2A3858] text-white'
                 : 'bg-white border-slate-200 text-[#1F2937]'
@@ -1026,8 +1026,8 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   ))}
                 </div>
 
-                {/* Available Services List */}
-                <div className={`max-h-40 overflow-y-auto space-y-1.5 pr-1 border rounded-xl p-2 ${
+                {/* Available Services List (Responsive 2-column grid on wider screens) */}
+                <div className={`max-h-52 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1 border rounded-xl p-2.5 ${
                   isDarkMode ? 'border-[#2A3858] bg-[#121B33]' : 'border-slate-200 bg-slate-50'
                 }`}>
                   {services
