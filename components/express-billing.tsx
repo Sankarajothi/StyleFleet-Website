@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSalon, ServiceItem } from '@/components/SalonContext';
 import { StylistMultiSelect } from '@/components/stylist-multi-select';
+import { getMostlyUsedServices } from '@/lib/salon-helpers';
 
 interface ExpressBillingProps {
   onOpenAddClientModal: () => void;
@@ -19,6 +20,8 @@ export function ExpressBillingView({
 }: ExpressBillingProps) {
   const {
     services,
+    bills,
+    appointments,
     staff,
     billCartItems,
     billCustName,
@@ -48,6 +51,15 @@ export function ExpressBillingView({
   } = useSalon();
 
   const [billTip, setBillTip] = useState(0);
+
+  // Dynamic Mostly Used Services from real bills & appointments
+  const mostlyUsedServices = useMemo(() => {
+    return getMostlyUsedServices(services, bills, appointments, 9);
+  }, [services, bills, appointments]);
+
+  const mostlyUsedIds = useMemo(() => {
+    return new Set(mostlyUsedServices.map((s) => s.id));
+  }, [mostlyUsedServices]);
 
   // Auto-select logged-in stylist or owner
   React.useEffect(() => {
@@ -279,22 +291,27 @@ export function ExpressBillingView({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {services.filter((s) => s.active).slice(0, 9).map((service) => (
+              {mostlyUsedServices.map((service) => (
                 <button
                   key={service.id}
                   type="button"
                   onClick={() => addCartItem(service)}
-                  className={`p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between group active:scale-95 ${
+                  className={`p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between group active:scale-95 cursor-pointer ${
                     isDarkMode
                       ? 'bg-[#0B1F44] border-white/5 hover:border-[#D4AF37]/40 hover:bg-[#0D2348]'
                       : 'bg-[#F7F9FC] border-slate-200 hover:border-[#D4AF37] hover:bg-[#FFFDF5]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className={`text-xs font-bold line-clamp-1 ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                      {service.name}
-                    </span>
-                    <span className="w-4 h-4 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-[11px] font-bold shrink-0">
+                    <div className="truncate pr-1">
+                      <span className="text-[9px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/15 text-amber-500 mr-1 inline-block">
+                        ⭐ Mostly Used
+                      </span>
+                      <span className={`text-xs font-bold block truncate ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+                        {service.name}
+                      </span>
+                    </div>
+                    <span className="w-5 h-5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-xs font-bold shrink-0">
                       +
                     </span>
                   </div>

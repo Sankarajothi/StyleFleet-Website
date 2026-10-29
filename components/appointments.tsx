@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Appointment, ServiceItem } from '@/components/SalonContext';
-import { generateTimeSlotsFromBookingHours, matchStaffName } from '@/lib/salon-helpers';
+import { generateTimeSlotsFromBookingHours, matchStaffName, getMostlyUsedServices } from '@/lib/salon-helpers';
 import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
 interface SelectedBookingService {
@@ -20,6 +20,7 @@ interface AppointmentsProps {
 export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   const {
     appointments,
+    bills,
     addAppointment,
     updateAppointmentStatus,
     updateAppointment,
@@ -105,6 +106,15 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
     .filter(c => c.status !== 'inactive')
     .map(c => ({ name: c.name, phone: c.phone, preferredService: 'Salon Service' }))
     .filter((item, idx, arr) => arr.findIndex(t => t.phone === item.phone) === idx);
+
+  // Calculate dynamic mostly used services from real bills and appointments
+  const mostlyUsedServices = useMemo(() => {
+    return getMostlyUsedServices(services, bills, appointments, 6);
+  }, [services, bills, appointments]);
+
+  const mostlyUsedIds = useMemo(() => {
+    return new Set(mostlyUsedServices.map((s) => s.id));
+  }, [mostlyUsedServices]);
 
   // Service categories
   const categories = ['All', ...Array.from(new Set(services.map(s => s.cat)))];
@@ -804,9 +814,9 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
       {/* ================= UNIQUE & ANIMATED NEW BOOKING MODAL =================== */}
       {/* ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
           <div
-            className={`p-6 sm:p-7 rounded-3xl border max-w-xl w-full space-y-5 shadow-2xl transition-all animate-scaleUp max-h-[92vh] overflow-y-auto ${
+            className={`p-4 sm:p-6 sm:p-7 rounded-3xl border max-w-2xl w-full space-y-5 shadow-2xl transition-all animate-scaleUp max-h-[92vh] overflow-y-auto my-auto ${
               isDarkMode
                 ? 'bg-[#1A2746] border-[#2A3858] text-white'
                 : 'bg-white border-slate-200 text-[#1F2937]'
@@ -921,7 +931,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
               </div>
 
               {/* Service Selection with Multi-Quantity Support (+/-) */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className={`block text-[11px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                     Services (Multi-Select & Multipliers) *
@@ -930,6 +940,71 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                     {selectedServices.length} selected
                   </span>
                 </div>
+
+                {/* ⭐ MOSTLY USED SERVICES AT THE TOP */}
+                {mostlyUsedServices.length > 0 && (
+                  <div className={`p-3 rounded-2xl border space-y-2 transition-colors ${
+                    isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/35' : 'bg-amber-50/70 border-amber-200 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">⭐</span>
+                        <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-[#D4AF37]' : 'text-amber-900'}`}>
+                          Mostly Used Services
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isDarkMode ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        Tap to 1-Click Add
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                      {mostlyUsedServices.map((service) => {
+                        const selected = selectedServices.find((s) => s.id === service.id);
+                        return (
+                          <div
+                            key={service.id}
+                            className={`p-2.5 rounded-xl border shrink-0 min-w-[150px] max-w-[170px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
+                              selected
+                                ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20'
+                                : isDarkMode
+                                ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/50'
+                                : 'bg-white border-slate-200 hover:border-[#D4AF37] shadow-2xs'
+                            }`}
+                            onClick={() => handleAddOrIncrementService(service)}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                  Mostly Used
+                                </span>
+                                {selected && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#D4AF37] text-[#0B1F44]">
+                                    x{selected.qty}
+                                  </span>
+                                )}
+                              </div>
+                              <strong className={`block text-xs font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {service.name}
+                              </strong>
+                            </div>
+
+                            <div className="flex items-center justify-between mt-2 pt-1 border-t border-white/5">
+                              <span className="text-xs font-extrabold text-[#D4AF37]">
+                                ₹{service.price}
+                              </span>
+                              <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {service.dur}m
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Categories filter */}
                 <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
@@ -969,7 +1044,14 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                           }`}
                         >
                           <div>
-                            <strong className={`block font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{service.name}</strong>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {mostlyUsedIds.has(service.id) && (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                  ⭐ Mostly Used
+                                </span>
+                              )}
+                              <strong className={`block font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{service.name}</strong>
+                            </div>
                             <span className={`text-[10px] font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
                               ₹{service.price} · {service.dur} mins
                             </span>

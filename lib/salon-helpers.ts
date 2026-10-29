@@ -193,6 +193,53 @@ export function toggleStylistSelection(
 }
 
 /**
+ * Calculates the most frequently used / ordered services from real bills and appointments.
+ * Falls back to the primary active services if no historical records exist yet.
+ */
+export function getMostlyUsedServices<T extends { id: string; name: string; active?: boolean }>(
+  services: T[],
+  bills: Array<{ isDeleted?: boolean; items?: Array<{ name: string; qty?: number }> }> = [],
+  appointments: Array<{ status?: string; service?: string }> = [],
+  limit = 6
+): T[] {
+  const frequencyMap: Record<string, number> = {};
+
+  // Count from real bills
+  bills.forEach((b) => {
+    if (b.isDeleted) return;
+    (b.items || []).forEach((item) => {
+      const n = (item.name || '').trim().toLowerCase();
+      if (n) {
+        frequencyMap[n] = (frequencyMap[n] || 0) + (item.qty || 1);
+      }
+    });
+  });
+
+  // Count from appointments
+  appointments.forEach((a) => {
+    if (a.status === 'Cancelled') return;
+    const sName = (a.service || '').trim().toLowerCase();
+    if (sName) {
+      const parts = sName.split(',').map((p) => p.replace(/\(x\d+\)/, '').trim().toLowerCase());
+      parts.forEach((p) => {
+        if (p) frequencyMap[p] = (frequencyMap[p] || 0) + 1;
+      });
+    }
+  });
+
+  const activeServices = services.filter((s) => s.active !== false);
+
+  const sorted = [...activeServices].sort((a, b) => {
+    const countA = frequencyMap[a.name.trim().toLowerCase()] || 0;
+    const countB = frequencyMap[b.name.trim().toLowerCase()] || 0;
+    if (countB !== countA) return countB - countA;
+    return a.name.localeCompare(b.name);
+  });
+
+  return sorted.slice(0, limit);
+}
+
+/**
  * Official StyleFleet WhatsApp Bill Templates (100% Mobile Parity)
  * Generates Template 1 (Paid), Template 2 (Partially Paid with UPI ID), or Template 3 (Pending Dues).
  */

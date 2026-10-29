@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSalon, Bill } from '@/components/SalonContext';
 import { AnimatedCounter } from '@/components/animated-counter';
-import { buildOfficialWhatsAppBillMessage, openWhatsAppBill, matchStaffName } from '@/lib/salon-helpers';
+import { buildOfficialWhatsAppBillMessage, openWhatsAppBill, matchStaffName, getMostlyUsedServices } from '@/lib/salon-helpers';
 import { InvoiceTemplate } from '@/components/invoice-template';
 import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
@@ -29,6 +29,7 @@ export function SalesAndBillsView({
     loggedInStaffName,
     hasPermission,
     bills,
+    appointments,
     expenses,
     staff,
     services,
@@ -221,6 +222,23 @@ export function SalesAndBillsView({
       return matchesCat && matchesSearch;
     });
   }, [services, selectedCategory, serviceSearchQuery]);
+
+  // Dynamic Mostly Used Services from real bills & appointments
+  const mostlyUsedServices = useMemo(() => {
+    return getMostlyUsedServices(services, bills, appointments, 6);
+  }, [services, bills, appointments]);
+
+  const mostlyUsedIds = useMemo(() => {
+    return new Set(mostlyUsedServices.map((s) => s.id));
+  }, [mostlyUsedServices]);
+
+  // Recent clients for 1-click quick selection
+  const recentClients = useMemo(() => {
+    return customers
+      .filter((c) => c.status !== 'inactive')
+      .map((c) => ({ name: c.name, phone: c.phone }))
+      .filter((item, idx, arr) => arr.findIndex((t) => t.phone === item.phone) === idx);
+  }, [customers]);
 
   const filteredCustomers = useMemo(() => {
     if (!customers || customers.length === 0) return [];
@@ -2133,9 +2151,9 @@ export function SalesAndBillsView({
 
       {/* ================= 9. EXPRESS BILLING POS MODAL ================= */}
       {showNewBillModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-5 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
           <div
-            className={`rounded-3xl border w-full max-w-5xl shadow-2xl animate-scaleUp my-auto flex flex-col max-h-[92vh] overflow-hidden ${
+            className={`rounded-3xl border w-full max-w-4xl shadow-2xl animate-scaleUp my-auto flex flex-col max-h-[92vh] overflow-hidden ${
               isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#F8FAFC]' : 'bg-white border-slate-200 text-[#1F2937]'
             }`}
           >
@@ -2214,6 +2232,40 @@ export function SalesAndBillsView({
                       </span>
                     </div>
                   </div>
+
+                  {/* 1-Click Recent Clients Pill Bar */}
+                  {recentClients.length > 0 && (
+                    <div className="mb-2.5 space-y-1">
+                      <span className={`block text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Recent Clients (1-Click)
+                      </span>
+                      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                        {recentClients.slice(0, 6).map((rc) => (
+                          <button
+                            key={rc.phone}
+                            type="button"
+                            onClick={() => {
+                              setBillCustName(rc.name);
+                              setBillCustPhone(rc.phone);
+                              showToast(`Selected client ${rc.name}!`);
+                            }}
+                            className={`px-2.5 py-1 rounded-xl border text-left shrink-0 transition-all cursor-pointer ${
+                              isDarkMode
+                                ? 'border-[#2A3858] bg-[#121B33] hover:border-[#D4AF37]'
+                                : 'border-slate-200 bg-white hover:border-[#D4AF37] hover:bg-amber-50/50 shadow-2xs'
+                            }`}
+                          >
+                            <span className={`text-[11px] font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {rc.name}
+                            </span>
+                            <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                              +91 {rc.phone.slice(-4)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* Client Name with Autocomplete */}
@@ -2344,6 +2396,71 @@ export function SalesAndBillsView({
                     />
                   </div>
 
+                  {/* ⭐ MOSTLY USED SERVICES AT THE TOP */}
+                  {mostlyUsedServices.length > 0 && (
+                    <div className={`p-3 rounded-2xl border space-y-2 transition-colors ${
+                      isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/35' : 'bg-amber-50/70 border-amber-200 shadow-2xs'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">⭐</span>
+                          <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-[#D4AF37]' : 'text-amber-900'}`}>
+                            Mostly Used Services
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isDarkMode ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          Tap to 1-Click Add
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                        {mostlyUsedServices.map((srv) => {
+                          const cartItem = billCartItems.find((i) => i.name === srv.name);
+                          return (
+                            <div
+                              key={srv.id}
+                              onClick={() => addCartItem(srv)}
+                              className={`p-2.5 rounded-xl border shrink-0 min-w-[150px] max-w-[170px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
+                                cartItem
+                                  ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20'
+                                  : isDarkMode
+                                  ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/50'
+                                  : 'bg-white border-slate-200 hover:border-[#D4AF37] shadow-2xs'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                    Mostly Used
+                                  </span>
+                                  {cartItem && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#D4AF37] text-[#0B1F44]">
+                                      x{cartItem.qty}
+                                    </span>
+                                  )}
+                                </div>
+                                <strong className={`block text-xs font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {srv.name}
+                                </strong>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-2 pt-1 border-t border-white/5">
+                                <span className="text-xs font-extrabold text-[#D4AF37]">
+                                  ₹{srv.price}
+                                </span>
+                                <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {srv.dur}m
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Category Pills */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
                     {serviceCategories.map((cat) => (
@@ -2383,9 +2500,16 @@ export function SalesAndBillsView({
                           }`}
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <strong className={`text-xs font-bold line-clamp-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                              {srv.name}
-                            </strong>
+                            <div className="truncate pr-1">
+                              {mostlyUsedIds.has(srv.id) && (
+                                <span className="text-[9px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/15 text-amber-500 mr-1 inline-block">
+                                  ⭐ Mostly Used
+                                </span>
+                              )}
+                              <strong className={`text-xs font-bold block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {srv.name}
+                              </strong>
+                            </div>
                             <span className="w-4 h-4 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-[10px] font-black shrink-0">
                               +
                             </span>
