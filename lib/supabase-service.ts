@@ -322,7 +322,7 @@ export async function findSalonByPhone(
       // 1. Direct query on shops table by phone
       const { data: shops, error: shopErr } = await supabase
         .from('shops')
-        .select('id, name, phone, social_links')
+        .select('id, name, phone, social_links, owner_profile_id')
         .or(`phone.ilike.%${cleanPhone}%,phone.eq.${cleanPhone},phone.eq.+91${cleanPhone}`)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -330,12 +330,25 @@ export async function findSalonByPhone(
       if (!shopErr && shops && shops.length > 0) {
         const sh = shops[0];
         const social = (sh.social_links as any) || {};
+        let ownerName = social.owner_name?.trim() || '';
+        if (!ownerName && sh.owner_profile_id) {
+          try {
+            const { data: p } = await supabase.from('profiles').select('full_name').eq('id', sh.owner_profile_id).maybeSingle();
+            if (p?.full_name && p.full_name.trim()) ownerName = p.full_name.trim();
+          } catch {}
+        }
+        if (!ownerName) {
+          try {
+            const { data: p } = await supabase.from('profiles').select('full_name').or(`phone.ilike.%${cleanPhone}%,phone.eq.${cleanPhone},phone.eq.+91${cleanPhone}`).limit(1);
+            if (p && p.length > 0 && p[0].full_name && p[0].full_name.trim()) ownerName = p[0].full_name.trim();
+          } catch {}
+        }
         return {
           found: true,
           shopId: sh.id,
           role: 'owner' as const,
           shopName: sh.name,
-          ownerName: social.owner_name || 'Owner',
+          ownerName: ownerName || 'Owner',
         };
       }
 
@@ -444,11 +457,44 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
       return null;
     }
 
-    const social = shop.social_links || {};
+    const social = (shop.social_links as any) || {};
+
+    // Authoritative Owner Name Resolution (prioritizes profiles.full_name updated by mobile/web)
+    let resolvedOwnerName = '';
+    try {
+      if (shop.owner_profile_id) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', shop.owner_profile_id)
+          .maybeSingle();
+        if (prof?.full_name && prof.full_name.trim()) {
+          resolvedOwnerName = prof.full_name.trim();
+        }
+      }
+      if (!resolvedOwnerName && social.owner_name && typeof social.owner_name === 'string' && social.owner_name.trim()) {
+        resolvedOwnerName = social.owner_name.trim();
+      }
+      if (!resolvedOwnerName) {
+        const cleanPhone = (shop.phone || '').replace(/\D/g, '').slice(-10);
+        if (cleanPhone) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .or(`phone.ilike.%${cleanPhone}%,phone.eq.${cleanPhone},phone.eq.+91${cleanPhone}`)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          if (profs && profs.length > 0 && profs[0].full_name && profs[0].full_name.trim()) {
+            resolvedOwnerName = profs[0].full_name.trim();
+          }
+        }
+      }
+    } catch {}
+
     const shopProfile: ShopProfile & { id: string } = {
       id: shop.id,
       shopName: shop.name || 'My Salon',
-      ownerName: social.owner_name || 'Owner',
+      ownerName: resolvedOwnerName || social.owner_name || 'Owner',
       phone: shop.phone || '',
       address: shop.address || '',
       city: shop.city || '',
@@ -625,39 +671,52 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         }
       }
 
-      // Parse starts_at: Handles shared format "YYYY-MM-DD hh:mm AM/PM" or fallback ISO
+      // Parse starts_at: Exact literal wall-clock parsing shared with mobile
       const rawStartsAt = (a.starts_at || '').trim();
       let dateStr = '';
       let timeStr = '';
 
-      if (rawStartsAt.includes(' ')) {
-        // Space-separated format: "YYYY-MM-DD hh:mm AM/PM"
+      if (rawStartsAt.includes('T')) {
+        // Shared ISO format: "YYYY-MM-DDThh:mm:ss+00:00" or "YYYY-MM-DDThh:mm:ss"
+        const [dPart, rest] = rawStartsAt.split('T');
+        dateStr = dPart;
+        const timeOnly = rest.replace(/(\+.*|Z|-.*)$/, '');
+        const timeSegments = timeOnly.split(':');
+        let h = parseInt(timeSegments[0] || '10', 10);
+        const m = (timeSegments[1] || '00').slice(0, 2);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        timeStr = `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+      } else if (rawStartsAt.includes(' ')) {
+        // Space-separated format: "YYYY-MM-DD hh:mm AM/PM" or "YYYY-MM-DD hh:mm"
         const parts = rawStartsAt.split(' ');
         dateStr = parts[0];
-        timeStr = parts.slice(1).join(' ');
-      } else if (rawStartsAt.includes('T')) {
-        // Legacy ISO timestamp fallback: convert strictly to IST Asia/Kolkata
-        const d = new Date(rawStartsAt);
-        if (!isNaN(d.getTime())) {
-          dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
-          timeStr = d.toLocaleTimeString('en-US', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-          });
+        const tPart = parts.slice(1).join(' ').trim();
+        const match = tPart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+        if (match) {
+          let h = parseInt(match[1], 10);
+          const m = match[2];
+          const explicitAmpm = match[3]?.toUpperCase();
+          if (!explicitAmpm && h >= 12) {
+            h = h % 12 || 12;
+            timeStr = `${String(h).padStart(2, '0')}:${m} PM`;
+          } else {
+            timeStr = `${String(h).padStart(2, '0')}:${m} ${explicitAmpm || 'AM'}`;
+          }
+        } else {
+          timeStr = tPart || '10:00 AM';
         }
       } else if (rawStartsAt) {
         if (rawStartsAt.includes('-')) {
           dateStr = rawStartsAt;
           timeStr = '10:00 AM';
         } else {
-          dateStr = new Date().toISOString().split('T')[0];
+          dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
           timeStr = rawStartsAt;
         }
       }
 
-      if (!dateStr) dateStr = new Date().toISOString().split('T')[0];
+      if (!dateStr) dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       if (!timeStr) timeStr = '10:00 AM';
 
       return {
@@ -709,20 +768,43 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
         qty: it.quantity || 1,
       }));
 
-      const dateObj = new Date(b.created_at || b.issued_at || Date.now());
-      const now = new Date();
-      const isToday = !isNaN(dateObj.getTime()) && dateObj.toDateString() === now.toDateString();
-      const yest = new Date();
-      yest.setDate(yest.getDate() - 1);
-      const isYesterday = !isNaN(dateObj.getTime()) && dateObj.toDateString() === yest.toDateString();
-
-      const dateStr = !isNaN(dateObj.getTime())
-        ? dateObj.toLocaleDateString('en-US', {
+      let parsedDateStr = '';
+      if (b.notes && b.notes.includes('date_str:')) {
+        const match = b.notes.match(/date_str:([^;]+)/);
+        if (match && match[1]) {
+          parsedDateStr = match[1].trim();
+        }
+      }
+      const rawDate = b.issued_at || b.created_at;
+      const dateObj = rawDate ? new Date(rawDate) : new Date();
+      if (!parsedDateStr) {
+        if (!isNaN(dateObj.getTime())) {
+          parsedDateStr = dateObj.toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
-          }) + `, ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-        : 'Today';
+            timeZone: 'Asia/Kolkata',
+          }) + `, ${dateObj.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Kolkata',
+          })}`;
+        } else {
+          parsedDateStr = 'Today';
+        }
+      }
+
+      const nowKolkata = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const yestDate = new Date();
+      yestDate.setDate(yestDate.getDate() - 1);
+      const yestKolkata = yestDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const billDateKolkata = !isNaN(dateObj.getTime())
+        ? dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+        : nowKolkata;
+      const isToday = billDateKolkata === nowKolkata;
+      const isYesterday = billDateKolkata === yestKolkata;
+      const dateStr = parsedDateStr;
 
       const payments = (b.payments as any[]) || [];
       const paymentMode = payments[0]?.method || (b.notes?.includes('Cash') ? 'Cash' : (b.notes?.includes('Card') ? 'Card' : 'UPI'));
@@ -1117,16 +1199,21 @@ export async function saveAppointmentToDb(
     // Format starts_at strictly as local space-separated string expected by mobile & web:
     // e.g. "2026-10-27 10:30 AM"
     let cleanSlot = (appt.startsAt || '10:00 AM').trim();
+    let h24 = 10;
+    let mStr = '00';
     const timeMatch = cleanSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
     if (timeMatch) {
-      const h = timeMatch[1].padStart(2, '0');
-      const m = timeMatch[2];
+      let h = parseInt(timeMatch[1], 10);
+      mStr = timeMatch[2];
       const ampm = (timeMatch[3] || 'AM').toUpperCase();
-      cleanSlot = `${h}:${m} ${ampm}`;
+      cleanSlot = `${String(h).padStart(2, '0')}:${mStr} ${ampm}`;
+      if (ampm === 'PM' && h !== 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      h24 = h;
     }
 
-    const cleanDate = (appt.date || new Date().toISOString().split('T')[0]).trim();
-    const formattedStartsAt = `${cleanDate} ${cleanSlot}`;
+    const cleanDate = (appt.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })).trim();
+    const formattedStartsAt = `${cleanDate}T${String(h24).padStart(2, '0')}:${mStr}:00+00:00`;
 
     // Resolve customer and staff foreign keys
     let customerId: string | null = null;
@@ -1385,7 +1472,8 @@ export async function saveBillToDb(
 
     const billStatus = dueMinor === 0 ? 'paid' : (paidMinor > 0 ? 'partially_paid' : 'pending');
     const paymentMethod = bill.mode || 'UPI';
-    const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}`;
+    const billDateStr = (bill as any).dateStr || '';
+    const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''}`;
     const nowIso = new Date().toISOString();
 
     const shortId = billId.slice(0, 4);
@@ -1682,7 +1770,9 @@ export async function updateExpenseInDb(
  */
 export async function updateShopProfileInDb(shopId: string, profile: Partial<ShopProfile>): Promise<boolean> {
   try {
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
     if (profile.shopName) updatePayload.name = profile.shopName.trim();
     if (profile.phone) updatePayload.phone = profile.phone.trim();
     if (profile.address) updatePayload.address = profile.address.trim();
@@ -1693,10 +1783,44 @@ export async function updateShopProfileInDb(shopId: string, profile: Partial<Sho
     if (profile.invoicePrefix) updatePayload.invoice_prefix = profile.invoicePrefix;
     if (profile.logoImg !== undefined) updatePayload.logo_path = profile.logoImg;
 
+    // Fetch existing shop to preserve and merge social_links and owner_profile_id
+    const { data: existingShop } = await supabase
+      .from('shops')
+      .select('social_links, owner_profile_id, phone')
+      .eq('id', shopId)
+      .maybeSingle();
+
+    if (profile.ownerName || profile.upiId !== undefined || profile.bookingHours) {
+      const social = (existingShop?.social_links as any) || {};
+      if (profile.ownerName) social.owner_name = profile.ownerName.trim();
+      if (profile.upiId !== undefined) social.upi_id = profile.upiId.trim();
+      updatePayload.social_links = social;
+    }
+
     const { error } = await supabase
       .from('shops')
       .update(updatePayload)
       .eq('id', shopId);
+
+    // Synchronize profiles table full_name so mobile app and web both immediately display the owner's exact name
+    if (profile.ownerName && profile.ownerName.trim()) {
+      const newOwnerName = profile.ownerName.trim();
+      try {
+        if (existingShop?.owner_profile_id) {
+          await supabase
+            .from('profiles')
+            .update({ full_name: newOwnerName, updated_at: new Date().toISOString() })
+            .eq('id', existingShop.owner_profile_id);
+        }
+        const cleanPhone = (profile.phone || existingShop?.phone || '').replace(/\D/g, '').slice(-10);
+        if (cleanPhone) {
+          await supabase
+            .from('profiles')
+            .update({ full_name: newOwnerName, updated_at: new Date().toISOString() })
+            .or(`phone.ilike.%${cleanPhone}%,phone.eq.${cleanPhone},phone.eq.+91${cleanPhone}`);
+        }
+      } catch {}
+    }
 
     return !error;
   } catch {
@@ -2179,10 +2303,20 @@ export async function updateAppointmentInDb(
     }
 
     if (updates.date !== undefined || updates.startsAt !== undefined) {
-      // Formatted starts_at: "YYYY-MM-DD hh:mm AM/PM"
-      const d = updates.date || new Date().toISOString().split('T')[0];
-      const t = updates.startsAt || '10:00 AM';
-      payload.starts_at = `${d} ${t}`;
+      const d = (updates.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })).trim();
+      const t = (updates.startsAt || '10:00 AM').trim();
+      let h24 = 10;
+      let mStr = '00';
+      const timeMatch = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let h = parseInt(timeMatch[1], 10);
+        mStr = timeMatch[2];
+        const ampm = (timeMatch[3] || 'AM').toUpperCase();
+        if (ampm === 'PM' && h !== 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        h24 = h;
+      }
+      payload.starts_at = `${d}T${String(h24).padStart(2, '0')}:${mStr}:00+00:00`;
     }
 
     if (updates.staff) {

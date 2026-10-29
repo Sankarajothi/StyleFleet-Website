@@ -20,6 +20,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
     mobileMenuOpen,
     setMobileMenuOpen,
     shopProfile,
+    loggedInStaffName,
     language,
     showToast,
     appointments,
@@ -199,7 +200,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
               isDarkMode ? 'hover:bg-[#121B33]' : 'hover:bg-[#FFFFFF]'
             }`}
           >
-            {/* Circular Avatar 'SA' */}
+            {/* Circular Avatar */}
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-inner ${
                 isDarkMode
@@ -207,12 +208,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
                   : 'bg-[#FEF3C7] text-[#5B2500] border border-[#D4AF37]/40'
               }`}
             >
-              <span>{shopProfile.ownerName.slice(0, 2).toUpperCase()}</span>
+              <span>{((role === 'stylist' && loggedInStaffName ? loggedInStaffName : shopProfile.ownerName) || 'Owner').slice(0, 2).toUpperCase()}</span>
             </div>
 
             <div className="hidden sm:flex flex-col text-left">
               <span className={`text-xs font-black leading-tight ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#0F172A]'}`}>
-                {shopProfile.ownerName}
+                {role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile.ownerName || 'Salon Owner')}
               </span>
               <span className={`text-[10px] leading-tight ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#0F172A] font-bold'}`}>
                 {role === 'owner' ? 'Owner' : 'Stylist'}
@@ -234,7 +235,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenSignOutModal }) => {
               }`}
             >
               <div className={`px-3 py-2 border-b ${isDarkMode ? 'border-[#2A3858]' : 'border-[#E2E8F0]'}`}>
-                <p className={`text-xs font-bold truncate ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>{shopProfile.ownerName}</p>
+                <p className={`text-xs font-bold truncate ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
+                  {role === 'stylist' && loggedInStaffName ? loggedInStaffName : (shopProfile.ownerName || 'Salon Owner')}
+                </p>
                 <p className={`text-[10px] truncate ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>+91 {shopProfile.phone}</p>
               </div>
 

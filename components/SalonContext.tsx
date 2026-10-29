@@ -1207,6 +1207,13 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const dbData = await fetchSalonDataFromDb(currentShopId);
         if (dbData) {
+          if (dbData.shop) {
+            setShopProfile((prev) => ({
+              ...prev,
+              ...dbData.shop,
+              ownerName: dbData.shop.ownerName || prev.ownerName,
+            }));
+          }
           if (dbData.staff && dbData.staff.length > 0) {
             setStaff(dbData.staff);
           }
@@ -1223,9 +1230,23 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch {}
     };
 
-    // Sub-second push synchronization via Supabase Realtime for instant mobile ⇄ web due sync
+    // Sub-second push synchronization via Supabase Realtime for instant mobile ⇄ web parity
     const realtimeChannel = supabase
       .channel(`realtime_salon_${currentShopId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shops', filter: `id=eq.${currentShopId}` },
+        () => {
+          handleSyncSalonState();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments', filter: `shop_id=eq.${currentShopId}` },
+        () => {
+          handleSyncSalonState();
+        }
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'customers', filter: `shop_id=eq.${currentShopId}` },
