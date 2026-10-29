@@ -200,40 +200,71 @@ export function InvoiceTemplate({
           @media print {
             @page {
               size: A4 portrait;
-              margin: 8mm 10mm;
+              margin: 0;
             }
             html, body {
-              background: #ffffff !important;
-              color: #0F1A36 !important;
+              width: 100% !important;
+              height: 100% !important;
+              max-height: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
-              height: auto !important;
-              overflow: visible !important;
+              overflow: hidden !important;
+              background: #ffffff !important;
+              color: #0F1A36 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
+            /* Collapse all background DOM elements to 0 height so they cannot generate trailing pages */
             body * {
               visibility: hidden !important;
+              height: 0 !important;
+              max-height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: none !important;
+              overflow: hidden !important;
             }
-            .no-print {
-              display: none !important;
-            }
+            /* Strictly restore the printable luxury invoice container and its contents */
             #printable-luxury-invoice,
             #printable-luxury-invoice * {
               visibility: visible !important;
+              height: auto !important;
+              max-height: none !important;
+              overflow: visible !important;
             }
+            /* Re-hide anything with .no-print */
+            #printable-luxury-invoice .no-print,
+            #printable-luxury-invoice .no-print *,
+            .no-print,
+            .no-print * {
+              display: none !important;
+              visibility: hidden !important;
+              height: 0 !important;
+              max-height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: none !important;
+              overflow: hidden !important;
+            }
+            /* Perfectly centered with equal top and bottom spacing, guaranteed single page */
             #printable-luxury-invoice {
               position: absolute !important;
               left: 0 !important;
-              top: 0 !important;
               right: 0 !important;
+              top: 0 !important;
+              bottom: 0 !important;
+              margin: auto !important;
               width: 100% !important;
-              max-width: 780px !important;
-              margin: 0 auto !important;
+              max-width: 680px !important;
+              height: fit-content !important;
+              max-height: 94vh !important;
               padding: 0 !important;
               box-shadow: none !important;
-              border: 1px solid #E2E8F0 !important;
-              border-radius: 16px !important;
+              border: 1px solid #DDE1E8 !important;
+              border-radius: 14px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+              page-break-before: avoid !important;
               page-break-after: avoid !important;
             }
             #printable-luxury-invoice h1 {
@@ -254,7 +285,7 @@ export function InvoiceTemplate({
 
         {/* 1. HEADER SECTION (NAVY BACKGROUND) */}
         <div
-          className="bg-[#0F1A36] text-white p-5 sm:p-8"
+          className="bg-[#0F1A36] text-white p-5 sm:p-8 print:p-6"
           style={{ backgroundColor: '#0F1A36' }}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -327,7 +358,7 @@ export function InvoiceTemplate({
         />
 
         {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION - 3 COLUMNS) */}
-        <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-slate-200 bg-white">
+        <div className="px-5 sm:px-8 py-4 sm:py-5 print:py-3 print:px-6 border-b border-slate-200 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
             {/* Column 1: Billed To */}
             <div>
@@ -374,12 +405,12 @@ export function InvoiceTemplate({
         </div>
 
         {/* 4. SERVICES TABLE (FULLY RESPONSIVE ON MOBILE & DESKTOP) */}
-        <div className="px-4 sm:px-8 pt-3 sm:pt-4">
+        <div className="px-4 sm:px-8 pt-3 sm:pt-4 print:pt-2 print:px-6">
           <div className="w-full">
             {/* Table Header Bar */}
             <div
               data-ui="invoice-table-header"
-              className="bg-[#0F1A36] text-white rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 flex items-center text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-sm"
+              className="bg-[#0F1A36] text-white rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 print:py-1.5 flex items-center text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-sm"
               style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
             >
               <div className="flex-1 min-w-0 font-black text-white" style={{ color: '#ffffff' }}>SERVICE</div>
@@ -407,7 +438,7 @@ export function InvoiceTemplate({
                   return (
                     <div
                       key={idx}
-                      className="px-3 sm:px-4 py-2 sm:py-2.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
+                      className="px-3 sm:px-4 py-2 sm:py-2.5 print:py-1.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
                     >
                       <div className="flex-1 min-w-0 pr-1">
                         <span className="font-bold text-slate-900 block truncate">{item.name}</span>
@@ -438,7 +469,7 @@ export function InvoiceTemplate({
         </div>
 
         {/* 5. PAYMENT STATUS & FINANCIAL TOTALS BREAKDOWN */}
-        <div className="px-5 sm:px-8 py-5 sm:py-6">
+        <div className="px-5 sm:px-8 py-5 sm:py-6 print:py-3.5 print:px-6">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-5 sm:gap-6">
             {/* Left: Payment Status */}
             <div className="space-y-2">
@@ -528,7 +559,7 @@ export function InvoiceTemplate({
 
               {/* Grand Total Banner */}
               <div
-                className="bg-[#0F1A36] text-white rounded-xl px-4 py-3.5 flex items-center justify-between my-2 shadow-sm"
+                className="bg-[#0F1A36] text-white rounded-xl px-4 py-3.5 print:py-2 flex items-center justify-between my-2 print:my-1 shadow-sm"
                 style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
               >
                 <span className="text-[11px] font-black tracking-widest uppercase">
@@ -566,9 +597,9 @@ export function InvoiceTemplate({
         </div>
 
         {/* 6. THANK YOU BOX */}
-        <div className="px-6 sm:px-8 pb-4">
+        <div className="px-6 sm:px-8 pb-4 print:pb-2.5 print:px-6">
           <div
-            className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 text-center flex items-center justify-center gap-2"
+            className="p-4 print:p-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 text-center flex items-center justify-center gap-2"
           >
             <span className="text-base select-none" role="img" aria-label="scissors">✂️</span>
             <p className="text-xs sm:text-sm text-slate-700">
@@ -578,7 +609,7 @@ export function InvoiceTemplate({
         </div>
 
         {/* 7. BOTTOM ATTRIBUTION */}
-        <div className="py-4 text-center border-t border-slate-100 bg-white">
+        <div className="py-4 print:py-2 text-center border-t border-slate-100 bg-white">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             POWERED BY STYLEFLEET · {shopProfile.shopName || 'SALON'}
           </p>
@@ -613,7 +644,14 @@ export function InvoiceTemplate({
                 </button>
                 <button
                   type="button"
-                  onClick={handlePrint}
+                  onClick={() => {
+                    const directPdf = (bill as any).pdfUrl || (bill as any).pdf_url;
+                    if (directPdf && typeof directPdf === 'string' && directPdf.endsWith('.pdf')) {
+                      window.open(directPdf, '_blank');
+                    } else {
+                      handlePrint();
+                    }
+                  }}
                   className="py-2 px-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
                   title="Save or Download Invoice as PDF"
                 >
