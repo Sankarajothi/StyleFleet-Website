@@ -1627,7 +1627,42 @@ export async function updateBillInDb(
     if (updated.status !== undefined) {
       updatePayload.status = updated.status;
     }
-    if (updated.notes !== undefined) {
+
+    // Resolve customer and staff foreign keys & update snapshot notes
+    if (updated.staff) {
+      try {
+        const { data: stRows } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('shop_id', shopId)
+          .ilike('name', updated.staff.trim())
+          .limit(1);
+        if (stRows && stRows.length > 0) {
+          updatePayload.staff_id = stRows[0].id;
+        }
+      } catch {}
+    }
+
+    if (updated.phone) {
+      const cleanPhone = updated.phone.replace(/\D/g, '').slice(-10);
+      try {
+        const { data: custRows } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('shop_id', shopId)
+          .eq('phone', cleanPhone)
+          .limit(1);
+        if (custRows && custRows.length > 0) {
+          updatePayload.customer_id = custRows[0].id;
+        }
+      } catch {}
+    }
+
+    // Update notes string with synchronized client, staff, and mode details
+    if (updated.cust !== undefined || updated.phone !== undefined || updated.staff !== undefined || updated.mode !== undefined) {
+      const existingNotes = updated.notes ? updated.notes + ';' : '';
+      updatePayload.notes = `${existingNotes}staff_name:${updated.staff || 'Stylist'};cust:${updated.cust || 'Client'};phone:${updated.phone || ''};mode:${updated.mode || 'UPI'}`;
+    } else if (updated.notes !== undefined) {
       updatePayload.notes = updated.notes;
     }
 
@@ -1639,6 +1674,48 @@ export async function updateBillInDb(
     }
 
     const { error } = await query;
+
+    // Synchronize payments table if paid amount or payment method updated
+    if (!error && (updated.paidAmount !== undefined || updated.mode !== undefined)) {
+      try {
+        let billUuid = isValidUuid(invoiceNumberOrId) ? invoiceNumberOrId : null;
+        if (!billUuid) {
+          const { data: bRow } = await supabase
+            .from('bills')
+            .select('id')
+            .eq('shop_id', shopId)
+            .eq('invoice_number', invoiceNumberOrId)
+            .limit(1);
+          if (bRow && bRow.length > 0) billUuid = bRow[0].id;
+        }
+        if (billUuid) {
+          const payUpdate: Record<string, any> = {};
+          if (updated.paidAmount !== undefined) payUpdate.amount_minor = Math.round(updated.paidAmount * 100);
+          if (updated.mode !== undefined) payUpdate.method = updated.mode;
+          await supabase.from('payments').update(payUpdate).eq('bill_id', billUuid).eq('shop_id', shopId);
+        }
+      } catch {}
+    }
+
+    // Asynchronously regenerate updated PDF invoice in Supabase Storage
+    try {
+      fetch('/api/invoices/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId,
+          invoiceNumber: invoiceNumberOrId,
+          customerName: updated.cust,
+          customerPhone: updated.phone,
+          total: updated.total,
+          paidAmount: updated.paidAmount,
+          dueAmount: updated.dueAmount,
+          paymentMethod: updated.mode,
+          issuedAt: new Date().toISOString(),
+        }),
+      }).catch(() => {});
+    } catch {}
+
     return !error;
   } catch {
     return false;
@@ -1937,10 +2014,48 @@ export async function updateAppointmentInDb(
     }
 
     if (updates.date !== undefined || updates.startsAt !== undefined) {
-      // Formatted starts_at
+      // Formatted starts_at: "YYYY-MM-DD hh:mm AM/PM"
       const d = updates.date || new Date().toISOString().split('T')[0];
       const t = updates.startsAt || '10:00 AM';
       payload.starts_at = `${d} ${t}`;
+    }
+
+    if (updates.staff) {
+      try {
+        const { data: stRows } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('shop_id', shopId)
+          .ilike('name', updates.staff.trim())
+          .limit(1);
+        if (stRows && stRows.length > 0) payload.staff_id = stRows[0].id;
+      } catch {}
+    }
+
+    if (updates.phone) {
+      try {
+        const clean = updates.phone.replace(/\D/g, '').slice(-10);
+        const { data: cRows } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('shop_id', shopId)
+          .eq('phone', clean)
+          .limit(1);
+        if (cRows && cRows.length > 0) payload.customer_id = cRows[0].id;
+      } catch {}
+    }
+
+    if (updates.service) {
+      try {
+        const primaryService = updates.service.split(',')[0].replace(/\(x\d+\)/, '').trim();
+        const { data: srvRows } = await supabase
+          .from('services')
+          .select('id')
+          .eq('shop_id', shopId)
+          .ilike('name', primaryService)
+          .limit(1);
+        if (srvRows && srvRows.length > 0) payload.service_id = srvRows[0].id;
+      } catch {}
     }
 
     if (updates.cust !== undefined || updates.phone !== undefined || updates.service !== undefined || updates.staff !== undefined || updates.amount !== undefined) {
