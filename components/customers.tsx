@@ -22,6 +22,7 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
     bills,
     setBills,
     createBill,
+    editBill,
     loggedInStaffName,
     appointments,
     setCurrentScreen,
@@ -386,27 +387,23 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
       spend: (settlingDueCust.spend || 0) + payment,
     });
 
-    // 2. Reduce unpaid bills' dueAmount for this customer
-    setBills((prev) => {
-      let remainingToDeduct = payment;
-      return prev.map((b) => {
-        const matchesCust =
-          (settlingDueCust.phone && b.phone === settlingDueCust.phone) ||
-          b.cust.toLowerCase() === settlingDueCust.name.toLowerCase();
-        if (matchesCust && (b.dueAmount || 0) > 0 && remainingToDeduct > 0) {
-          const deduct = Math.min(b.dueAmount || 0, remainingToDeduct);
-          remainingToDeduct -= deduct;
-          const updatedDue = (b.dueAmount || 0) - deduct;
-          const updatedPaid = (b.paidAmount || 0) + deduct;
-          return {
-            ...b,
-            dueAmount: updatedDue,
-            paidAmount: updatedPaid,
-            status: updatedDue <= 0 ? 'paid' : 'partially_paid',
-          };
-        }
-        return b;
-      });
+    // 2. Reduce unpaid bills' dueAmount for this customer and sync to DB
+    let remainingToDeduct = payment;
+    bills.forEach((b) => {
+      const matchesCust =
+        (settlingDueCust.phone && b.phone === settlingDueCust.phone) ||
+        b.cust.toLowerCase() === settlingDueCust.name.toLowerCase();
+      if (matchesCust && (b.dueAmount || 0) > 0 && remainingToDeduct > 0) {
+        const deduct = Math.min(b.dueAmount || 0, remainingToDeduct);
+        remainingToDeduct -= deduct;
+        const updatedDue = (b.dueAmount || 0) - deduct;
+        const updatedPaid = (b.paidAmount || 0) + deduct;
+        editBill(b.id, {
+          dueAmount: updatedDue,
+          paidAmount: updatedPaid,
+          status: updatedDue <= 0 ? 'paid' : 'partially_paid',
+        });
+      }
     });
 
     // 3. Create a today revenue record so it strictly reflects in Today's Revenue and Accounts
