@@ -966,7 +966,7 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                         return (
                           <div
                             key={service.id}
-                            className={`p-2.5 rounded-xl border shrink-0 min-w-[150px] max-w-[170px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
+                            className={`p-2.5 rounded-xl border shrink-0 min-w-[145px] max-w-[165px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
                               selected
                                 ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20'
                                 : isDarkMode
@@ -975,24 +975,45 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                             }`}
                             onClick={() => handleAddOrIncrementService(service)}
                           >
-                            <div>
-                              <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center justify-between gap-1 mb-1 min-h-[22px]">
+                              {selected ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDecrementService(service.id);
+                                  }}
+                                  className="w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-black shadow-xs cursor-pointer transition-transform active:scale-90"
+                                  title="Remove"
+                                >
+                                  –
+                                </button>
+                              ) : (
                                 <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                                  Mostly Used
+                                  ⭐ Mostly Used
                                 </span>
+                              )}
+
+                              <div className="flex items-center gap-1">
                                 {selected && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#D4AF37] text-[#0B1F44]">
-                                    x{selected.qty}
+                                  <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded bg-amber-500/20 text-amber-500">
+                                    ⭐
+                                  </span>
+                                )}
+                                {selected && (
+                                  <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] font-black text-[10px] flex items-center justify-center shadow-xs">
+                                    {selected.qty}
                                   </span>
                                 )}
                               </div>
-                              <strong className={`block text-xs font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                {service.name}
-                              </strong>
                             </div>
 
-                            <div className="flex items-center justify-between mt-2 pt-1 border-t border-white/5">
-                              <span className="text-xs font-extrabold text-[#D4AF37]">
+                            <strong className={`block text-xs font-bold truncate my-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {service.name}
+                            </strong>
+
+                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                              <span className="text-xs font-extrabold text-[#D4AF37] font-mono">
                                 ₹{service.price}
                               </span>
                               <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -1026,70 +1047,83 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   ))}
                 </div>
 
-                {/* Available Services List (Responsive 2-column grid on wider screens) */}
-                <div className={`max-h-52 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1 border rounded-xl p-2.5 ${
+                {/* Available Services (Square Boxes ~5 per row on desktop, tap anywhere to add, corner minus to remove) */}
+                <div className={`max-h-64 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-2.5 p-2 rounded-2xl border ${
                   isDarkMode ? 'border-[#2A3858] bg-[#121B33]' : 'border-slate-200 bg-slate-50'
                 }`}>
                   {services
                     .filter((s) => s.active && (selectedCat === 'All' || s.cat === selectedCat))
                     .map((service) => {
                       const selected = selectedServices.find((s) => s.id === service.id);
+                      const isMostlyUsed = mostlyUsedIds.has(service.id);
+
                       return (
                         <div
                           key={service.id}
-                          className={`flex items-center justify-between p-2 rounded-lg text-xs transition-colors border ${
-                            isDarkMode
-                              ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/40'
-                              : 'bg-white border-slate-200 hover:border-[#D4AF37] shadow-2xs'
+                          onClick={() => handleAddOrIncrementService(service)}
+                          className={`relative p-2.5 rounded-2xl border flex flex-col justify-between transition-all select-none cursor-pointer active:scale-95 min-h-[110px] sm:min-h-[115px] ${
+                            selected
+                              ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20 ring-1 ring-[#D4AF37]/50'
+                              : isDarkMode
+                              ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/60 hover:bg-[#1f315a]'
+                              : 'bg-white border-slate-200 hover:border-[#D4AF37] hover:bg-amber-50/40 shadow-2xs'
                           }`}
                         >
-                          <div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {mostlyUsedIds.has(service.id) && (
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                                  ⭐ Mostly Used
+                          {/* Top Row: Left Minus button if selected, Right Count Badge if selected */}
+                          <div className="flex items-center justify-between gap-1 w-full min-h-[22px]">
+                            <div>
+                              {selected ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDecrementService(service.id);
+                                  }}
+                                  className="w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-black shadow-xs cursor-pointer transition-transform active:scale-90"
+                                  title="Remove one"
+                                  aria-label="Remove"
+                                >
+                                  –
+                                </button>
+                              ) : isMostlyUsed ? (
+                                <span className="text-[8px] font-black uppercase px-1 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                  ⭐ Mostly
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {selected && isMostlyUsed && (
+                                <span className="text-[10px]" title="Mostly Used">⭐</span>
+                              )}
+                              {selected ? (
+                                <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] font-black text-[10px] flex items-center justify-center shadow-xs">
+                                  {selected.qty}
+                                </span>
+                              ) : (
+                                <span className="w-4 h-4 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-[10px] font-black">
+                                  +
                                 </span>
                               )}
-                              <strong className={`block font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{service.name}</strong>
                             </div>
-                            <span className={`text-[10px] font-bold ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-600'}`}>
-                              ₹{service.price} · {service.dur} mins
-                            </span>
                           </div>
 
-                          {selected ? (
-                            <div className={`flex items-center gap-1.5 border rounded-lg p-0.5 ${isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/40' : 'bg-[#FEF3C7] border-[#D4AF37]'}`}>
-                              <button
-                                type="button"
-                                onClick={() => handleDecrementService(service.id)}
-                                className={`w-6 h-6 rounded font-bold flex items-center justify-center text-xs cursor-pointer ${isDarkMode ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-800'}`}
-                              >
-                                -
-                              </button>
-                              <span className={`w-5 text-center font-extrabold text-xs ${isDarkMode ? 'text-[#D4AF37]' : 'text-[#5B2500]'}`}>
-                                {selected.qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleAddOrIncrementService(service)}
-                                className="w-6 h-6 rounded bg-[#D4AF37] hover:bg-amber-300 text-[#0B1F44] font-black flex items-center justify-center text-xs cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAddOrIncrementService(service)}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-colors cursor-pointer ${
-                                isDarkMode
-                                  ? 'bg-[#121B33] hover:bg-[#D4AF37] hover:text-[#0B1F44] text-slate-300 border border-[#2A3858]'
-                                  : 'bg-white hover:bg-[#D4AF37] hover:text-[#0B1F44] text-slate-800 border border-slate-300 shadow-2xs'
-                              }`}
-                            >
-                              Add
-                            </button>
-                          )}
+                          {/* Middle: Service Name */}
+                          <div className="my-1 flex-1 flex items-center">
+                            <strong className={`block text-xs font-bold leading-tight line-clamp-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {service.name}
+                            </strong>
+                          </div>
+
+                          {/* Bottom: Price & Duration */}
+                          <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px]">
+                            <span className="font-extrabold text-[#D4AF37] font-mono">
+                              ₹{service.price}
+                            </span>
+                            <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {service.dur}m
+                            </span>
+                          </div>
                         </div>
                       );
                     })}

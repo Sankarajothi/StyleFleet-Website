@@ -251,6 +251,13 @@ export function SalesAndBillsView({
     ).slice(0, 15);
   }, [customers, billCustName]);
 
+  const handleDecrementCartItem = (srvName: string) => {
+    const idx = billCartItems.findIndex((item) => item.name === srvName);
+    if (idx !== -1) {
+      updateCartItemQty(idx, billCartItems[idx].qty - 1);
+    }
+  };
+
   const handleCompleteBill = () => {
     // 100 Free Bills Limit Check for unsubscribed salons
     const nonDeletedBillsCount = bills.filter((b) => !b.isDeleted).length;
@@ -2202,339 +2209,405 @@ export function SalesAndBillsView({
               </div>
             </div>
 
-            {/* Modal Body: 2 Columns */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Left Column: Client Details & Service Catalog */}
-              <div className="lg:col-span-7 space-y-4">
-                {/* Client Details Card */}
-                <div
-                  className={`p-4 rounded-2xl border ${
-                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
-                    <span className="text-xs font-extrabold text-[#D4AF37]">
-                      1. Client Details
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* Client Details Card */}
+              <div
+                className={`p-4 rounded-2xl border ${
+                  isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
+                  <span className="text-xs font-extrabold text-[#D4AF37]">
+                    1. Client Details
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerDropdown((prev) => !prev)}
+                      className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Select Existing Client ({customers.length})</span>
+                    </button>
+                    <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                      Walk-in if empty
                     </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCustomerDropdown((prev) => !prev)}
-                        className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span>Select Existing Client ({customers.length})</span>
-                      </button>
-                      <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                        Walk-in if empty
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 1-Click Recent Clients Pill Bar */}
-                  {recentClients.length > 0 && (
-                    <div className="mb-2.5 space-y-1">
-                      <span className={`block text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        Recent Clients (1-Click)
-                      </span>
-                      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                        {recentClients.slice(0, 6).map((rc) => (
-                          <button
-                            key={rc.phone}
-                            type="button"
-                            onClick={() => {
-                              setBillCustName(rc.name);
-                              setBillCustPhone(rc.phone);
-                              showToast(`Selected client ${rc.name}!`);
-                            }}
-                            className={`px-2.5 py-1 rounded-xl border text-left shrink-0 transition-all cursor-pointer ${
-                              isDarkMode
-                                ? 'border-[#2A3858] bg-[#121B33] hover:border-[#D4AF37]'
-                                : 'border-slate-200 bg-white hover:border-[#D4AF37] hover:bg-amber-50/50 shadow-2xs'
-                            }`}
-                          >
-                            <span className={`text-[11px] font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                              {rc.name}
-                            </span>
-                            <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                              +91 {rc.phone.slice(-4)}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {/* Client Name with Autocomplete */}
-                    <div className="relative">
-                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Client Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Search existing or enter name..."
-                        value={billCustName}
-                        onFocus={() => {
-                          if (customers.length > 0) setShowCustomerDropdown(true);
-                        }}
-                        onChange={(e) => {
-                          setBillCustName(e.target.value);
-                          setShowCustomerDropdown(true);
-                        }}
-                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
-                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                        }`}
-                      />
-
-                      {/* Floating Customer Suggestions Dropdown */}
-                      {showCustomerDropdown && (
-                        <div
-                          className={`absolute left-0 right-0 top-full mt-1.5 max-h-52 overflow-y-auto rounded-2xl border shadow-2xl p-1 z-50 animate-fadeIn ${
-                            isDarkMode ? 'bg-[#162340] border-[#2A3858]' : 'bg-white border-slate-300'
-                          }`}
-                        >
-                          <div className={`p-1.5 flex items-center justify-between border-b text-[10px] font-extrabold text-[#D4AF37] ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
-                            <span>Existing Customers ({filteredCustomers.length})</span>
-                            <button
-                              type="button"
-                              onClick={() => setShowCustomerDropdown(false)}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                                isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-black hover:bg-slate-100'
-                              }`}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          {filteredCustomers.length === 0 ? (
-                            <div className="p-3 text-center text-xs text-slate-400">
-                              No existing clients matching &ldquo;{billCustName}&rdquo;.
-                            </div>
-                          ) : (
-                            filteredCustomers.map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setBillCustName(c.name);
-                                  setBillCustPhone(c.phone);
-                                  setShowCustomerDropdown(false);
-                                  showToast(`Selected existing client ${c.name}!`, 'success');
-                                }}
-                                className={`w-full p-2 text-left rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                                  isDarkMode ? 'hover:bg-[#1f315a] text-white' : 'hover:bg-slate-100 text-slate-900'
-                                }`}
-                              >
-                                <div>
-                                  <strong className="block font-bold">{c.name}</strong>
-                                  <span className="text-[10px] text-slate-400 font-mono">+91 {c.phone}</span>
-                                </div>
-                                {c.vip && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-                                    VIP
-                                  </span>
-                                )}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        WhatsApp Mobile
-                      </label>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        placeholder="10-digit number"
-                        value={billCustPhone}
-                        onChange={(e) => setBillCustPhone(e.target.value.replace(/\D/g, ''))}
-                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
-                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Bill Date (Max: Today)
-                      </label>
-                      <input
-                        type="date"
-                        max={todayStr}
-                        value={newBillDate}
-                        onChange={(e) => setNewBillDate(e.target.value)}
-                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold cursor-pointer ${
-                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
                   </div>
                 </div>
 
-                {/* Service Catalog & Tap to Add */}
-                <div
-                  className={`p-4 rounded-2xl border space-y-3 ${
-                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-[#D4AF37]">
-                      2. Tap Services to Add
+                {/* 1-Click Recent Clients Pill Bar */}
+                {recentClients.length > 0 && (
+                  <div className="mb-2.5 space-y-1">
+                    <span className={`block text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Recent Clients (1-Click)
                     </span>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                      {recentClients.slice(0, 6).map((rc) => (
+                        <button
+                          key={rc.phone}
+                          type="button"
+                          onClick={() => {
+                            setBillCustName(rc.name);
+                            setBillCustPhone(rc.phone);
+                            showToast(`Selected client ${rc.name}!`);
+                          }}
+                          className={`px-2.5 py-1 rounded-xl border text-left shrink-0 transition-all cursor-pointer ${
+                            isDarkMode
+                              ? 'border-[#2A3858] bg-[#121B33] hover:border-[#D4AF37]'
+                              : 'border-slate-200 bg-white hover:border-[#D4AF37] hover:bg-amber-50/50 shadow-2xs'
+                          }`}
+                        >
+                          <span className={`text-[11px] font-bold block ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {rc.name}
+                          </span>
+                          <span className={`text-[10px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                            +91 {rc.phone.slice(-4)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Client Name with Autocomplete */}
+                  <div className="relative">
+                    <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Client Name
+                    </label>
                     <input
                       type="text"
-                      placeholder="Search services..."
-                      value={serviceSearchQuery}
-                      onChange={(e) => setServiceSearchQuery(e.target.value)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs outline-none ${
+                      placeholder="Search existing or enter name..."
+                      value={billCustName}
+                      onFocus={() => {
+                        if (customers.length > 0) setShowCustomerDropdown(true);
+                      }}
+                      onChange={(e) => {
+                        setBillCustName(e.target.value);
+                        setShowCustomerDropdown(true);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+
+                    {/* Floating Customer Suggestions Dropdown */}
+                    {showCustomerDropdown && (
+                      <div
+                        className={`absolute left-0 right-0 top-full mt-1.5 max-h-52 overflow-y-auto rounded-2xl border shadow-2xl p-1 z-50 animate-fadeIn ${
+                          isDarkMode ? 'bg-[#162340] border-[#2A3858]' : 'bg-white border-slate-300'
+                        }`}
+                      >
+                        <div className={`p-1.5 flex items-center justify-between border-b text-[10px] font-extrabold text-[#D4AF37] ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                          <span>Existing Customers ({filteredCustomers.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomerDropdown(false)}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                              isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-black hover:bg-slate-100'
+                            }`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        {filteredCustomers.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400">
+                            No existing clients matching &ldquo;{billCustName}&rdquo;.
+                          </div>
+                        ) : (
+                          filteredCustomers.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setBillCustName(c.name);
+                                setBillCustPhone(c.phone);
+                                setShowCustomerDropdown(false);
+                                showToast(`Selected existing client ${c.name}!`, 'success');
+                              }}
+                              className={`w-full p-2 text-left rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                isDarkMode ? 'hover:bg-[#1f315a] text-white' : 'hover:bg-slate-100 text-slate-900'
+                              }`}
+                            >
+                              <div>
+                                <strong className="block font-bold">{c.name}</strong>
+                                <span className="text-[10px] text-slate-400 font-mono">+91 {c.phone}</span>
+                              </div>
+                              {c.vip && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+                                  VIP
+                                </span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      WhatsApp Mobile
+                    </label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      placeholder="10-digit number"
+                      value={billCustPhone}
+                      onChange={(e) => setBillCustPhone(e.target.value.replace(/\D/g, ''))}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold ${
                         isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
                       }`}
                     />
                   </div>
-
-                  {/* ⭐ MOSTLY USED SERVICES AT THE TOP */}
-                  {mostlyUsedServices.length > 0 && (
-                    <div className={`p-3 rounded-2xl border space-y-2 transition-colors ${
-                      isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/35' : 'bg-amber-50/70 border-amber-200 shadow-2xs'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm">⭐</span>
-                          <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-[#D4AF37]' : 'text-amber-900'}`}>
-                            Mostly Used Services
-                          </span>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isDarkMode ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          Tap to 1-Click Add
-                        </span>
-                      </div>
-
-                      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-                        {mostlyUsedServices.map((srv) => {
-                          const cartItem = billCartItems.find((i) => i.name === srv.name);
-                          return (
-                            <div
-                              key={srv.id}
-                              onClick={() => addCartItem(srv)}
-                              className={`p-2.5 rounded-xl border shrink-0 min-w-[150px] max-w-[170px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
-                                cartItem
-                                  ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20'
-                                  : isDarkMode
-                                  ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/50'
-                                  : 'bg-white border-slate-200 hover:border-[#D4AF37] shadow-2xs'
-                              }`}
-                            >
-                              <div>
-                                <div className="flex items-center justify-between gap-1 mb-1">
-                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                                    Mostly Used
-                                  </span>
-                                  {cartItem && (
-                                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#D4AF37] text-[#0B1F44]">
-                                      x{cartItem.qty}
-                                    </span>
-                                  )}
-                                </div>
-                                <strong className={`block text-xs font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                  {srv.name}
-                                </strong>
-                              </div>
-
-                              <div className="flex items-center justify-between mt-2 pt-1 border-t border-white/5">
-                                <span className="text-xs font-extrabold text-[#D4AF37]">
-                                  ₹{srv.price}
-                                </span>
-                                <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                  {srv.dur}m
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Category Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                    {serviceCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-3 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap transition-colors cursor-pointer ${
-                          selectedCategory === cat
-                            ? 'bg-[#D4AF37] text-[#0B1F44]'
-                            : isDarkMode
-                            ? 'bg-[#121B33] border border-[#2A3858] text-slate-300 hover:text-white'
-                            : 'bg-white border border-slate-300 text-slate-700'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Services Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
-                    {filteredServices.length === 0 ? (
-                      <div className="col-span-full py-8 text-center text-xs text-slate-400">
-                        No services match your search.
-                      </div>
-                    ) : (
-                      filteredServices.map((srv) => (
-                        <button
-                          key={srv.id}
-                          type="button"
-                          onClick={() => addCartItem(srv)}
-                          className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-transform active:scale-95 cursor-pointer ${
-                            isDarkMode
-                              ? 'bg-[#121B33] border-white/5 hover:border-[#D4AF37]/50'
-                              : 'bg-white border-slate-200 hover:border-[#D4AF37]'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="truncate pr-1">
-                              {mostlyUsedIds.has(srv.id) && (
-                                <span className="text-[9px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/15 text-amber-500 mr-1 inline-block">
-                                  ⭐ Mostly Used
-                                </span>
-                              )}
-                              <strong className={`text-xs font-bold block truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                {srv.name}
-                              </strong>
-                            </div>
-                            <span className="w-4 h-4 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-[10px] font-black shrink-0">
-                              +
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-2 text-[11px]">
-                            <span className="font-extrabold text-[#D4AF37]">₹{srv.price}</span>
-                            <span className={isDarkMode ? 'text-[#737D92]' : 'text-slate-500'}>
-                              {srv.dur}m
-                            </span>
-                          </div>
-                        </button>
-                      ))
-                    )}
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Bill Date (Max: Today)
+                    </label>
+                    <input
+                      type="date"
+                      max={todayStr}
+                      value={newBillDate}
+                      onChange={(e) => setNewBillDate(e.target.value)}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs outline-none font-semibold cursor-pointer ${
+                        isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Stylist, Cart, Discounts, Payment Mode & Checkout */}
+              {/* Service Catalog & Tap to Add (Full Width for 5-per-row square boxes on desktop) */}
               <div
-                className={`lg:col-span-5 p-4 rounded-2xl border space-y-3.5 flex flex-col justify-between ${
+                className={`p-4 rounded-2xl border space-y-3 ${
                   isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
                 }`}
               >
-                <div className="space-y-3.5">
-                  {/* Serving Stylist(s) with Multi-Select and Owner Default */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-[#D4AF37]">
+                      2. Select Services (Tap to Add)
+                    </span>
+                    <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
+                      {billCartItems.reduce((acc, i) => acc + i.qty, 0)} items in cart
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search services..."
+                    value={serviceSearchQuery}
+                    onChange={(e) => setServiceSearchQuery(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs outline-none ${
+                      isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                {/* ⭐ MOSTLY USED SERVICES AT THE TOP */}
+                {mostlyUsedServices.length > 0 && (
+                  <div className={`p-3 rounded-2xl border space-y-2 transition-colors ${
+                    isDarkMode ? 'bg-[#121B33] border-[#D4AF37]/35' : 'bg-amber-50/70 border-amber-200 shadow-2xs'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">⭐</span>
+                        <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDarkMode ? 'text-[#D4AF37]' : 'text-amber-900'}`}>
+                          Mostly Used Services
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isDarkMode ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        Tap to 1-Click Add
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                      {mostlyUsedServices.map((srv) => {
+                        const cartItem = billCartItems.find((i) => i.name === srv.name);
+                        return (
+                          <div
+                            key={srv.id}
+                            onClick={() => addCartItem(srv)}
+                            className={`relative p-2.5 rounded-xl border shrink-0 min-w-[145px] max-w-[165px] flex flex-col justify-between transition-all cursor-pointer select-none active:scale-95 ${
+                              cartItem
+                                ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20 ring-1 ring-[#D4AF37]/50'
+                                : isDarkMode
+                                ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/50'
+                                : 'bg-white border-slate-200 hover:border-[#D4AF37] shadow-2xs'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-1 min-h-[22px]">
+                              {cartItem ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDecrementCartItem(srv.name);
+                                  }}
+                                  className="w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-black shadow-xs cursor-pointer transition-transform active:scale-90"
+                                  title="Remove one"
+                                  aria-label="Remove"
+                                >
+                                  –
+                                </button>
+                              ) : (
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                  ⭐ Mostly Used
+                                </span>
+                              )}
+
+                              <div className="flex items-center gap-1">
+                                {cartItem && (
+                                  <span className="text-[9px] font-black uppercase px-1 py-0.5 rounded bg-amber-500/20 text-amber-500">
+                                    ⭐
+                                  </span>
+                                )}
+                                {cartItem && (
+                                  <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] font-black text-[10px] flex items-center justify-center shadow-xs">
+                                    {cartItem.qty}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <strong className={`block text-xs font-bold truncate my-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {srv.name}
+                            </strong>
+
+                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                              <span className="text-xs font-extrabold text-[#D4AF37] font-mono">
+                                ₹{srv.price}
+                              </span>
+                              <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {srv.dur}m
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs [scrollbar-width:none]">
+                  {serviceCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                        selectedCategory === cat
+                          ? 'bg-[#D4AF37] text-[#0B1F44]'
+                          : isDarkMode
+                          ? 'bg-[#121B33] border border-[#2A3858] text-slate-300 hover:text-white'
+                          : 'bg-white border border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Services Grid (Square Boxes: ~5 per row on desktop, tap anywhere to add, corner minus to decrement) */}
+                <div className={`max-h-64 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-2.5 p-2 rounded-2xl border ${
+                  isDarkMode ? 'border-[#2A3858] bg-[#121B33]' : 'border-slate-200 bg-slate-50'
+                }`}>
+                  {filteredServices.length === 0 ? (
+                    <div className="col-span-full py-8 text-center text-xs text-slate-400">
+                      No services match your search.
+                    </div>
+                  ) : (
+                    filteredServices.map((srv) => {
+                      const cartItem = billCartItems.find((i) => i.name === srv.name);
+                      const isMostlyUsed = mostlyUsedIds.has(srv.id);
+
+                      return (
+                        <div
+                          key={srv.id}
+                          onClick={() => addCartItem(srv)}
+                          className={`relative p-2.5 rounded-2xl border flex flex-col justify-between transition-all select-none cursor-pointer active:scale-95 min-h-[110px] sm:min-h-[115px] ${
+                            cartItem
+                              ? 'bg-[#D4AF37]/20 border-[#D4AF37] shadow-sm shadow-[#D4AF37]/20 ring-1 ring-[#D4AF37]/50'
+                              : isDarkMode
+                              ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/60 hover:bg-[#1f315a]'
+                              : 'bg-white border-slate-200 hover:border-[#D4AF37] hover:bg-amber-50/40 shadow-2xs'
+                          }`}
+                        >
+                          {/* Top Row: Left Minus button if in cart, Right Count Badge if in cart */}
+                          <div className="flex items-center justify-between gap-1 w-full min-h-[22px]">
+                            <div>
+                              {cartItem ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDecrementCartItem(srv.name);
+                                  }}
+                                  className="w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-black shadow-xs cursor-pointer transition-transform active:scale-90"
+                                  title="Remove one"
+                                  aria-label="Remove"
+                                >
+                                  –
+                                </button>
+                              ) : isMostlyUsed ? (
+                                <span className="text-[8px] font-black uppercase px-1 py-0.5 rounded bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                                  ⭐ Mostly
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {cartItem && isMostlyUsed && (
+                                <span className="text-[10px]" title="Mostly Used">⭐</span>
+                              )}
+                              {cartItem ? (
+                                <span className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#07152B] font-black text-[10px] flex items-center justify-center shadow-xs">
+                                  {cartItem.qty}
+                                </span>
+                              ) : (
+                                <span className="w-4 h-4 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-[10px] font-black">
+                                  +
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Middle: Service Name */}
+                          <div className="my-1 flex-1 flex items-center">
+                            <strong className={`block text-xs font-bold leading-tight line-clamp-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {srv.name}
+                            </strong>
+                          </div>
+
+                          {/* Bottom: Price & Duration */}
+                          <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px]">
+                            <span className="font-extrabold text-[#D4AF37] font-mono">
+                              ₹{srv.price}
+                            </span>
+                            <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {srv.dur}m
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Section 3: 2-Column Responsive Layout for Cart & Stylist + Totals & Payment */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Left: Stylist Multi-Select & Active Cart */}
+                <div
+                  className={`lg:col-span-6 p-4 rounded-2xl border space-y-3.5 flex flex-col justify-between ${
+                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
                   <StylistMultiSelect
                     value={billStaffSelect}
                     onChange={setBillStaffSelect}
@@ -2542,21 +2615,26 @@ export function SalesAndBillsView({
                     sublabel="Select Owner, Stylist, or Both"
                   />
 
-                  {/* Cart Items List */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-extrabold text-[#D4AF37]">
-                        Active Cart ({billCartItems.length})
+                        Active Cart ({billCartItems.length} items)
                       </span>
-                      <span className={`text-[11px] ${isDarkMode ? 'text-[#A7B0C3]' : 'text-slate-500'}`}>
-                        Adjust quantity
-                      </span>
+                      {billCartItems.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={clearCart}
+                          className="text-[11px] text-rose-400 hover:underline font-bold cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
                     </div>
 
-                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                       {billCartItems.length === 0 ? (
                         <div className={`p-4 text-center text-xs border border-dashed rounded-xl ${isDarkMode ? 'border-white/10 text-slate-400' : 'border-slate-300 text-slate-500'}`}>
-                          No services added yet. Tap services on the left to add.
+                          No services added yet. Tap services above to add.
                         </div>
                       ) : (
                         billCartItems.map((item, idx) => (
@@ -2602,6 +2680,7 @@ export function SalesAndBillsView({
                                 type="button"
                                 onClick={() => removeCartItem(idx)}
                                 className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer"
+                                aria-label="Delete item"
                               >
                                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -2613,138 +2692,146 @@ export function SalesAndBillsView({
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Discount & Tip Inputs */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Discount (₹)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={billDiscount || ''}
-                        onChange={(e) => setBillDiscount(Math.max(0, Number(e.target.value)))}
-                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
-                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Tip (₹)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={billTip || ''}
-                        onChange={(e) => setBillTip(Math.max(0, Number(e.target.value)))}
-                        className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
-                          isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Payment Mode Selector */}
-                  <div>
-                    <label className={`block text-[10px] font-bold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Payment Mode
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5 text-xs font-bold">
-                      {(['UPI', 'Cash', 'Card', 'Partial Pay', 'Fully Pending'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setBillPaymentMode(mode)}
-                          className={`py-1.5 px-2 rounded-xl border text-center transition-colors cursor-pointer text-[11px] ${
-                            billPaymentMode === mode
-                              ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
-                              : isDarkMode
-                              ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
-                              : 'bg-white border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Partial Pay Received Amount Input */}
-                    {billPaymentMode === 'Partial Pay' && (
-                      <div className="mt-2 p-2.5 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 space-y-1">
-                        <label className="block text-[10px] font-bold text-[#D4AF37]">
-                          Amount Received Now (₹)
+                {/* Right: Discounts, Payment Mode, Financial Totals & Generate Bill Button */}
+                <div
+                  className={`lg:col-span-6 p-4 rounded-2xl border space-y-3 flex flex-col justify-between ${
+                    isDarkMode ? 'bg-[#0B1F44] border-white/5' : 'bg-slate-50 border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    {/* Discount & Tip Inputs */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          Discount (₹)
                         </label>
                         <input
                           type="number"
                           min="0"
-                          max={cartTotal}
-                          value={partialPaidAmount}
-                          onChange={(e) => setPartialPaidAmount(Number(e.target.value))}
-                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-bold outline-none ${
+                          placeholder="0"
+                          value={billDiscount || ''}
+                          onChange={(e) => setBillDiscount(Math.max(0, Number(e.target.value)))}
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
                             isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
                           }`}
                         />
-                        <div className="flex justify-between text-[11px] font-bold pt-1">
-                          <span className="text-slate-400">Due Balance:</span>
-                          <span className="text-rose-400">₹{Math.max(0, cartTotal - partialPaidAmount)}</span>
+                      </div>
+                      <div>
+                        <label className={`block text-[10px] font-bold mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                          Tip (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={billTip || ''}
+                          onChange={(e) => setBillTip(Math.max(0, Number(e.target.value)))}
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none ${
+                            isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Payment Mode Selector */}
+                    <div>
+                      <label className={`block text-[10px] font-bold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Payment Mode
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs font-bold">
+                        {(['UPI', 'Cash', 'Card', 'Partial Pay', 'Fully Pending'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setBillPaymentMode(mode)}
+                            className={`py-1.5 px-2 rounded-xl border text-center transition-colors cursor-pointer text-[11px] ${
+                              billPaymentMode === mode
+                                ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                                : isDarkMode
+                                ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                                : 'bg-white border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+
+                      {billPaymentMode === 'Partial Pay' && (
+                        <div className="mt-2 p-2.5 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 space-y-1">
+                          <label className="block text-[10px] font-bold text-[#D4AF37]">
+                            Amount Received Now (₹)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={cartTotal}
+                            value={partialPaidAmount}
+                            onChange={(e) => setPartialPaidAmount(Number(e.target.value))}
+                            className={`w-full px-3 py-1.5 rounded-xl border text-xs font-bold outline-none ${
+                              isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-white' : 'bg-white border-slate-300 text-slate-900'
+                            }`}
+                          />
+                          <div className="flex justify-between text-[11px] font-bold pt-1">
+                            <span className="text-slate-400">Due Balance:</span>
+                            <span className="text-rose-400">₹{Math.max(0, cartTotal - partialPaidAmount)}</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Financial Summary & Checkout Button */}
-                <div className={`space-y-3 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
-                  <div className="space-y-1 text-xs">
-                    <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      <span>Subtotal:</span>
-                      <span>₹{cartSubtotal}</span>
+                      )}
                     </div>
-                    {safeDiscount > 0 && (
-                      <div className="flex justify-between text-emerald-400">
-                        <span>Discount:</span>
-                        <span>-₹{safeDiscount}</span>
-                      </div>
-                    )}
-                    {taxAmount > 0 && (
+                  </div>
+
+                  {/* Financial Summary & Checkout Button */}
+                  <div className={`space-y-3 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
+                    <div className="space-y-1 text-xs">
                       <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                        <span>GST ({gstRate}%):</span>
-                        <span>₹{taxAmount}</span>
+                        <span>Subtotal:</span>
+                        <span>₹{cartSubtotal}</span>
                       </div>
-                    )}
-                    {safeTip > 0 && (
-                      <div className="flex justify-between text-[#D4AF37]">
-                        <span>Tip:</span>
-                        <span>+₹{safeTip}</span>
+                      {safeDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-400">
+                          <span>Discount:</span>
+                          <span>-₹{safeDiscount}</span>
+                        </div>
+                      )}
+                      {taxAmount > 0 && (
+                        <div className={`flex justify-between ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          <span>GST ({gstRate}%):</span>
+                          <span>₹{taxAmount}</span>
+                        </div>
+                      )}
+                      {safeTip > 0 && (
+                        <div className="flex justify-between text-[#D4AF37]">
+                          <span>Tip:</span>
+                          <span>+₹{safeTip}</span>
+                        </div>
+                      )}
+                      <div className={`flex justify-between text-sm font-black pt-1 border-t ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>
+                        <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Net Payable:</span>
+                        <span className="text-[#D4AF37] text-base">₹{cartTotal}</span>
                       </div>
-                    )}
-                    <div className={`flex justify-between text-sm font-black pt-1 border-t ${isDarkMode ? 'border-white/5' : 'border-slate-200'}`}>
-                      <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Net Payable:</span>
-                      <span className="text-[#D4AF37] text-base">₹{cartTotal}</span>
                     </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    disabled={billCartItems.length === 0}
-                    onClick={handleCompleteBill}
-                    className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-transform cursor-pointer shadow-lg ${
-                      billCartItems.length === 0
-                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
-                        : 'bg-[#D4AF37] hover:bg-[#C59F2E] text-[#0B1F44] active:scale-95 shadow-[#D4AF37]/25'
-                    }`}
-                  >
-                    <svg className="w-5 h-5 text-[#0B1F44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <path d="M9 15l2 2 4-4" />
-                    </svg>
-                    <span>Generate Bill & Open Invoice (₹{cartTotal})</span>
-                  </button>
+                    <button
+                      type="button"
+                      disabled={billCartItems.length === 0}
+                      onClick={handleCompleteBill}
+                      className={`w-full py-3.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg select-none ${
+                        billCartItems.length === 0
+                          ? 'bg-gradient-to-r from-[#D4AF37]/50 via-[#F5A623]/50 to-[#D4AF37]/50 text-[#07152B]/70 border border-[#D4AF37]/40 cursor-not-allowed opacity-75'
+                          : 'bg-gradient-to-r from-[#D4AF37] via-[#F5A623] to-[#D4AF37] hover:brightness-105 active:scale-[0.98] text-[#07152B] shadow-md shadow-[#D4AF37]/30 border border-[#FFE17D]'
+                      }`}
+                    >
+                      <svg className="w-5 h-5 shrink-0 text-[#07152B]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <path d="M9 15l2 2 4-4" />
+                      </svg>
+                      <span className="truncate">Generate Bill & Open Invoice (₹{cartTotal})</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
