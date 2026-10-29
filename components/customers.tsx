@@ -696,11 +696,11 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
         </div>
       </div>
 
-      {/* ================= 2 CUSTOMERS PER LINE GRID ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ================= COMPACT SQUARE CUSTOMER GRID (6 PER ROW) ================= */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5">
         {filteredCustomers.length === 0 ? (
           <div
-            className={`col-span-full p-12 rounded-2xl border text-center space-y-3 ${
+            className={`col-span-full p-10 rounded-2xl border text-center space-y-3 ${
               isDarkMode ? 'bg-[#121B33] border-[#2A3858] text-[#A7B0C3]' : 'bg-white border-slate-200 text-[#737D92]'
             }`}
           >
@@ -715,45 +715,50 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
             </p>
             <button
               onClick={() => setShowManualModal(true)}
-              className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#0B1F44] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
             >
               + Add Client Manually
             </button>
           </div>
         ) : (
-          filteredCustomers.map((c) => {
-            const hasDue = (c.due || 0) > 0;
-            const isMenuOpen = openMenuCustId === c.id;
+          <>
+            {filteredCustomers.map((c) => {
+              const hasDue = (c.due || 0) > 0;
 
-            return (
-              <div
-                key={c.id}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all shadow-md relative group flex flex-col justify-between gap-3 ${
-                  isDarkMode
-                    ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/40'
-                    : 'bg-white border-[#E2E8F0] hover:border-[#D4AF37]/60 shadow-sm'
-                }`}
-              >
-                {/* TOP ROW: Star Button + Avatar + Name/Phone + Icon Actions (WhatsApp, Call, Bill, 3 Dots) */}
-                <div className="flex items-start justify-between gap-2">
-                  {/* Left: Star + Avatar + Name/Phone (Touching client opens Visit History) */}
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    {/* STAR VIP BUTTON */}
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setHistoryCust(c)}
+                  className={`p-2.5 sm:p-3 rounded-2xl border transition-all relative flex flex-col justify-between group cursor-pointer select-none min-h-[135px] sm:min-h-[145px] ${
+                    c.vip
+                      ? isDarkMode
+                        ? 'bg-[#121B33] border-[#D4AF37]/50 hover:border-[#D4AF37] shadow-sm shadow-[#D4AF37]/10'
+                        : 'bg-white border-[#D4AF37]/60 hover:border-[#D4AF37] shadow-xs ring-1 ring-[#D4AF37]/20'
+                      : isDarkMode
+                      ? 'bg-[#121B33] border-[#2A3858] hover:border-[#D4AF37]/60 shadow-2xs'
+                      : 'bg-white border-slate-200 hover:border-[#D4AF37]/60 shadow-2xs'
+                  }`}
+                  title="Touch to view visit history & client ledger"
+                >
+                  {/* Top Row: VIP Star on Left, WhatsApp & Call on Right */}
+                  <div className="flex items-center justify-between gap-1">
                     <button
                       type="button"
-                      title={c.vip ? 'VIP / MVP Client (Click to remove)' : 'Mark as VIP / MVP Client'}
+                      title={c.vip ? 'VIP / MVP Client (Click to remove)' : 'Mark as VIP Client'}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleCustomerVip(c.id);
                       }}
-                      className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
+                      className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
                         c.vip
-                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] shadow-sm shadow-amber-400/30'
-                          : isDarkMode ? 'bg-[#1A2746] border-[#2A3858] text-[#737D92] hover:text-[#D4AF37] hover:border-[#D4AF37]/50' : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#4B5563] hover:text-[#D4AF37] hover:border-[#D4AF37]/50'
+                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] shadow-xs'
+                          : isDarkMode
+                          ? 'bg-[#1A2746] border-[#2A3858] text-[#737D92] hover:text-[#D4AF37]'
+                          : 'bg-slate-100 border-slate-200 text-slate-400 hover:text-[#D4AF37]'
                       }`}
                     >
                       <svg
-                        className={`w-3.5 h-3.5 ${c.vip ? 'fill-amber-400 text-[#D4AF37]' : 'fill-none stroke-current'}`}
+                        className={`w-3 h-3 ${c.vip ? 'fill-amber-400 text-[#D4AF37]' : 'fill-none stroke-current'}`}
                         viewBox="0 0 24 24"
                         strokeWidth="2"
                       >
@@ -765,160 +770,130 @@ export function CustomersView({ onOpenAddClientModal }: CustomersProps) {
                       </svg>
                     </button>
 
-                    {/* TOUCH CLIENT FOR VISIT HISTORY */}
-                    <div
-                      onClick={() => setHistoryCust(c)}
-                      className="cursor-pointer flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90 transition-opacity"
-                      title="Touch to view complete visits and billing history"
-                    >
-                      {/* Avatar */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        title={`WhatsApp ${c.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const msg = encodeURIComponent(
+                            `Hello ${c.name}! Greetings from ${shopProfile.shopName}. We hope to see you soon!`
+                          );
+                          window.open(`https://wa.me/91${c.phone}?text=${msg}`, '_blank');
+                          showToast(`Opened WhatsApp chat for ${c.name}`);
+                        }}
+                        className="w-6 h-6 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
+                      >
+                        <svg className="w-3 h-3 fill-emerald-400" viewBox="0 0 24 24">
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        title={`Call ${c.name} (+91 ${c.phone})`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`tel:+91${c.phone}`);
+                        }}
+                        className="w-6 h-6 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-400 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Middle Content: Initials + Name + Phone + Notes */}
+                  <div className="my-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
                       <div
-                        className={`w-10 h-10 rounded-xl border text-xs font-black flex items-center justify-center shrink-0 ${
+                        className={`w-5 h-5 rounded-md border text-[9px] font-black flex items-center justify-center shrink-0 ${
                           c.vip
-                            ? isDarkMode
-                              ? 'bg-[#D4AF37]/15 border-[#D4AF37]/40 text-[#D4AF37]'
-                              : 'bg-[#FEF3C7] border-[#D4AF37]/50 text-[#5B2500]'
+                            ? 'bg-[#D4AF37]/20 border-[#D4AF37]/50 text-[#D4AF37]'
                             : isDarkMode
                             ? 'bg-[#1A2746] border-[#2A3858] text-[#A7B0C3]'
-                            : 'bg-[#F7F9FC] border-[#E2E8F0] text-[#374151]'
+                            : 'bg-slate-100 border-slate-200 text-slate-700'
                         }`}
                       >
                         {c.name.slice(0, 2).toUpperCase()}
                       </div>
-
-                      {/* Name & Phone */}
-                      <div className="overflow-hidden min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <strong className={`text-xs sm:text-sm font-extrabold tracking-tight truncate hover:text-[#D4AF37] transition-colors ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>
-                            {c.name}
-                          </strong>
-                          {c.vip && (
-                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 font-black tracking-wider uppercase">
-                              VIP
-                            </span>
-                          )}
-                          {c.status === 'inactive' && (
-                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-slate-500/20 text-slate-400 border border-slate-500/40 font-black tracking-wider uppercase">
-                              Inactive
-                            </span>
-                          )}
-                        </div>
-                        <span className={`text-[11px] block truncate ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-                          +91 {c.phone}
-                        </span>
-                      </div>
+                      <strong className={`text-xs font-bold truncate block ${isDarkMode ? 'text-white' : 'text-slate-900'} group-hover:text-[#D4AF37] transition-colors`}>
+                        {c.name}
+                      </strong>
                     </div>
-                  </div>
 
-                  {/* Right: Only Icons for WhatsApp and Call */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* WHATSAPP ICON BUTTON */}
-                    <button
-                      type="button"
-                      title={`WhatsApp message to ${c.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const msg = encodeURIComponent(
-                          `Hello ${c.name}! Greetings from ${shopProfile.shopName}. We hope to see you soon for your next salon experience!`
-                        );
-                        window.open(`https://wa.me/91${c.phone}?text=${msg}`, '_blank');
-                        showToast(`Opened WhatsApp chat for ${c.name}`);
-                      }}
-                      className="w-8 h-8 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-emerald-400" viewBox="0 0 24 24">
-                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.06-2.131-.538-1.839-.765-3.023-2.627-3.114-2.748-.09-.122-.745-.989-.745-1.895 0-.907.472-1.352.641-1.536.17-.184.37-.23.493-.23.123 0 .247.001.355.006.114.005.267-.043.418.32.155.371.531 1.294.577 1.389.047.094.078.204.016.326-.062.123-.093.2-.185.309-.092.109-.194.244-.277.328-.093.094-.19.196-.082.381.108.185.481.794 1.031 1.285.709.632 1.306.828 1.492.92.185.093.293.078.401-.047.108-.124.463-.54.586-.726.123-.185.247-.154.416-.093.17.062 1.079.509 1.264.601.185.093.308.139.354.216.046.078.046.452-.098.857z" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'} truncate font-mono text-[9px]`}>
+                        +91 {c.phone}
+                      </span>
+                      {c.status === 'inactive' && (
+                        <span className="text-[7px] px-1 py-0.2 rounded bg-slate-500/20 text-slate-400 font-bold uppercase tracking-wider">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
 
-                    {/* CALL ICON BUTTON */}
-                    <button
-                      type="button"
-                      title={`Call ${c.name} (+91 ${c.phone})`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(`tel:+91${c.phone}`);
-                      }}
-                      className="w-8 h-8 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-400 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* MIDDLE: 4 Horizontal Metrics Pills */}
-                <div
-                  onClick={() => setHistoryCust(c)}
-                  className={`grid grid-cols-4 gap-2 py-2 px-3 rounded-xl border cursor-pointer transition-colors ${isDarkMode ? 'bg-[#1A2746] border-[#2A3858] hover:border-[#D4AF37]/40' : 'bg-[#F7F9FC] border-[#E2E8F0] hover:border-[#D4AF37]/50'}`}
-                  title="Touch to view complete visit history"
-                >
-                  <div className="text-center">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Visits</span>
-                    <strong className={`text-xs font-extrabold ${isDarkMode ? 'text-[#F8FAFC]' : 'text-[#1F2937]'}`}>{c.visits ?? 0}</strong>
-                  </div>
-                  <div className="text-center">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Last Visit</span>
-                    <strong className={`text-[11px] font-bold truncate block ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#374151]'}`}>
-                      {(c.visits && c.visits > 0) ? (c.lastVisit || 'Recently') : 'Never'}
-                    </strong>
-                  </div>
-                  <div className="text-center">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Spent</span>
-                    <strong className="text-xs font-extrabold text-[#D4AF37]">₹{(c.spend || 0).toLocaleString('en-IN')}</strong>
-                  </div>
-                  <div className="text-center">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider block ${isDarkMode ? 'text-[#737D92]' : 'text-[#4B5563]'}`}>Due</span>
-                    {hasDue ? (
-                      <span className={`text-xs font-black block truncate ${isDarkMode ? 'text-rose-400' : 'text-[#DC2626]'}`}>₹{c.due}</span>
-                    ) : (
-                      <span className={`text-xs font-semibold block truncate ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>₹0</span>
+                    {c.notes && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNotesCust(c);
+                          setTempNotes(c.notes || '');
+                        }}
+                        className={`mt-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium flex items-center gap-1 truncate cursor-pointer transition-colors ${
+                          isDarkMode
+                            ? 'bg-[#D4AF37]/10 text-[#EAE6D6] hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20'
+                            : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200/60'
+                        }`}
+                        title={c.notes}
+                      >
+                        <span className="text-[#D4AF37] shrink-0 text-[9px]">📝</span>
+                        <span className="truncate">{c.notes}</span>
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* BOTTOM ROW: Client CRM Notes (Touch notes to view/edit) */}
-                <div className="flex items-center justify-between text-xs pt-0.5">
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setNotesCust(c);
-                      setTempNotes(c.notes || '');
-                    }}
-                    className="flex-1 cursor-pointer group/notes hover:text-[#D4AF37] transition-colors mr-2 overflow-hidden"
-                    title="Touch client CRM notes to view or edit"
-                  >
-                    {c.notes ? (
-                      <div className={`p-1.5 rounded-lg border text-[11px] flex items-center gap-1.5 truncate ${isDarkMode ? 'bg-[#D4AF37]/15 border-[#D4AF37]/30 text-[#EAE6D6]' : 'bg-[#FEF3C7] border-[#D4AF37]/40 text-[#5B2500]'}`}>
-                        <svg className="w-3 h-3 text-[#D4AF37] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span className="truncate italic font-medium">{c.notes}</span>
-                      </div>
+                  {/* Bottom Row: Visits count on left, Spend/Due on right */}
+                  <div className={`pt-1.5 border-t flex items-center justify-between text-[10px] ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+                    <span className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {c.visits ?? 0} {c.visits === 1 ? 'visit' : 'visits'}
+                    </span>
+                    {hasDue ? (
+                      <span className={`font-black text-[11px] ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
+                        Due ₹{c.due}
+                      </span>
                     ) : (
-                      <span className={`text-[10px] flex items-center gap-1 transition-colors ${isDarkMode ? 'text-[#737D92] hover:text-[#D4AF37]' : 'text-[#4B5563] hover:text-[#B8863B]'}`}>
-                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span>+ Add client CRM notes</span>
+                      <span className="font-black text-[11px] text-[#D4AF37]">
+                        ₹{(c.spend || 0).toLocaleString('en-IN')}
                       </span>
                     )}
                   </div>
-
-                  {/* Visit History indicator pill */}
-                  <button
-                    type="button"
-                    onClick={() => setHistoryCust(c)}
-                    className={`text-[10px] font-bold shrink-0 flex items-center gap-0.5 transition-colors cursor-pointer ${isDarkMode ? 'text-[#A7B0C3] hover:text-[#D4AF37]' : 'text-[#374151] hover:text-[#B8863B]'}`}
-                  >
-                    <span>History</span>
-                    <span>→</span>
-                  </button>
                 </div>
+              );
+            })}
+
+            {/* + Add Client Dashed Box */}
+            <button
+              type="button"
+              onClick={() => setShowManualModal(true)}
+              className={`p-2.5 sm:p-3 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-1 text-center cursor-pointer min-h-[135px] sm:min-h-[145px] group select-none ${
+                isDarkMode
+                  ? 'border-[#2A3858] hover:border-[#D4AF37] hover:bg-white/[0.02] text-slate-400 hover:text-white'
+                  : 'border-slate-300 hover:border-amber-400 hover:bg-amber-50/40 text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
               </div>
-            );
-          })
+              <span className="text-xs font-black tracking-tight">+ Add Client</span>
+              <span className="text-[9px] opacity-70">Register new record</span>
+            </button>
+          </>
         )}
       </div>
 

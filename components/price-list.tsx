@@ -513,18 +513,61 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div>
-              <h2 className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
-                Salon Menu & Price Catalog
-              </h2>
-              <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
-                Manage services, prices, categories, bulk edits and promotional discounts
-              </p>
-            </div>
+          <div>
+            <h2 className={`text-lg font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F2937]'}`}>
+              Salon Menu & Price Catalog
+            </h2>
+            <p className={`text-xs ${isDarkMode ? 'text-[#A7B0C3]' : 'text-[#4B5563]'}`}>
+              Manage services, prices, categories, bulk edits and promotional discounts
+            </p>
+          </div>
+        </div>
 
-            {/* Master 3-Dots Action Menu for Catalog & Bulk Editing */}
-            <div className="relative header-menu-container">
+        {/* Right Corner: Segmented Slider Pill + Master 3-Dots Action Menu */}
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          {/* Segmented Slider Pill: Price List vs Discount Offers */}
+          <div
+            className={`p-1 rounded-xl border flex items-center gap-1 ${
+              isDarkMode ? 'bg-[#0B1528] border-[#2A3858]' : 'bg-slate-100 border-slate-200'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setActiveTab('price_list')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'price_list'
+                  ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
+                  : isDarkMode
+                  ? 'text-[#A7B0C3] hover:text-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <span>Price List ({services.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('discount_offers')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'discount_offers'
+                  ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
+                  : isDarkMode
+                  ? 'text-[#A7B0C3] hover:text-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              <span>Offers ({offers.length})</span>
+            </button>
+          </div>
+
+          {/* Master 3-Dots Action Menu for Catalog & Bulk Editing (To the side of the offers button in the corner) */}
+          <div className="relative header-menu-container">
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu(!showHeaderMenu)}
@@ -545,7 +588,7 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
               {/* Master Dropdown Popover */}
               {showHeaderMenu && (
                 <div
-                  className={`absolute left-0 sm:left-auto sm:right-0 top-9 w-56 rounded-2xl border shadow-2xl py-1.5 z-50 animate-scaleUp text-left ${
+                  className={`absolute right-0 top-11 w-56 rounded-2xl border shadow-2xl py-1.5 z-50 animate-scaleUp text-left ${
                     isDarkMode
                       ? 'bg-[#0E1830] border-[#2A3858] text-white shadow-black/60'
                       : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80 ring-1 ring-black/5'
@@ -662,48 +705,6 @@ export const PriceListView: React.FC<PriceListViewProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Segmented Slider Pill: Price List vs Discount Offers */}
-        <div
-          className={`p-1 rounded-xl border flex items-center gap-1 self-start md:self-auto ${
-            isDarkMode ? 'bg-[#0B1528] border-[#2A3858]' : 'bg-slate-100 border-slate-200'
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('price_list')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'price_list'
-                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
-                : isDarkMode
-                ? 'text-[#A7B0C3] hover:text-white'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            <span>Price List ({services.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('discount_offers')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'discount_offers'
-                ? 'bg-[#D4AF37] text-[#0B1F44] shadow-sm shadow-[#D4AF37]/25'
-                : isDarkMode
-                ? 'text-[#A7B0C3] hover:text-white'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-            <span>Offers ({offers.length})</span>
-          </button>
-        </div>
-      </div>
 
       {/* 2. TAB CONTENT: PRICE LIST */}
       {activeTab === 'price_list' && (
