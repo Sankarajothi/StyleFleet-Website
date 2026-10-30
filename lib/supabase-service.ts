@@ -1568,7 +1568,7 @@ export async function saveBillToDb(
     const billStatus = dueMinor === 0 ? 'paid' : (paidMinor > 0 ? 'partially_paid' : 'pending');
     const paymentMethod = bill.mode || 'UPI';
     const billDateStr = (bill as any).dateStr || '';
-    const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''}`;
+    const notesStr = `due:${dueMinor};paid:${paidMinor};staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''};`;
     const nowIso = new Date().toISOString();
 
     const cleanInvNum = (bill.invoiceNumber || billId).replace(/\.pdf$/i, '').trim();
@@ -1653,7 +1653,9 @@ export async function saveBillToDb(
           invoiceNumber: bill.invoiceNumber,
           customerName: bill.cust,
           customerPhone: bill.phone,
-          items: bill.items,
+          stylist: bill.staff || 'Stylist',
+          staff: bill.staff || 'Stylist',
+          items: (bill.items || []).map((it) => ({ ...it, staff: it.staff || bill.staff || 'Stylist' })),
           subtotal: Math.round(subtotalMinor / 100),
           discount: Math.round(discountMinor / 100),
           tax: Math.round(taxMinor / 100),
@@ -2064,10 +2066,14 @@ export async function updateBillInDb(
       } catch {}
     }
 
-    // Update notes string with synchronized client, staff, and mode details
-    if (updated.cust !== undefined || updated.phone !== undefined || updated.staff !== undefined || updated.mode !== undefined) {
-      const existingNotes = updated.notes ? updated.notes + ';' : '';
-      updatePayload.notes = `${existingNotes}staff_name:${updated.staff || 'Stylist'};cust:${updated.cust || 'Client'};phone:${updated.phone || ''};mode:${updated.mode || 'UPI'}`;
+    // Update notes string with synchronized due, paid, client, staff, and mode details (mobile parity)
+    if (updated.cust !== undefined || updated.phone !== undefined || updated.staff !== undefined || updated.mode !== undefined || updated.dueAmount !== undefined || updated.paidAmount !== undefined) {
+      let baseNotes = (updated.notes || '').replace(/due:\d+;?/g, '').replace(/paid:\d+;?/g, '').trim();
+      const dueMinorVal = updated.dueAmount !== undefined ? Math.round(updated.dueAmount * 100) : null;
+      const paidMinorVal = updated.paidAmount !== undefined ? Math.round(updated.paidAmount * 100) : null;
+      const duePrefix = dueMinorVal !== null ? `due:${dueMinorVal};` : '';
+      const paidPrefix = paidMinorVal !== null ? `paid:${paidMinorVal};` : '';
+      updatePayload.notes = `${duePrefix}${paidPrefix}${baseNotes ? baseNotes + ';' : ''}staff_name:${updated.staff || 'Stylist'};cust:${updated.cust || 'Client'};phone:${updated.phone || ''};mode:${updated.mode || 'UPI'};[Edited];`;
     } else if (updated.notes !== undefined) {
       updatePayload.notes = updated.notes;
     }
@@ -2113,6 +2119,8 @@ export async function updateBillInDb(
           invoiceNumber: invoiceNumberOrId,
           customerName: updated.cust,
           customerPhone: updated.phone,
+          stylist: updated.staff || 'Stylist',
+          staff: updated.staff || 'Stylist',
           total: updated.total,
           paidAmount: updated.paidAmount,
           dueAmount: updated.dueAmount,
@@ -2209,15 +2217,33 @@ export async function settleCustomerDueInDb(
         const updatedBillPaidMinor = currentBillPaidMinor + deductMinor;
         const updatedStatus = updatedBillDueMinor <= 0 ? 'paid' : 'partially_paid';
 
+        // Clean out old due/paid tags and format notes with mobile-compatible due/paid tags and [Edited] marker
+        let existingNotes = (b.notes || '').replace(/due:\d+;?/g, '').replace(/paid:\d+;?/g, '').trim();
+        const updatedNotes = `due:${updatedBillDueMinor};paid:${updatedBillPaidMinor};${existingNotes}${existingNotes.endsWith(';') ? '' : ';'}clearance_paid:${deductMinor};[Edited];`;
+
         await supabase
           .from('bills')
           .update({
             due_amount_minor: updatedBillDueMinor,
             paid_amount_minor: updatedBillPaidMinor,
             status: updatedStatus,
+            notes: updatedNotes,
             updated_at: nowIso,
           })
           .eq('id', b.id);
+
+        // Also insert payment record directly linked to this bill so mobile app's bill-level queries update instantly
+        try {
+          await supabase.from('payments').insert({
+            id: generateUuid(),
+            shop_id: shopId,
+            bill_id: b.id,
+            amount_minor: deductMinor,
+            method: paymentMode,
+            status: 'Completed',
+            paid_at: nowIso,
+          });
+        } catch {}
       }
 
       // Authoritatively ensure customer's outstanding_due_minor strictly reflects active unpaid bills
@@ -2230,7 +2256,7 @@ export async function settleCustomerDueInDb(
     const invoiceNumber = `DUE-CLR-${Date.now().toString().slice(-4)}`;
     const officialPdfKey = `${invoiceNumber}.pdf`;
     const officialPdfUrl = `https://stylefleet.tecstellar.com/b/${officialPdfKey}`;
-    const notesStr = `staff_name:${collectorName};cust:${customer.name};phone:${cleanPhone};mode:${paymentMode};date_str:${new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    const notesStr = `due:0;paid:${paymentMinor};staff_name:${collectorName};cust:${customer.name};phone:${cleanPhone};mode:${paymentMode};date_str:${new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })};`;
 
     await supabase.from('bills').insert({
       id: clearanceBillId,

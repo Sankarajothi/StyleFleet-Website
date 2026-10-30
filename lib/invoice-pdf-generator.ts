@@ -9,6 +9,7 @@ export interface InvoicePdfData {
   issuedAt?: string | Date;
   customerName?: string;
   customerPhone?: string;
+  stylistName?: string;
   shop: {
     shopName?: string;
     phone?: string;
@@ -17,6 +18,7 @@ export interface InvoicePdfData {
     pincode?: string;
     email?: string;
     upiId?: string;
+    logoImg?: string;
   };
   items: Array<{
     name: string;
@@ -108,35 +110,94 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
     .slice(0, 2)
     .toUpperCase() || 'SF';
 
-  const circleX = 75;
-  const circleY = height - 70;
-  page.drawCircle({
-    x: circleX,
-    y: circleY,
-    size: 24,
-    borderColor: gold,
-    borderWidth: 1.5,
-    color: rgb(0.08, 0.14, 0.28),
-  });
-  const initWidth = customFontBold.widthOfTextAtSize(initials, 16);
-  page.drawText(initials, {
-    x: circleX - initWidth / 2,
-    y: circleY - 6,
-    size: 16,
-    font: customFontBold,
-    color: gold,
-  });
+  // Embed logo image if present (Base64 PNG/JPEG or HTTP URL)
+  let embeddedLogo: any = null;
+  const rawLogo = data.shop.logoImg?.trim() || '';
+  if (rawLogo) {
+    try {
+      let imgBuf: Buffer | null = null;
+      if (rawLogo.startsWith('data:image/')) {
+        const parts = rawLogo.split(',');
+        if (parts[1]) imgBuf = Buffer.from(parts[1], 'base64');
+      } else if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
+        const resp = await fetch(rawLogo);
+        if (resp.ok) {
+          const ab = await resp.arrayBuffer();
+          imgBuf = Buffer.from(ab);
+        }
+      }
+      if (imgBuf) {
+        try {
+          embeddedLogo = await doc.embedPng(imgBuf);
+        } catch {
+          try {
+            embeddedLogo = await doc.embedJpg(imgBuf);
+          } catch {}
+        }
+      }
+    } catch (logoErr) {
+      console.warn('[PDF Generator] Logo embedding notice:', logoErr);
+    }
+  }
+
+  const badgeX = 50;
+  const badgeY = height - 98;
+  const badgeW = 54;
+  const badgeH = 50;
+
+  if (embeddedLogo) {
+    // Beautiful luxury card badge with rounded look & gold border for the salon logo
+    page.drawRectangle({
+      x: badgeX,
+      y: badgeY,
+      width: badgeW,
+      height: badgeH,
+      color: white,
+      borderColor: gold,
+      borderWidth: 1.5,
+    });
+    const maxW = badgeW - 6;
+    const maxH = badgeH - 6;
+    const scale = Math.min(maxW / embeddedLogo.width, maxH / embeddedLogo.height);
+    const imgW = embeddedLogo.width * scale;
+    const imgH = embeddedLogo.height * scale;
+    page.drawImage(embeddedLogo, {
+      x: badgeX + (badgeW - imgW) / 2,
+      y: badgeY + (badgeH - imgH) / 2,
+      width: imgW,
+      height: imgH,
+    });
+  } else {
+    const circleX = badgeX + badgeW / 2;
+    const circleY = badgeY + badgeH / 2;
+    page.drawCircle({
+      x: circleX,
+      y: circleY,
+      size: 24,
+      borderColor: gold,
+      borderWidth: 1.5,
+      color: rgb(0.08, 0.14, 0.28),
+    });
+    const initWidth = customFontBold.widthOfTextAtSize(initials, 16);
+    page.drawText(initials, {
+      x: circleX - initWidth / 2,
+      y: circleY - 6,
+      size: 16,
+      font: customFontBold,
+      color: gold,
+    });
+  }
 
   // Salon Name & Contact
   page.drawText(shopName, {
-    x: 115,
+    x: 116,
     y: height - 55,
     size: 19,
     font: customFontBold,
     color: white,
   });
   page.drawText(shopAddr.slice(0, 48), {
-    x: 115,
+    x: 116,
     y: height - 74,
     size: 9,
     font: customFont,
@@ -144,7 +205,7 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
   });
   if (formattedShopPhone) {
     page.drawText(formattedShopPhone, {
-      x: 115,
+      x: 116,
       y: height - 89,
       size: 9,
       font: customFont,
@@ -191,7 +252,7 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
     color: white,
   });
 
-  // 2. CLIENT CARD
+  // 2. CLIENT CARD (4 BALANCED COLUMNS: BILLED TO, MOBILE, STYLIST, APPT DATE)
   const clientCardY = height - 215;
   page.drawRectangle({
     x: 45,
@@ -203,17 +264,25 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
     borderWidth: 1,
   });
 
-  page.drawText('BILLED TO', { x: 60, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
+  // Column 1: Billed To
+  page.drawText('BILLED TO', { x: 58, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
   const custName = data.customerName || 'Client';
-  page.drawText(custName.slice(0, 24), { x: 60, y: clientCardY + 16, size: 11, font: customFontBold, color: navy });
+  page.drawText(custName.slice(0, 20), { x: 58, y: clientCardY + 16, size: 10.5, font: customFontBold, color: navy });
 
-  page.drawText('MOBILE', { x: 240, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
+  // Column 2: Mobile
+  page.drawText('MOBILE', { x: 195, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
   const rawCustPhone = (data.customerPhone || '').replace(/\D/g, '').slice(-10);
   const custPhoneStr = rawCustPhone ? `+91 ${rawCustPhone.slice(0, 5)} ${rawCustPhone.slice(5)}` : '—';
-  page.drawText(custPhoneStr, { x: 240, y: clientCardY + 16, size: 10, font: customFont, color: navy });
+  page.drawText(custPhoneStr, { x: 195, y: clientCardY + 16, size: 10, font: customFont, color: navy });
 
-  page.drawText('APPOINTMENT DATE', { x: 400, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
-  page.drawText(dateStr, { x: 400, y: clientCardY + 16, size: 10, font: customFont, color: navy });
+  // Column 3: Stylist (Clearly visible, bold navy)
+  page.drawText('STYLIST', { x: 320, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
+  const stylistDisplay = (data.stylistName || 'Stylist').slice(0, 18);
+  page.drawText(stylistDisplay, { x: 320, y: clientCardY + 16, size: 10.5, font: customFontBold, color: navy });
+
+  // Column 4: Appointment Date
+  page.drawText('APPOINTMENT DATE', { x: 440, y: clientCardY + 32, size: 7.5, font: customFontBold, color: gold });
+  page.drawText(dateStr, { x: 440, y: clientCardY + 16, size: 9.5, font: customFontBold, color: navy });
 
   // 3. ITEMS TABLE HEADER
   const tableTop = clientCardY - 24;
@@ -257,7 +326,8 @@ export async function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Ui
     const lineAmt = item.amount ?? item.price * qty;
 
     page.drawText(item.name.slice(0, 26), { x: 60, y: curY + 8, size: 9, font: customFontBold, color: navy });
-    page.drawText((item.staff || 'Stylist').slice(0, 22), { x: 230, y: curY + 8, size: 9, font: customFont, color: grayText });
+    const itemStaff = (item.staff || data.stylistName || 'Stylist').slice(0, 22);
+    page.drawText(itemStaff, { x: 230, y: curY + 8, size: 9, font: customFontBold, color: navy });
     page.drawText(String(qty), { x: 348, y: curY + 8, size: 9, font: customFont, color: navy });
     
     const pStr = `₹${item.price.toLocaleString('en-IN')}`;

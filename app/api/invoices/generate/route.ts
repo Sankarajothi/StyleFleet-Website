@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       issuedAt,
       shopProfile,
+      staff,
+      staffName,
+      stylist,
     } = body;
 
     if (!shopId || !invoiceNumber) {
@@ -29,7 +32,8 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch shop data if not provided
     let shopData = shopProfile;
-    if (!shopData || !shopData.shopName) {
+    let dbLogoPath = '';
+    if (!shopData || !shopData.shopName || !shopData.logoImg) {
       const { data: sRow } = await supabase
         .from('shops')
         .select('*')
@@ -37,19 +41,25 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (sRow) {
+        dbLogoPath = sRow.logo_path || '';
         shopData = {
-          shopName: sRow.name,
-          phone: sRow.phone,
-          street: sRow.street,
-          city: sRow.city,
-          pincode: sRow.pincode,
-          email: sRow.email,
-          upiId: sRow.upi_id,
+          shopName: shopData?.shopName || sRow.name,
+          phone: shopData?.phone || sRow.phone,
+          street: shopData?.address || shopData?.street || sRow.address || sRow.street,
+          city: shopData?.city || sRow.city,
+          pincode: shopData?.pinCode || shopData?.pincode || sRow.pin_code || sRow.pincode,
+          email: shopData?.email || sRow.email,
+          upiId: shopData?.upiId || sRow.upi_id,
+          logoImg: shopData?.logoImg || dbLogoPath,
         };
-      } else {
+      } else if (!shopData) {
         shopData = { shopName: 'StyleFleet Salon' };
       }
     }
+
+    // Resolve stylist name prominently
+    const resolvedStaff = stylist || staffName || staff || (items && items[0]?.staff) || 'Stylist';
+    const resolvedLogo = shopData?.logoImg || shopProfile?.logoImg || dbLogoPath || '';
 
     // 2. Build invoice payload
     const pdfData: InvoicePdfData = {
@@ -58,7 +68,11 @@ export async function POST(req: NextRequest) {
       issuedAt: issuedAt || new Date().toISOString(),
       customerName: customerName || 'Client',
       customerPhone: customerPhone || '',
-      shop: shopData,
+      stylistName: resolvedStaff,
+      shop: {
+        ...shopData,
+        logoImg: resolvedLogo,
+      },
       items: items || [],
       subtotal: subtotal ?? total,
       discount: discount ?? 0,

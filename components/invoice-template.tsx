@@ -96,7 +96,12 @@ export function InvoiceTemplate({
           invoiceNumber: cleanInv,
           customerName: bill.cust || 'Client',
           customerPhone: bill.phone || '',
-          items: bill.items || [],
+          stylist: bill.staff || 'Stylist',
+          staff: bill.staff || 'Stylist',
+          items: (bill.items || []).map((it) => ({
+            ...it,
+            staff: it.staff || bill.staff || 'Stylist',
+          })),
           subtotal: itemsSubtotal,
           discount: discountAmount,
           tax: taxAmount,
@@ -109,10 +114,17 @@ export function InvoiceTemplate({
         }),
       }).catch(() => {});
     } catch {}
-  }, [bill.id, shopProfile?.id]);
+  }, [bill.id, bill.staff, shopProfile?.id, shopProfile?.logoImg]);
 
   const handlePrint = () => {
+    document.body.classList.add('stylefleet-single-page-print');
+    const cleanup = () => {
+      document.body.classList.remove('stylefleet-single-page-print');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
+    setTimeout(cleanup, 2500);
   };
 
   const handleDownloadPdf = async () => {
@@ -140,7 +152,12 @@ export function InvoiceTemplate({
           invoiceNumber: cleanInv,
           customerName: bill.cust || 'Client',
           customerPhone: bill.phone || '',
-          items: bill.items || [],
+          stylist: bill.staff || 'Stylist',
+          staff: bill.staff || 'Stylist',
+          items: (bill.items || []).map((it) => ({
+            ...it,
+            staff: it.staff || bill.staff || 'Stylist',
+          })),
           subtotal: itemsSubtotal,
           discount: discountAmount,
           tax: taxAmount,
@@ -282,11 +299,13 @@ export function InvoiceTemplate({
           @media print {
             @page {
               size: A4 portrait;
-              margin: 8mm 10mm;
+              margin: 4mm 6mm;
             }
             html, body {
               width: 100% !important;
-              height: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
+              max-height: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
@@ -297,8 +316,11 @@ export function InvoiceTemplate({
             }
             body {
               visibility: hidden !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: hidden !important;
             }
-            /* Flatten parent modal backdrops so they never clip or hide the invoice */
+            /* Suppress parent overlays from creating ghost height */
             .fixed, [role="dialog"], .modal-overlay, .modal-backdrop, .animate-fadeIn {
               position: static !important;
               overflow: visible !important;
@@ -306,25 +328,28 @@ export function InvoiceTemplate({
               backdrop-filter: none !important;
               padding: 0 !important;
               margin: 0 !important;
+              height: auto !important;
+              min-height: 0 !important;
+              max-height: none !important;
             }
-            /* Strictly elevate and center the printable luxury invoice */
+            /* Strict Single Sheet Presentation - Prevents duplicate 2nd page copy */
             #printable-luxury-invoice {
               visibility: visible !important;
-              position: fixed !important;
+              display: block !important;
+              position: relative !important;
               left: 0 !important;
               right: 0 !important;
               top: 0 !important;
-              bottom: 0 !important;
-              margin: auto !important;
+              margin: 2mm auto 0 auto !important;
               width: 100% !important;
               max-width: 680px !important;
-              height: fit-content !important;
-              max-height: 94vh !important;
+              height: auto !important;
+              max-height: 275mm !important;
               padding: 0 !important;
               box-shadow: none !important;
               border: 1px solid #DDE1E8 !important;
               border-radius: 14px !important;
-              z-index: 999999 !important;
+              overflow: visible !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               page-break-before: avoid !important;
@@ -333,7 +358,7 @@ export function InvoiceTemplate({
             #printable-luxury-invoice * {
               visibility: visible !important;
             }
-            /* Re-hide anything with .no-print */
+            /* Re-hide anything with .no-print and screen siblings */
             #printable-luxury-invoice .no-print,
             #printable-luxury-invoice .no-print *,
             .no-print,
@@ -345,6 +370,11 @@ export function InvoiceTemplate({
               margin: 0 !important;
               padding: 0 !important;
               border: none !important;
+              overflow: hidden !important;
+            }
+            body.stylefleet-single-page-print > *:not(:has(#printable-luxury-invoice)) {
+              display: none !important;
+              height: 0 !important;
               overflow: hidden !important;
             }
             #printable-luxury-invoice h1 {
@@ -372,18 +402,18 @@ export function InvoiceTemplate({
             {/* Salon Info Left */}
             <div className="flex items-center gap-3.5 sm:gap-4">
               <div
-                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full border-2 border-[#D4A515] bg-[#0F1A36] flex items-center justify-center text-[#D4A515] font-black text-lg shrink-0 shadow-sm"
-                style={{ borderColor: '#D4A515', backgroundColor: '#0F1A36' }}
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-[#D4A515] bg-white flex items-center justify-center text-[#D4A515] font-black text-lg shrink-0 shadow-sm overflow-hidden p-1"
+                style={{ borderColor: '#D4A515', backgroundColor: '#ffffff' }}
               >
                 {shopProfile.logoImg ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={shopProfile.logoImg}
                     alt={shopProfile.shopName}
-                    className="w-full h-full rounded-full object-cover"
+                    className="w-full h-full object-contain rounded-xl"
                   />
                 ) : (
-                  <span>{salonInitial}</span>
+                  <span className="text-[#0F1A36] font-black">{salonInitial}</span>
                 )}
               </div>
               <div className="space-y-0.5">
@@ -437,9 +467,9 @@ export function InvoiceTemplate({
           style={{ backgroundColor: '#D4A515' }}
         />
 
-        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION - 3 COLUMNS) */}
-        <div className="px-5 sm:px-8 py-4 sm:py-5 print:py-3 print:px-6 border-b border-slate-200 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        {/* 3. CUSTOMER & APPOINTMENT METADATA BAR (INFO SECTION - 4 PROMINENT COLUMNS) */}
+        <div className="px-5 sm:px-8 py-3.5 sm:py-4 print:py-2.5 print:px-6 border-b border-slate-200 bg-white">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {/* Column 1: Billed To */}
             <div>
               <span
@@ -448,7 +478,7 @@ export function InvoiceTemplate({
               >
                 BILLED TO
               </span>
-              <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
+              <p className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5 truncate">
                 {bill.cust || 'Walk-in Client'}
               </p>
             </div>
@@ -466,7 +496,23 @@ export function InvoiceTemplate({
               </p>
             </div>
 
-            {/* Column 3: Appointment Date & Stylist */}
+            {/* Column 3: Stylist / Staff (Prominently Highlighted) */}
+            <div>
+              <span
+                className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
+                style={{ color: '#0F1A36' }}
+              >
+                {(bill.staff || '').includes(',') ? 'STYLISTS' : 'STYLIST'}
+              </span>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#D4A515] inline-block shrink-0" />
+                <p className="text-sm sm:text-base font-black text-[#0F1A36] truncate">
+                  {bill.staff || 'Stylist'}
+                </p>
+              </div>
+            </div>
+
+            {/* Column 4: Appointment Date */}
             <div className="sm:text-right">
               <span
                 className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block"
@@ -476,9 +522,6 @@ export function InvoiceTemplate({
               </span>
               <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">
                 {invoiceDateStr}
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {(bill.staff || '').includes(',') ? 'Stylists' : 'Stylist'}: <span className="font-semibold text-slate-800">{bill.staff || 'Stylist'}</span>
               </p>
             </div>
           </div>
@@ -494,7 +537,7 @@ export function InvoiceTemplate({
               style={{ backgroundColor: '#0F1A36', color: '#ffffff' }}
             >
               <div className="flex-1 min-w-0 font-black text-white" style={{ color: '#ffffff' }}>SERVICE</div>
-              <div className="hidden sm:block sm:w-28 text-left font-black text-white" style={{ color: '#ffffff' }}>STAFF</div>
+              <div className="w-24 sm:w-28 text-left font-black text-white" style={{ color: '#ffffff' }}>STYLIST</div>
               <div className="w-10 sm:w-14 text-center font-black text-white shrink-0" style={{ color: '#ffffff' }}>QTY</div>
               <div className="w-14 sm:w-20 text-right font-black text-white shrink-0" style={{ color: '#ffffff' }}>PRICE</div>
               <div
@@ -520,11 +563,10 @@ export function InvoiceTemplate({
                       key={idx}
                       className="px-3 sm:px-4 py-2 sm:py-2.5 print:py-1.5 flex items-center text-xs sm:text-sm hover:bg-slate-50/60 transition-colors"
                     >
-                      <div className="flex-1 min-w-0 pr-1">
+                      <div className="flex-1 min-w-0 pr-2">
                         <span className="font-bold text-slate-900 block truncate">{item.name}</span>
-                        <span className="sm:hidden text-[10px] text-slate-500 font-medium">By {itemStaff}</span>
                       </div>
-                      <div className="hidden sm:block sm:w-28 text-left text-slate-600 font-medium truncate">
+                      <div className="w-24 sm:w-28 text-left font-bold text-slate-800 text-xs sm:text-sm truncate">
                         {itemStaff}
                       </div>
                       <div className="w-10 sm:w-14 text-center font-bold text-slate-800 shrink-0">
