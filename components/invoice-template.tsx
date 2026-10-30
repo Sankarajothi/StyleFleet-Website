@@ -13,6 +13,152 @@ interface InvoiceTemplateProps {
   onDelete?: () => void;
 }
 
+function printInvoiceSinglePage(elementId: string) {
+  if (typeof window === 'undefined') return;
+  const target = document.getElementById(elementId);
+  if (!target) {
+    window.print();
+    return;
+  }
+
+  // Remove existing print iframe if any
+  const oldIframe = document.getElementById('stylefleet-print-iframe');
+  if (oldIframe) {
+    try {
+      oldIframe.remove();
+    } catch {}
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'stylefleet-print-iframe';
+  iframe.setAttribute(
+    'style',
+    'position:fixed;top:-99999px;left:-99999px;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;z-index:-9999;'
+  );
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  // Collect stylesheet tags from parent document
+  const headElements: string[] = [];
+  document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+    headElements.push(node.outerHTML);
+  });
+
+  // Clone invoice and strip screen-only controls
+  const clone = target.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.no-print, [data-ui="no-print"]').forEach((el) => el.remove());
+
+  const printDocumentHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice</title>
+  ${headElements.join('\n')}
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 6mm 8mm;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      box-sizing: border-box !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      color: #0F1A36 !important;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      overflow: visible !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    #${elementId} {
+      visibility: visible !important;
+      display: block !important;
+      position: relative !important;
+      width: 100% !important;
+      max-width: 680px !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      border: 1px solid #DDE1E8 !important;
+      border-radius: 14px !important;
+      box-shadow: none !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+    .no-print {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  ${clone.outerHTML}
+</body>
+</html>`;
+
+  doc.open();
+  doc.write(printDocumentHtml);
+  doc.close();
+
+  const iframeWin = iframe.contentWindow;
+  if (!iframeWin) {
+    window.print();
+    return;
+  }
+
+  const triggerPrint = () => {
+    try {
+      iframeWin.focus();
+      iframeWin.print();
+    } catch {
+      window.print();
+    } finally {
+      setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch {}
+      }, 3000);
+    }
+  };
+
+  const images = doc.images;
+  if (!images || images.length === 0) {
+    setTimeout(triggerPrint, 200);
+  } else {
+    let pending = images.length;
+    const checkImage = () => {
+      pending--;
+      if (pending <= 0) {
+        setTimeout(triggerPrint, 200);
+      }
+    };
+    for (let i = 0; i < images.length; i++) {
+      if (images[i].complete) {
+        pending--;
+      } else {
+        images[i].addEventListener('load', checkImage, { once: true });
+        images[i].addEventListener('error', checkImage, { once: true });
+      }
+    }
+    if (pending <= 0) {
+      setTimeout(triggerPrint, 200);
+    } else {
+      setTimeout(triggerPrint, 1000);
+    }
+  }
+}
+
 export function InvoiceTemplate({
   bill,
   shopProfile,
@@ -117,14 +263,7 @@ export function InvoiceTemplate({
   }, [bill.id, bill.staff, shopProfile?.id, shopProfile?.logoImg]);
 
   const handlePrint = () => {
-    document.body.classList.add('stylefleet-single-page-print');
-    const cleanup = () => {
-      document.body.classList.remove('stylefleet-single-page-print');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup, { once: true });
-    window.print();
-    setTimeout(cleanup, 2500);
+    printInvoiceSinglePage('printable-luxury-invoice');
   };
 
   const handleDownloadPdf = async () => {

@@ -1,8 +1,33 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSalon, Appointment, ServiceItem } from '@/components/SalonContext';
 import { generateTimeSlotsFromBookingHours, matchStaffName, getMostlyUsedServices } from '@/lib/salon-helpers';
+
+// Time slot normalizer for reliable matching (e.g. "5:00 PM" <-> "05:00 PM", "17:00")
+const normalizeSlotTime = (t?: string): string => {
+  if (!t) return '';
+  const match = t.trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return t.trim().toLowerCase();
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const ampm = (match[3] || 'AM').toUpperCase();
+  return `${h}:${m} ${ampm}`;
+};
+
+const normalizeBookingDate = (d?: string): string => {
+  if (!d) return '';
+  return d.split('T')[0].trim();
+};
+
+const matchStaffNameLoose = (staffA?: string, staffB?: string): boolean => {
+  if (!staffA || !staffB) return false;
+  const a = staffA.toLowerCase().trim();
+  const b = staffB.toLowerCase().trim();
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+  return false;
+};
 import { StylistMultiSelect } from '@/components/stylist-multi-select';
 
 interface SelectedBookingService {
@@ -91,6 +116,42 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
   const [bookingStaff, setBookingStaff] = useState(defaultStaff);
   const [specialNotes, setSpecialNotes] = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
+
+  // Check if a time slot is already booked and locked for the selected date & stylist (mobile parity)
+  const getSlotLockInfo = useCallback((slot: string, dateStr: string, staffName: string, excludeApptId?: string) => {
+    const targetTime = normalizeSlotTime(slot);
+    const targetDate = normalizeBookingDate(dateStr);
+    const lockedAppt = appointments.find((appt) => {
+      if (excludeApptId && appt.id === excludeApptId) return false;
+      if (appt.status === 'Cancelled') return false;
+      const apptDate = normalizeBookingDate(appt.date || (appt.startsAt && appt.startsAt.includes('T') ? appt.startsAt.split('T')[0] : ''));
+      if (apptDate !== targetDate) return false;
+
+      // Stylist match
+      if (!matchStaffNameLoose(appt.staff, staffName)) return false;
+
+      const apptTime = normalizeSlotTime(appt.startsAt);
+      return apptTime === targetTime;
+    });
+
+    return {
+      isLocked: !!lockedAppt,
+      bookedClient: lockedAppt?.cust || '',
+      bookedService: lockedAppt?.service || '',
+    };
+  }, [appointments]);
+
+  // Auto-switch away from locked slot when date or stylist changes
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const currentLock = getSlotLockInfo(bookingSlot, bookingDate, bookingStaff);
+    if (currentLock.isLocked) {
+      const firstAvailable = timeSlots.find(s => !getSlotLockInfo(s, bookingDate, bookingStaff).isLocked);
+      if (firstAvailable) {
+        setBookingSlot(firstAvailable);
+      }
+    }
+  }, [bookingDate, bookingStaff, timeSlots, isModalOpen, getSlotLockInfo]);
 
   // Synchronize role default staff
   useEffect(() => {
@@ -188,6 +249,12 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
     }
     if (selectedServices.length === 0) {
       showToast('Please select at least one service.', 'error');
+      return;
+    }
+
+    const lockCheck = getSlotLockInfo(bookingSlot, bookingDate, bookingStaff);
+    if (lockCheck.isLocked) {
+      showToast(`This slot (${bookingSlot}) is locked and already booked for ${bookingStaff} (${lockCheck.bookedClient}). Please choose an open slot.`, 'error');
       return;
     }
 
@@ -487,9 +554,10 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   >
                     {/* Top Row: Time Slot Badge on Left, Status Pill & 3-Dot Menu on Right */}
                     <div className="flex items-center justify-between gap-1">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg font-mono ${
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg font-mono flex items-center gap-1 ${
                         isDarkMode ? 'text-[#D4AF37] bg-[#D4AF37]/15 border border-[#D4AF37]/30' : 'text-[#5B2500] bg-amber-50 border border-amber-300'
                       }`}>
+                        <span className="text-[10px]" title="Booked & Locked Slot">🔒</span>
                         {appt.startsAt}
                       </span>
 
@@ -806,7 +874,10 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                     isDarkMode ? 'border-[#2A3858]' : 'border-slate-200'
                   }`}>
                     <div className="text-left md:text-right">
-                      <span className="text-[11px] text-[#A7B0C3] block">{appt.date} at {appt.startsAt}</span>
+                      <span className="text-[11px] text-[#A7B0C3] flex items-center md:justify-end gap-1">
+                        <span className="text-[10px]" title="Booked & Locked Slot">🔒</span>
+                        {appt.date} at {appt.startsAt}
+                      </span>
                       <strong className="text-[#D4AF37] font-mono text-xs">₹{appt.amount}</strong>
                     </div>
 
@@ -1218,20 +1289,36 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                 }`}>
                   {timeSlots.map((slot) => {
                     const isSelected = bookingSlot === slot;
+                    const lockInfo = getSlotLockInfo(slot, bookingDate, bookingStaff);
+                    const isLocked = lockInfo.isLocked;
+
                     return (
                       <button
                         key={slot}
                         type="button"
-                        onClick={() => setBookingSlot(slot)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md shadow-[#D4AF37]/30 ring-2 ring-[#D4AF37]/60 font-black scale-102'
+                        disabled={isLocked}
+                        onClick={() => {
+                          if (isLocked) {
+                            showToast(`${slot} is locked & already booked for ${bookingStaff} (${lockInfo.bookedClient}).`, 'error');
+                            return;
+                          }
+                          setBookingSlot(slot);
+                        }}
+                        title={isLocked ? `Locked 🔒: Booked by ${lockInfo.bookedClient} (${lockInfo.bookedService})` : `Available: ${slot}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
+                          isLocked
+                            ? isDarkMode
+                              ? 'bg-rose-950/30 border border-rose-500/30 text-rose-400 opacity-60 cursor-not-allowed line-through'
+                              : 'bg-rose-50 border border-rose-300 text-rose-600 opacity-70 cursor-not-allowed line-through'
+                            : isSelected
+                            ? 'bg-[#D4AF37] text-[#0B1F44] shadow-md shadow-[#D4AF37]/30 ring-2 ring-[#D4AF37]/60 font-black scale-102 cursor-pointer'
                             : isDarkMode
-                            ? 'bg-[#1A2746] hover:bg-[#22355e] text-slate-300 hover:text-white border border-[#2A3858]'
-                            : 'bg-white hover:bg-slate-100 text-slate-800 hover:text-black border border-slate-300 shadow-2xs'
+                            ? 'bg-[#1A2746] hover:bg-[#22355e] text-slate-300 hover:text-white border border-[#2A3858] cursor-pointer'
+                            : 'bg-white hover:bg-slate-100 text-slate-800 hover:text-black border border-slate-300 shadow-2xs cursor-pointer'
                         }`}
                       >
-                        {slot}
+                        <span>{slot}</span>
+                        {isLocked && <span className="text-[10px] no-underline font-black not-italic" title="Slot Locked">🔒</span>}
                       </button>
                     );
                   })}
@@ -1351,12 +1438,22 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   showToast('Please specify the styling service.', 'error');
                   return;
                 }
+                const targetStaff = editStaff.trim() || defaultStaff;
+                const lockCheck = getSlotLockInfo(editStartsAt, editingAppt.date, targetStaff, editingAppt.id);
+                if (lockCheck.isLocked) {
+                  showToast(
+                    `This slot (${editStartsAt}) is locked and already booked for ${targetStaff} (${lockCheck.bookedClient}). Please choose an open slot.`,
+                    'error'
+                  );
+                  return;
+                }
                 updateAppointment(editingAppt.id, {
                   startsAt: editStartsAt.trim(),
                   service: editService.trim(),
-                  staff: editStaff.trim() || defaultStaff,
+                  staff: targetStaff,
                 });
                 setEditingAppt(null);
+                showToast(`Appointment updated for ${editingAppt.cust}.`, 'success');
               }}
               className="space-y-4"
             >
@@ -1377,22 +1474,31 @@ export function AppointmentsView({ onOpenNewBooking }: AppointmentsProps) {
                   } focus:border-[#D4AF37]`}
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {['09:30 AM', '10:30 AM', '11:30 AM', '01:00 PM', '02:30 PM', '04:00 PM', '05:30 PM', '07:00 PM'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setEditStartsAt(t)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
-                        editStartsAt === t
-                          ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
-                          : isDarkMode
-                          ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {['09:30 AM', '10:30 AM', '11:30 AM', '01:00 PM', '02:30 PM', '04:00 PM', '05:30 PM', '07:00 PM'].map((t) => {
+                    const lock = getSlotLockInfo(t, editingAppt.date, editStaff || defaultStaff, editingAppt.id);
+                    const isLocked = lock.isLocked;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        disabled={isLocked}
+                        title={isLocked ? `Locked: Booked for ${lock.bookedClient}` : undefined}
+                        onClick={() => setEditStartsAt(t)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
+                          editStartsAt === t
+                            ? 'bg-[#D4AF37] text-[#0B1F44] border-[#D4AF37]'
+                            : isLocked
+                            ? 'opacity-40 line-through cursor-not-allowed bg-slate-800/40 border-slate-700 text-slate-500'
+                            : isDarkMode
+                            ? 'bg-[#121B33] border-[#2A3858] text-slate-300 hover:text-white'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {isLocked && <span className="text-[10px]">🔒</span>}
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

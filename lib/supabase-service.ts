@@ -1568,7 +1568,9 @@ export async function saveBillToDb(
     const billStatus = dueMinor === 0 ? 'paid' : (paidMinor > 0 ? 'partially_paid' : 'pending');
     const paymentMethod = bill.mode || 'UPI';
     const billDateStr = (bill as any).dateStr || '';
-    const notesStr = `due:${dueMinor};paid:${paidMinor};staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''};`;
+    // Only include due: prefix when dueMinor > 0. For normal bills, include paid: so mobile does not falsely display "Due Settled" badge
+    const duePrefix = dueMinor > 0 ? `due:${dueMinor};paid:${paidMinor};` : `paid:${paidMinor};`;
+    const notesStr = `${duePrefix}staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''};`;
     const nowIso = new Date().toISOString();
 
     const cleanInvNum = (bill.invoiceNumber || billId).replace(/\.pdf$/i, '').trim();
@@ -2071,7 +2073,7 @@ export async function updateBillInDb(
       let baseNotes = (updated.notes || '').replace(/due:\d+;?/g, '').replace(/paid:\d+;?/g, '').trim();
       const dueMinorVal = updated.dueAmount !== undefined ? Math.round(updated.dueAmount * 100) : null;
       const paidMinorVal = updated.paidAmount !== undefined ? Math.round(updated.paidAmount * 100) : null;
-      const duePrefix = dueMinorVal !== null ? `due:${dueMinorVal};` : '';
+      const duePrefix = (dueMinorVal !== null && dueMinorVal > 0) ? `due:${dueMinorVal};` : '';
       const paidPrefix = paidMinorVal !== null ? `paid:${paidMinorVal};` : '';
       updatePayload.notes = `${duePrefix}${paidPrefix}${baseNotes ? baseNotes + ';' : ''}staff_name:${updated.staff || 'Stylist'};cust:${updated.cust || 'Client'};phone:${updated.phone || ''};mode:${updated.mode || 'UPI'};[Edited];`;
     } else if (updated.notes !== undefined) {
