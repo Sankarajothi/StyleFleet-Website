@@ -1489,8 +1489,8 @@ export async function saveBillToDb(
     const notesStr = `staff_name:${bill.staff};cust:${bill.cust};phone:${bill.phone};mode:${paymentMethod}${billDateStr ? `;date_str:${billDateStr}` : ''}`;
     const nowIso = new Date().toISOString();
 
-    const shortId = billId.slice(0, 4);
-    const officialPdfKey = `${bill.invoiceNumber}_${shortId}.pdf`;
+    const cleanInvNum = (bill.invoiceNumber || billId).replace(/\.pdf$/i, '').trim();
+    const officialPdfKey = `${cleanInvNum}.pdf`;
     const officialPdfUrl = `https://stylefleet.tecstellar.com/b/${officialPdfKey}`;
 
     const { error: billErr } = await supabase.from('bills').insert({
@@ -2095,7 +2095,7 @@ export async function settleCustomerDueInDb(
     const clearanceBillId = generateUuid();
     const shortId = clearanceBillId.slice(0, 4);
     const invoiceNumber = `DUE-CLR-${Date.now().toString().slice(-4)}`;
-    const officialPdfKey = `${invoiceNumber}_${shortId}.pdf`;
+    const officialPdfKey = `${invoiceNumber}.pdf`;
     const officialPdfUrl = `https://stylefleet.tecstellar.com/b/${officialPdfKey}`;
     const notesStr = `staff_name:${collectorName};cust:${customer.name};phone:${cleanPhone};mode:${paymentMode};date_str:${new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 

@@ -96,8 +96,8 @@ export async function POST(req: NextRequest) {
       console.warn('[PDF Generator] Upload warning (standard):', upload2.error.message);
     }
 
-    // Official production vanity URL
-    const publicPdfUrl = `https://stylefleet.tecstellar.com/b/${keyWithShortId}`;
+    // Official production vanity URL (standard clean invoice key for 100% reliability)
+    const publicPdfUrl = `https://stylefleet.tecstellar.com/b/${keyStandard}`;
 
     // 6. Update the bills table with the generated pdf_url
     if (billId) {

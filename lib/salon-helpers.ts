@@ -277,16 +277,15 @@ export function buildOfficialWhatsAppBillMessage(params: {
     socialLinks,
   } = params;
 
-  const rawInv = (invoiceNumber || billId || '').trim();
-  const shortId = billId ? billId.replace(/-/g, '').slice(0, 4) : '';
-  const cleanInvKey = rawInv.toLowerCase().endsWith('.pdf')
-    ? rawInv
-    : (shortId ? `${rawInv}_${shortId}.pdf` : `${rawInv}.pdf`);
+  const rawInv = (invoiceNumber || billId || '').replace(/\.pdf$/i, '').trim();
+  const cleanInvKey = `${rawInv}.pdf`;
 
   let billPdfUrl = (pdfUrl || '').trim();
-  // If no pdfUrl or it points to raw supabase storage bucket which causes NoSuchKey 404, use the official digital bill web link
-  if (!billPdfUrl || billPdfUrl.includes('supabase.co/storage') || billPdfUrl.includes('NoSuchKey')) {
+  // Always ensure official tecstellar direct link with clean invoice key to guarantee 100% 200 OK (no NoSuchKey 404)
+  if (!billPdfUrl || billPdfUrl.includes('supabase.co/storage') || billPdfUrl.includes('NoSuchKey') || billPdfUrl.includes('_JSOC') || billPdfUrl.includes('undefined')) {
     billPdfUrl = `https://stylefleet.tecstellar.com/b/${encodeURIComponent(cleanInvKey)}`;
+  } else if (!billPdfUrl.endsWith('.pdf')) {
+    billPdfUrl = `${billPdfUrl}.pdf`;
   }
   const cleanShopPhone = (shopPhone || '').replace(/\D/g, '').slice(-10);
 

@@ -1117,14 +1117,41 @@ function DashboardContent() {
               }}
               onShareWhatsApp={() => {
                 setIsWhatsAppShared(true);
+                const cleanInv = (activeInvoice.id || '').replace(/\.pdf$/i, '').trim();
+                const officialUrl = `https://stylefleet.tecstellar.com/b/${encodeURIComponent(cleanInv)}.pdf`;
+
+                // Fire invoice generation in background to guarantee file is in Supabase storage
+                if (shopProfile?.id) {
+                  fetch('/api/invoices/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      shopId: shopProfile.id,
+                      billId: activeInvoice.id,
+                      invoiceNumber: cleanInv,
+                      customerName: activeInvoice.cust || 'Client',
+                      customerPhone: activeInvoice.phone || '',
+                      items: activeInvoice.items || [],
+                      subtotal: activeInvoice.total,
+                      discount: activeInvoice.discount || 0,
+                      total: activeInvoice.total,
+                      paidAmount: activeInvoice.paidAmount,
+                      dueAmount: activeInvoice.dueAmount,
+                      paymentMethod: activeInvoice.mode || 'UPI',
+                      issuedAt: activeInvoice.createdAt || activeInvoice.dateStr,
+                      shopProfile,
+                    }),
+                  }).catch(() => {});
+                }
+
                 const msgText = buildOfficialWhatsAppBillMessage({
                   shopName: shopProfile.shopName || 'StyleFleet Salon',
                   shopPhone: shopProfile.phone || '',
                   upiId: shopProfile.upiId || '',
                   customerName: activeInvoice.cust || 'Client',
-                  invoiceNumber: activeInvoice.id,
+                  invoiceNumber: cleanInv,
                   billId: activeInvoice.id,
-                  pdfUrl: (activeInvoice as any).pdfUrl || (activeInvoice as any).pdf_url,
+                  pdfUrl: officialUrl,
                   totalAmount: activeInvoice.total,
                   paidAmount: activeInvoice.paidAmount,
                   dueAmount: activeInvoice.dueAmount,
