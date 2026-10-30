@@ -7,10 +7,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { sessionId, pairCode, shopId, role, phone, ownerName, staffId, staffName } = body;
 
-    const targetKey = sessionId || pairCode;
+    let rawTarget = String(sessionId || pairCode || body.qrData || body.qrContent || body.code || body.rawResult || '').trim();
+
+    // Automatically parse and extract session_id if the full scanned URI or query string was sent
+    if (rawTarget.includes('session_id=')) {
+      try {
+        const urlPart = rawTarget.includes('://') ? rawTarget : `http://dummy.com/?${rawTarget}`;
+        const parsedUrl = new URL(urlPart);
+        const extracted = parsedUrl.searchParams.get('session_id');
+        if (extracted) rawTarget = extracted.trim();
+      } catch {
+        const match = rawTarget.match(/session_id=([^&]+)/);
+        if (match && match[1]) rawTarget = match[1].trim();
+      }
+    }
+
+    const targetKey = rawTarget;
     if (!targetKey) {
       return NextResponse.json(
-        { success: false, error: 'Session ID or 6-digit PIN code is required' },
+        { success: false, error: 'Session ID is required' },
         { status: 400 }
       );
     }
