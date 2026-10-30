@@ -945,8 +945,9 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const newSpend = (exists.spend || 0) + billData.paidAmount;
         if (currentShopId) {
           const identifier = (exists.id && isValidUuid(exists.id)) ? exists.id : (exists.phone || billData.phone || exists.name);
+          // saveBillToDb authoritatively reconciles outstanding_due_minor in Supabase from bills table.
+          // Omit due here to prevent double-increment race conditions.
           updateCustomerInDb(currentShopId, identifier, {
-            due: newDue,
             spend: newSpend,
             phone: exists.phone || billData.phone,
             name: exists.name,
@@ -1070,8 +1071,9 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
     );
 
-    // 3. Create clearance bill in state
-    createBill({
+    // 3. Create clearance bill in state (settleCustomerDueInDb authoritatively persists clearance bill to Supabase)
+    const clearanceBill: Bill = {
+      id: `DUE-CLR-${Date.now().toString().slice(-4)}`,
       cust: cust.name,
       phone: cust.phone || '',
       items: [{ name: `Due Payment Clearance (${cust.name})`, price: payment, qty: 1 }],
@@ -1084,7 +1086,12 @@ export const SalonProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discount: 0,
       tax: 0,
       tip: 0,
-    });
+      dateStr: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      isToday: true,
+      isDeleted: false,
+      isEdited: false,
+    };
+    setBills((prev) => [clearanceBill, ...prev]);
 
     // 4. Atomically persist due settlement and bill deductions to Supabase
     if (currentShopId) {

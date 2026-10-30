@@ -887,29 +887,45 @@ export async function fetchSalonDataFromDb(shopId: string): Promise<DatabaseSalo
     });
 
     // Reconcile bills if customer due has been settled or partially cleared in Supabase
+    const customerDuePool = new Map<string, number>();
+    for (const c of custRows || []) {
+      if (c.outstanding_due_minor !== undefined && c.outstanding_due_minor !== null) {
+        const dueVal = Math.max(0, Math.round(Number(c.outstanding_due_minor) / 100));
+        customerDuePool.set(c.id, dueVal);
+        const cleanP = (c.phone || '').replace(/\D/g, '').slice(-10);
+        if (cleanP) customerDuePool.set(cleanP, dueVal);
+        if (c.name) customerDuePool.set(c.name.toLowerCase().trim(), dueVal);
+      }
+    }
+
     const reconciledBills = bills.map((b) => {
       if (!b.dueAmount || b.dueAmount <= 0) return b;
       const cleanPhone = (b.phone || '').replace(/\D/g, '').slice(-10);
-      const custMatch = custRows?.find((c: any) => {
-        if (b.customerId && c.id === b.customerId) return true;
-        const cPhone = (c.phone || '').replace(/\D/g, '').slice(-10);
-        return (cleanPhone && cPhone && cleanPhone === cPhone) || (b.cust && c.name?.toLowerCase().trim() === b.cust.toLowerCase().trim());
-      });
-      if (custMatch && custMatch.outstanding_due_minor !== undefined && custMatch.outstanding_due_minor !== null) {
-        const custDueRupees = Math.round((custMatch.outstanding_due_minor || 0) / 100);
-        if (custDueRupees <= 0) {
+      const custKey = (b.customerId && customerDuePool.has(b.customerId))
+        ? b.customerId
+        : (cleanPhone && customerDuePool.has(cleanPhone))
+        ? cleanPhone
+        : (b.cust && customerDuePool.has(b.cust.toLowerCase().trim()))
+        ? b.cust.toLowerCase().trim()
+        : null;
+
+      if (custKey !== null) {
+        const poolRemaining = customerDuePool.get(custKey) ?? 0;
+        if (poolRemaining <= 0) {
           return {
             ...b,
             dueAmount: 0,
             paidAmount: b.total,
             status: 'paid' as const,
           };
-        } else if (b.dueAmount > custDueRupees) {
+        } else {
+          const alloc = Math.min(b.dueAmount, poolRemaining);
+          customerDuePool.set(custKey, poolRemaining - alloc);
           return {
             ...b,
-            dueAmount: custDueRupees,
-            paidAmount: Math.max(0, b.total - custDueRupees),
-            status: 'partially_paid' as const,
+            dueAmount: alloc,
+            paidAmount: Math.max(0, b.total - alloc),
+            status: alloc < b.total ? ('partially_paid' as const) : ('pending' as const),
           };
         }
       }
@@ -1198,6 +1214,91 @@ export async function deleteCustomerInDb(shopId: string, customerIdOrPhone: stri
 }
 
 /**
+ * Authoritatively reconcile a customer's outstanding_due_minor in Supabase from all active unpaid bills.
+ * Strictly guarantees that customer due === sum of unpaid bills (status != 'paid' and status != 'deleted').
+ * This mathematically prevents any doubling, stale phantom dues, or race condition discrepancies between mobile and web.
+ */
+export async function reconcileCustomerDueInDb(
+  shopId: string,
+  customerIdOrPhone: string
+): Promise<number> {
+  try {
+    let customerId: string | null = null;
+    let cleanPhone = '';
+
+    if (isValidUuid(customerIdOrPhone)) {
+      customerId = customerIdOrPhone;
+      const { data: cRow } = await supabase
+        .from('customers')
+        .select('phone')
+        .eq('id', customerId)
+        .maybeSingle();
+      if (cRow?.phone) {
+        cleanPhone = cRow.phone.replace(/\D/g, '').slice(-10);
+      }
+    } else {
+      cleanPhone = customerIdOrPhone.replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length >= 7) {
+        const { data: cRow } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('shop_id', shopId)
+          .eq('phone', cleanPhone)
+          .maybeSingle();
+        if (cRow?.id) customerId = cRow.id;
+      }
+    }
+
+    if (!customerId && !cleanPhone) return 0;
+
+    // Fetch all active (non-deleted, non-paid) bills for this customer in Supabase
+    let billsQuery = supabase
+      .from('bills')
+      .select('due_amount_minor, status')
+      .eq('shop_id', shopId)
+      .neq('status', 'deleted')
+      .neq('status', 'paid');
+
+    if (customerId) {
+      billsQuery = billsQuery.eq('customer_id', customerId);
+    } else if (cleanPhone) {
+      billsQuery = billsQuery.ilike('notes', `%${cleanPhone}%`);
+    }
+
+    const { data: activeBills, error } = await billsQuery;
+    if (error) {
+      console.warn('[Supabase] Failed to query active bills for due reconciliation:', error.message);
+      return 0;
+    }
+
+    const totalDueMinor = (activeBills || []).reduce((sum, b) => {
+      return sum + Math.max(0, b.due_amount_minor || 0);
+    }, 0);
+
+    // Update customer in database with exact mathematical sum
+    let updateQuery = supabase
+      .from('customers')
+      .update({
+        outstanding_due_minor: totalDueMinor,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('shop_id', shopId);
+
+    if (customerId) {
+      updateQuery = updateQuery.eq('id', customerId);
+    } else {
+      updateQuery = updateQuery.eq('phone', cleanPhone);
+    }
+
+    await updateQuery;
+    return totalDueMinor;
+  } catch (err) {
+    console.warn('[Supabase] Error reconciling customer due:', err);
+    return 0;
+  }
+}
+
+/**
  * Persist an appointment strictly into the current salon's appointments table.
  * Guaranteed format: starts_at = "YYYY-MM-DD hh:mm AM/PM" (matching StyleFleet Android)
  */
@@ -1444,25 +1545,6 @@ export async function saveBillToDb(
       } catch {}
     }
 
-    // Immediately synchronize customer's outstanding_due_minor in Supabase
-    if (customerId && dueMinor > 0) {
-      try {
-        const { data: cRow } = await supabase
-          .from('customers')
-          .select('outstanding_due_minor')
-          .eq('id', customerId)
-          .single();
-        const prevDueMinor = cRow?.outstanding_due_minor || 0;
-        await supabase
-          .from('customers')
-          .update({
-            outstanding_due_minor: prevDueMinor + dueMinor,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', customerId);
-      } catch {}
-    }
-
     // Resolve staff foreign key (supports multi-selected stylists)
     let staffId: string | null = null;
     if (bill.staff) {
@@ -1515,6 +1597,15 @@ export async function saveBillToDb(
     if (billErr) {
       console.warn('[Supabase] Bill insert warning:', billErr.message);
       return null;
+    }
+
+    // Authoritatively synchronize customer's outstanding_due_minor from all active bills in Supabase
+    if (customerId || bill.phone) {
+      try {
+        await reconcileCustomerDueInDb(shopId, customerId || bill.phone);
+      } catch (err) {
+        console.warn('[Supabase] Customer due sync warning:', err);
+      }
     }
 
     // Insert bill items with snapshot
@@ -1859,6 +1950,20 @@ export async function deleteBillInDb(
       updatePayload.notes = `deleted_by:${deletedByName.trim()};deleted_at:${nowIso}`;
     }
 
+    // Fetch bill details prior to deletion to identify customer for due reconciliation
+    let billCustQuery = supabase
+      .from('bills')
+      .select('id, customer_id, notes')
+      .eq('shop_id', shopId);
+
+    if (isValidUuid(invoiceNumberOrId)) {
+      billCustQuery = billCustQuery.or(`id.eq.${invoiceNumberOrId},invoice_number.eq.${invoiceNumberOrId}`);
+    } else {
+      billCustQuery = billCustQuery.eq('invoice_number', invoiceNumberOrId);
+    }
+    const { data: bRows } = await billCustQuery;
+    const targetBill = bRows && bRows.length > 0 ? bRows[0] : null;
+
     let query = supabase
       .from('bills')
       .update(updatePayload)
@@ -1871,7 +1976,22 @@ export async function deleteBillInDb(
     }
 
     const { error } = await query;
-    return !error;
+    if (error) return false;
+
+    // Immediately reconcile customer's outstanding due so deleted bills cannot cause phantom dues
+    if (targetBill) {
+      let phoneMatch: string | null = null;
+      if (targetBill.notes) {
+        const pMatch = targetBill.notes.match(/phone:([^;]+)/);
+        if (pMatch && pMatch[1]) phoneMatch = pMatch[1].trim();
+      }
+      const custIdentifier = targetBill.customer_id || phoneMatch;
+      if (custIdentifier) {
+        await reconcileCustomerDueInDb(shopId, custIdentifier);
+      }
+    }
+
+    return true;
   } catch {
     return false;
   }
@@ -2002,6 +2122,16 @@ export async function updateBillInDb(
       }).catch(() => {});
     } catch {}
 
+    // Authoritatively re-sync customer due if due, total, or payment status changed
+    if (!error && (updated.dueAmount !== undefined || updated.paidAmount !== undefined || updated.status !== undefined || updated.total !== undefined)) {
+      try {
+        const custIdentifier = updatePayload.customer_id || updated.phone;
+        if (custIdentifier) {
+          await reconcileCustomerDueInDb(shopId, custIdentifier);
+        }
+      } catch {}
+    }
+
     return !error;
   } catch {
     return false;
@@ -2089,6 +2219,9 @@ export async function settleCustomerDueInDb(
           })
           .eq('id', b.id);
       }
+
+      // Authoritatively ensure customer's outstanding_due_minor strictly reflects active unpaid bills
+      await reconcileCustomerDueInDb(shopId, customer.id || cleanPhone);
     }
 
     // 3. Insert clearance receipt bill into bills table
@@ -2143,10 +2276,25 @@ export async function settleCustomerDueInDb(
 export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string): Promise<boolean> {
   try {
     const nowIso = new Date().toISOString();
+    let billCustQuery = supabase
+      .from('bills')
+      .select('id, customer_id, notes, due_amount_minor')
+      .eq('shop_id', shopId);
+
+    if (isValidUuid(invoiceNumberOrId)) {
+      billCustQuery = billCustQuery.or(`id.eq.${invoiceNumberOrId},invoice_number.eq.${invoiceNumberOrId}`);
+    } else {
+      billCustQuery = billCustQuery.eq('invoice_number', invoiceNumberOrId);
+    }
+    const { data: bRows } = await billCustQuery;
+    const targetBill = bRows && bRows.length > 0 ? bRows[0] : null;
+
+    const restoreStatus = (targetBill && (targetBill.due_amount_minor || 0) > 0) ? 'partially_paid' : 'paid';
+
     let query = supabase
       .from('bills')
       .update({
-        status: 'paid',
+        status: restoreStatus,
         updated_at: nowIso,
       })
       .eq('shop_id', shopId);
@@ -2158,7 +2306,21 @@ export async function restoreBillInDb(shopId: string, invoiceNumberOrId: string)
     }
 
     const { error } = await query;
-    return !error;
+    if (error) return false;
+
+    if (targetBill) {
+      let phoneMatch: string | null = null;
+      if (targetBill.notes) {
+        const pMatch = targetBill.notes.match(/phone:([^;]+)/);
+        if (pMatch && pMatch[1]) phoneMatch = pMatch[1].trim();
+      }
+      const custIdentifier = targetBill.customer_id || phoneMatch;
+      if (custIdentifier) {
+        await reconcileCustomerDueInDb(shopId, custIdentifier);
+      }
+    }
+
+    return true;
   } catch {
     return false;
   }
